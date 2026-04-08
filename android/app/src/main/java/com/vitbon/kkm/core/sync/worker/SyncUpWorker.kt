@@ -1,0 +1,61 @@
+package com.vitbon.kkm.core.sync.worker
+
+import android.content.Context
+import androidx.work.*
+import com.vitbon.kkm.core.sync.SyncManager
+import java.util.concurrent.TimeUnit
+
+class SyncUpWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        val syncManager = SyncManager(/* injected via Hilt */)
+
+        val result = syncManager.syncChecks()
+        return if (result.failed == 0) {
+            Result.success()
+        } else if (runAttemptCount < MAX_RETRIES) {
+            Result.retry()
+        } else {
+            Result.failure()
+        }
+    }
+
+    companion object {
+        const val WORK_NAME = "sync_up"
+        private const val MAX_RETRIES = 5
+
+        fun enqueue(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val workRequest = OneTimeWorkRequestBuilder<SyncUpWorker>()
+                .setConstraints(constraints)
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    30,
+                    TimeUnit.SECONDS
+                )
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, workRequest)
+        }
+
+        fun enqueueIfConnected(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val workRequest = OneTimeWorkRequestBuilder<SyncUpWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, workRequest)
+        }
+    }
+}
