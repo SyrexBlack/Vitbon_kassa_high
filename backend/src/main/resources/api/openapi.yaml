@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: VITBON Cloud API
+  version: 1.0.0
+  description: REST API для мобильной кассы VITBON
+
+servers:
+  - url: https://api.vitbon.ru/api/v1
+    description: Production
+  - url: https://staging.vitbon.ru/api/v1
+    description: Staging
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Авторизация кассира
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin:
+                  type: string
+                  minLength: 4
+                  maxLength: 6
+      responses:
+        '200':
+          description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  cashier:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      role: { type: string, enum: [ADMIN, SENIOR_CASHIER, CASHIER] }
+        '401':
+          description: Неверный ПИН
+
+  /checks/sync:
+    post:
+      tags: [Checks]
+      summary: Синхронизация чеков (push)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CheckDto'
+      responses:
+        '200':
+          description: Результат обработки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processed: { type: integer }
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        localUuid: { type: string }
+                        error: { type: string }
+
+  /products:
+    get:
+      tags: [Products]
+      summary: Каталог товаров (delta sync)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Только товары обновлённые после этого timestamp (ms)
+      responses:
+        '200':
+          description: Delta-обновление каталога
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products: { type: array, items: { $ref: '#/components/schemas/ProductDto' } }
+                  deletedIds: { type: array, items: { type: string } }
+                  serverTimestamp: { type: integer, format: int64 }
+
+  /shifts/{cashierId}:
+    get:
+      tags: [Shifts]
+      summary: Смены кассира
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cashierId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список смен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShiftDto'
+
+  /statuses:
+    get:
+      tags: [System]
+      summary: Статусы системы
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Текущие статусы
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ofdQueueLength: { type: integer }
+                  lastSyncTimestamp: { type: integer, format: int64 }
+                  cloudServerOk: { type: boolean }
+                  licenseStatus: { type: string }
+
+  /license/check:
+    post:
+      tags: [Licensing]
+      summary: Проверка статуса лицензии
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId: { type: string }
+      responses:
+        '200':
+          description: Статус лицензии
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ACTIVE, EXPIRED, GRACE_PERIOD] }
+                  expiryDate: { type: integer, format: int64, nullable: true }
+                  graceUntil: { type: integer, format: int64, nullable: true }
+
+  /documents/acceptance:
+    post:
+      tags: [Documents]
+      summary: Приёмка товара
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string, enum: [ACCEPTANCE] }
+                items: { type: array, items: { $ref: '#/components/schemas/DocumentItemDto' } }
+                timestamp: { type: integer, format: int64 }
+      responses:
+        '200': { description: Принято }
+
+  /documents/writeoff:
+    post:
+      tags: [Documents]
+      summary: Списание товара
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Принято }
+
+  /documents/inventory:
+    post:
+      tags: [Documents]
+      summary: Инвентаризация
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: Принято }
+
+  /egais/incoming:
+    post:
+      tags: [ЕГАИС]
+      summary: Прокси приёмки накладной ЕГАИС
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              type: string
+              example: '<EgaisRequest>...</EgaisRequest>'
+      responses:
+        '200':
+          description: Ответ ЕГАИС
+          content:
+            application/xml:
+              schema:
+                type: string
+
+  /egais/tara:
+    post:
+      tags: [ЕГАИС]
+      summary: Акт вскрытия тары
+      security:
+        - BearerAuth: []
+      responses:
+        '200': { description: Принято }
+
+  /chaseznak/sell:
+    post:
+      tags: [Честный ЗНАК]
+      summary: Выбытие маркированного товара
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                checkId: { type: string }
+      responses:
+        '200': { description: Выбытие зарегистрировано }
+        '400': { description: Ошибка валидации кода }
+
+  /chaseznak/verify-age:
+    post:
+      tags: [Честный ЗНАК]
+      summary: Верификация возраста (Цифровой ID Max)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                qrData: { type: string }
+      responses:
+        '200':
+          description: Результат верификации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+                  verificationId: { type: string }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CheckDto:
+      type: object
+      required: [id, type, total, createdAt]
+      properties:
+        id: { type: string }
+        localUuid: { type: string }
+        shiftId: { type: string, nullable: true }
+        cashierId: { type: string, nullable: true }
+        deviceId: { type: string }
+        type:
+          type: string
+          enum: [SALE, RETURN, CORRECTION, CASH_IN, CASH_OUT]
+        fiscalSign: { type: string, nullable: true }
+        ffdVersion: { type: string }
+        subtotal: { type: integer }
+        discount: { type: integer }
+        total: { type: integer }
+        taxAmount: { type: integer }
+        paymentType: { type: string }
+        items: { type: array, items: { $ref: '#/components/schemas/CheckItemDto' } }
+        createdAt: { type: integer, format: int64 }
+
+    CheckItemDto:
+      type: object
+      properties:
+        id: { type: string }
+        productId: { type: string, nullable: true }
+        barcode: { type: string, nullable: true }
+        name: { type: string }
+        quantity: { type: number }
+        price: { type: integer }
+        discount: { type: integer }
+        vatRate: { type: string }
+        total: { type: integer }
+
+    ProductDto:
+      type: object
+      properties:
+        id: { type: string }
+        barcode: { type: string, nullable: true }
+        name: { type: string }
+        article: { type: string, nullable: true }
+        price: { type: integer }
+        vatRate: { type: string }
+        categoryId: { type: string, nullable: true }
+        stock: { type: number }
+        egaisFlag: { type: boolean }
+        chaseznakFlag: { type: boolean }
+        updatedAt: { type: integer, format: int64 }
+
+    ShiftDto:
+      type: object
+      properties:
+        id: { type: string }
+        cashierId: { type: string }
+        deviceId: { type: string }
+        openedAt: { type: integer, format: int64 }
+        closedAt: { type: integer, format: int64, nullable: true }
+        totalCash: { type: integer }
+        totalCard: { type: integer }
+
+    DocumentItemDto:
+      type: object
+      properties:
+        productId: { type: string, nullable: true }
+        barcode: { type: string, nullable: true }
+        name: { type: string }
+        quantity: { type: number }
+        reason: { type: string, nullable: true }
