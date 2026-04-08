@@ -1,0 +1,106 @@
+package com.vitbon.kkm.features.sales.domain
+
+import com.vitbon.kkm.core.fiscal.FiscalCore
+import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.data.local.dao.CheckDao
+import com.vitbon.kkm.data.local.entity.LocalCheck
+import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ProcessSaleUseCase @Inject constructor(
+    private val fiscalCore: FiscalCore,
+    private val checkDao: CheckDao
+) {
+    suspend fun execute(
+        cart: Cart,
+        cashierId: String,
+        deviceId: String,
+        shiftId: String?
+    ): SaleResult {
+        // 1. Построить FiscalCheck
+        val fiscalCheck = FiscalCheck(
+            id = UUID.randomUUID().toString(),
+            type = CheckType.SALE,
+            items = cart.items.map { item ->
+                CheckItem(
+                    id = UUID.randomUUID().toString(),
+                    productId = item.productId,
+                    barcode = item.barcode,
+                    name = item.name,
+                    quantity = item.quantity,
+                    price = item.price,
+                    discount = item.discount,
+                    vatRate = item.vatRate,
+                    total = item.total
+                )
+            },
+            payments = listOf(
+                PaymentLine(
+                    type = cart.paymentType,
+                    amount = cart.total,
+                    label = cart.paymentType.name
+                )
+            )
+        )
+
+        // 2. Сохранить в Room (черновик — PENDING_SYNC)
+        val localCheck = LocalCheck(
+            id = fiscalCheck.id,
+            localUuid = fiscalCheck.id,
+            shiftId = shiftId,
+            cashierId = cashierId,
+            deviceId = deviceId,
+            type = CheckType.SALE.value,
+            fiscalSign = null,
+            ofdResponse = null,
+            ffdVersion = null,
+            status = "PENDING_SYNC",
+            subtotal = cart.subtotal.kopecks,
+            discount = cart.globalDiscount.kopecks,
+            total = cart.total.kopecks,
+            taxAmount = cart.taxAmount.kopecks,
+            paymentType = cart.paymentType.value,
+            createdAt = System.currentTimeMillis(),
+            syncedAt = null
+        )
+        checkDao.insert(localCheck)
+
+        // 3. Отправить в FiscalCore
+        val fiscalResult = fiscalCore.printSale(fiscalCheck)
+
+        return when (fiscalResult) {
+            is FiscalResult.Success -> {
+                checkDao.updateSyncStatus(
+                    id = fiscalCheck.id,
+                    status = "PENDING_SYNC",  // всё ещё ожидает sync up
+                    fiscalSign = fiscalResult.fiscalSign,
+                    ofdResponse = null,
+                    syncedAt = null
+                )
+                SaleResult.Success(
+                    checkId = fiscalCheck.id,
+                    fiscalSign = fiscalResult.fiscalSign,
+                    total = cart.total.rubles
+                )
+            }
+            is FiscalResult.Error -> {
+                checkDao.updateSyncStatus(
+                    id = fiscalCheck.id,
+                    status = "FISCAL_ERROR",
+                    fiscalSign = null,
+                    ofdResponse = null,
+                    syncedAt = null
+                )
+                SaleResult.FiscalError(fiscalResult.code, fiscalResult.message)
+            }
+        }
+    }
+}
+
+sealed class SaleResult {
+    data class Success(val checkId: String, val fiscalSign: String, val total: Double) : SaleResult()
+    data class FiscalError(val code: Int, val message: String) : SaleResult()
+}
