@@ -6,3 +6,15 @@
 
 # Local git worktrees
 .worktrees/
+
+# Claude local state
+.claude/
+
+# Android local/generated
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# Backend local/generated
+backend/.gradle/
+backend/build/
