@@ -1,6 +1,7 @@
 package com.vitbon.kkm.core.sync
 
 import com.vitbon.kkm.data.local.dao.CheckDao
+import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.dao.ProductDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.*
@@ -13,6 +14,7 @@ import javax.inject.Singleton
 class SyncManager @Inject constructor(
     private val api: VitbonApi,
     private val checkDao: CheckDao,
+    private val checkItemDao: CheckItemDao,
     private val productDao: ProductDao,
     private val syncPrefs: SyncPrefs
 ) {
@@ -25,6 +27,20 @@ class SyncManager @Inject constructor(
         if (pending.isEmpty()) return SyncResult(0, 0)
 
         val checkDtos = pending.map { check ->
+            val items = checkItemDao.findByCheckId(check.id).map { item ->
+                CheckItemDto(
+                    id = item.id,
+                    productId = item.productId,
+                    barcode = item.barcode,
+                    name = item.name,
+                    quantity = item.quantity,
+                    price = item.price,
+                    discount = item.discount,
+                    vatRate = item.vatRate,
+                    total = item.total
+                )
+            }
+
             CheckDto(
                 id = check.id,
                 localUuid = check.localUuid,
@@ -39,7 +55,7 @@ class SyncManager @Inject constructor(
                 total = check.total,
                 taxAmount = check.taxAmount,
                 paymentType = check.paymentType,
-                items = emptyList(), // items loaded separately if needed
+                items = items,
                 createdAt = check.createdAt
             )
         }
@@ -48,14 +64,22 @@ class SyncManager @Inject constructor(
             val response = api.syncChecks(CheckSyncRequestDto(checkDtos))
             if (response.isSuccessful) {
                 val body = response.body()!!
+                val failedUuids = body.failed.map { it.localUuid }.toSet()
                 body.failed.forEach { failed ->
                     val check = pending.find { it.localUuid == failed.localUuid }
                     if (check != null) {
-                        checkDao.updateSyncStatus(check.id, "ERROR", null, null, null)
+                        checkDao.updateSyncStatus(check.id, "ERROR", check.fiscalSign, null, null)
                     }
                 }
-                val successCount = body.processed
-                syncPrefs.lastSyncTimestamp = System.currentTimeMillis()
+
+                val syncedAt = System.currentTimeMillis()
+                pending.filterNot { it.localUuid in failedUuids }
+                    .forEach { check ->
+                        checkDao.markSynced(check.id, syncedAt)
+                    }
+
+                val successCount = pending.count { it.localUuid !in failedUuids }
+                syncPrefs.lastSyncTimestamp = syncedAt
                 SyncResult(successCount, body.failed.size)
             } else {
                 SyncResult(0, pending.size)

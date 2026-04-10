@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import com.vitbon.kkm.core.sync.worker.SyncDownWorker
 import com.vitbon.kkm.core.sync.worker.SyncUpWorker
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -14,7 +15,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SyncMonitor @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     private val _isOnline = MutableStateFlow(false)
     val isOnline: StateFlow<Boolean> = _isOnline

@@ -3,13 +3,15 @@ package com.vitbon.kkm.core.sync
 import android.content.Context
 import com.vitbon.kkm.core.sync.worker.SyncDownWorker
 import com.vitbon.kkm.core.sync.worker.SyncUpWorker
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SyncService @Inject constructor(
-    private val context: Context,
-    private val syncMonitor: SyncMonitor
+    @ApplicationContext private val context: Context,
+    private val syncMonitor: SyncMonitor,
+    private val syncManager: SyncManager
 ) {
     fun start() {
         syncMonitor.start()
@@ -32,7 +34,7 @@ class SyncService @Inject constructor(
      * Синхронизировать немедленно (перед закрытием смены и т.д.)
      */
     suspend fun syncNow(): SyncResult {
-        val manager = SyncManager(/* resolved via Hilt */)
+        val manager = syncManager
         return manager.syncChecks()
     }
 }
