@@ -428,3 +428,18 @@ Targeted evidence commands (same date):
 - `:app:testDebugUnitTest --tests '*AuthViewModelTest'` → `BUILD SUCCESSFUL`
 
 This satisfies the verification gate for the Android Step 2 lane with fresh, reproducible command evidence.
+
+### Fresh verification gate snapshot (2026-04-10, strict rerun)
+
+To reconfirm closure on a fresh day, backend and Android verification were re-run with `--rerun-tasks`.
+
+Commands and results:
+- `cd backend && ./gradlew.bat test clean compileKotlin --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`
+- `cd android && ./gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`
+
+Observed notes (non-blocking):
+- Backend lane reports Gradle deprecation warnings for upcoming Gradle 9 compatibility.
+- Android lane reports compile warnings (Room schema export and Kotlin deprecation/unused parameters), while tests/build still pass.
+
+Conclusion:
+- Step 2 verification gate remains reproducible and green for both lanes as of 2026-04-10.
