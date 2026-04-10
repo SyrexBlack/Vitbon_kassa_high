@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vitbon.kkm.features.sales.domain.CartItem
 import com.vitbon.kkm.features.sales.domain.SaleResult
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,24 +53,47 @@ fun SalesScreen(
         }
     }
 
-    LaunchedEffect(warningMessage) {
-        if (warningShown) return@LaunchedEffect
-
-        val effectiveWarning = awaitBackendWarning(
-            directWarning = warningMessage,
-            prefs = prefs,
-            attempts = 150,
-            delayMs = 200L
-        )
-
-        if (effectiveWarning != null) {
-            warningShown = true
-            prefs.edit().remove("backend_auth_warning").apply()
+    suspend fun showWarningIfPresent(
+        warningMessageSource: String?,
+        notifyParent: Boolean
+    ) {
+        if (warningShown) return
+        val warning = resolveBackendWarning(warningMessageSource, prefs) ?: return
+        warningShown = true
+        if (notifyParent) {
             onWarningShown()
-            snackbarHostState.showSnackbar(
-                message = effectiveWarning,
-                withDismissAction = true
-            )
+        }
+        snackbarHostState.showSnackbar(
+            message = warning,
+            withDismissAction = true
+        )
+    }
+
+    LaunchedEffect(warningMessage) {
+        showWarningIfPresent(
+            warningMessageSource = warningMessage,
+            notifyParent = true
+        )
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    DisposableEffect(Unit) {
+        val listener = createBackendWarningPreferenceListener(prefs) { warning ->
+            coroutineScope.launch {
+                if (!warningShown) {
+                    warningShown = true
+                    onWarningShown()
+                    snackbarHostState.showSnackbar(
+                        message = warning,
+                        withDismissAction = true
+                    )
+                }
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
         }
     }
 
@@ -257,21 +280,39 @@ private fun CartItemRow(
     }
 }
 
-private suspend fun awaitBackendWarning(
-    directWarning: String?,
-    prefs: SharedPreferences,
-    attempts: Int,
-    delayMs: Long
-): String? {
-    if (directWarning != null) return directWarning
+internal const val BACKEND_AUTH_WARNING_KEY = "backend_auth_warning"
 
-    for (i in 0 until attempts) {
-        val warning = prefs.getString("backend_auth_warning", null)
-        if (warning != null) return warning
-        delay(delayMs)
+fun consumeBackendAuthWarning(prefs: SharedPreferences): String? {
+    val warning = prefs.getString(BACKEND_AUTH_WARNING_KEY, null)
+    if (warning != null) {
+        prefs.edit().remove(BACKEND_AUTH_WARNING_KEY).apply()
     }
+    return warning
+}
 
-    return null
+fun resolveBackendWarning(
+    warningMessage: String?,
+    prefs: SharedPreferences
+): String? {
+    if (warningMessage != null) {
+        prefs.edit().remove(BACKEND_AUTH_WARNING_KEY).apply()
+        return warningMessage
+    }
+    return consumeBackendAuthWarning(prefs)
+}
+
+fun createBackendWarningPreferenceListener(
+    prefs: SharedPreferences,
+    onWarning: (String) -> Unit
+): SharedPreferences.OnSharedPreferenceChangeListener {
+    return SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == BACKEND_AUTH_WARNING_KEY) {
+            val warning = consumeBackendAuthWarning(prefs)
+            if (warning != null) {
+                onWarning(warning)
+            }
+        }
+    }
 }
 
 @Composable
