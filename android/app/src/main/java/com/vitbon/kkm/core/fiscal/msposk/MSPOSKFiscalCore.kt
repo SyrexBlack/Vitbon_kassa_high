@@ -51,7 +51,7 @@ class MSPOSKFiscalCore @Inject constructor(
         }
     }
 
-    override suspend fun shutdown() = withContext(Dispatchers.IO) {
+    override suspend fun shutdown(): Unit = withContext(Dispatchers.IO) {
         initialized = false
         // sdk.shutdown() — вызов SDK
         Log.d(TAG, "MSPOS-K SDK shut down")

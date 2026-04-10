@@ -47,7 +47,7 @@ class Neva01FFiscalCore @Inject constructor(
         }
     }
 
-    override suspend fun shutdown() = withContext(Dispatchers.IO) {
+    override suspend fun shutdown(): Unit = withContext(Dispatchers.IO) {
         initialized = false
         // sdk.shutdown()
         Log.d(TAG, "Нева 01Ф shut down")

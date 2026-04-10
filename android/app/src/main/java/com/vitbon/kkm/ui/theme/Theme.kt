@@ -35,7 +35,10 @@ fun VitbonTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
     if (!view.isInEditMode) {
-        view.root.backgroundTintList = android.content.res.ColorStateList.valueOf(colorScheme.background.toArgb())
+        val activity = view.context as Activity
+        activity.window.let { window ->
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
     MaterialTheme(
         colorScheme = colorScheme,

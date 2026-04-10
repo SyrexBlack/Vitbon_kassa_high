@@ -16,6 +16,7 @@ import com.vitbon.kkm.features.statuses.domain.*
 /**
  * Компактная строка статусов — встраивается в TopAppBar каждого экрана.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatusBar(
     status: SystemStatus,
@@ -92,6 +93,7 @@ fun StatusBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatusIndicator(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

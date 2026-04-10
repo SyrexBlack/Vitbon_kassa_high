@@ -2,8 +2,9 @@ package com.vitbon.kkm.features.statuses.domain
 
 /** Состояние интернет-соединения */
 enum class ConnectionStatus {
-    AVAILABLE,  // есть интернет
-    LOST        // нет интернета
+    AVAILABLE,
+    LOST,
+    UNKNOWN
 }
 
 /** Состояние сервиса */

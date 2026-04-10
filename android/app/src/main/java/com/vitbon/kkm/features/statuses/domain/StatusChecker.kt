@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import com.vitbon.kkm.core.sync.SyncManager
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.features.licensing.domain.LicenseChecker
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,7 @@ import javax.inject.Singleton
 
 @Singleton
 class StatusChecker @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val api: VitbonApi,
     private val syncManager: SyncManager,
     private val licenseChecker: LicenseChecker

@@ -1,6 +1,8 @@
 package com.vitbon.kkm.features.auth.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material3.*
@@ -20,7 +22,7 @@ fun AdminPinSetupScreen(
     cashierId: String,
     cashierName: String,
     onBack: () -> Unit,
-    viewModel: AdminPinViewModel = hiltViewModel()
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
@@ -82,6 +84,24 @@ fun AdminPinSetupScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NumberKey(key: String, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.size(72.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        onClick = onClick
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (key == "⌫") {
+                Icon(Icons.Default.Backspace, contentDescription = "Очистить", modifier = Modifier.size(24.dp))
+            } else {
+                Text(key, style = MaterialTheme.typography.headlineMedium)
             }
         }
     }

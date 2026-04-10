@@ -124,6 +124,7 @@ fun EgaisScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EgaisMenuItem(
     icon: String,
