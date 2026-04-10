@@ -25,6 +25,7 @@ import com.vitbon.kkm.features.auth.domain.AuthResult
 fun AuthScreen(
     onAuthSuccess: (String, String) -> Unit,  // cashierId, cashierName
     onAdminMode: () -> Unit,
+    onBackendWarning: (String) -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -33,6 +34,10 @@ fun AuthScreen(
     LaunchedEffect(state.result) {
         when (val result = state.result) {
             is AuthResult.Success -> {
+                val warning = state.backendWarning
+                if (warning != null) {
+                    onBackendWarning(warning)
+                }
                 onAuthSuccess(result.cashier.id, result.cashier.name)
                 viewModel.reset()
             }

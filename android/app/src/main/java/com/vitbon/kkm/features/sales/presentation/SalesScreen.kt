@@ -1,5 +1,7 @@
 package com.vitbon.kkm.features.sales.presentation
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,17 +15,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vitbon.kkm.features.sales.domain.CartItem
 import com.vitbon.kkm.features.sales.domain.SaleResult
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesScreen(
     cashierName: String,
     shiftNumber: Int,
+    warningMessage: String? = null,
+    onWarningShown: () -> Unit = {},
     onOpenShift: () -> Unit,
     onOpenReturn: () -> Unit,
     onOpenCorrection: () -> Unit,
@@ -33,11 +39,38 @@ fun SalesScreen(
     viewModel: SalesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("vitbon_prefs", Context.MODE_PRIVATE)
+    }
+    val snackbarHostState = remember { SnackbarHostState() }
+    var warningShown by remember(warningMessage) { mutableStateOf(false) }
 
     LaunchedEffect(state.saleResult) {
         if (state.saleResult is SaleResult.Success) {
             // Показать подтверждение → очистить корзину
             viewModel.clearCart()
+        }
+    }
+
+    LaunchedEffect(warningMessage) {
+        if (warningShown) return@LaunchedEffect
+
+        val effectiveWarning = awaitBackendWarning(
+            directWarning = warningMessage,
+            prefs = prefs,
+            attempts = 150,
+            delayMs = 200L
+        )
+
+        if (effectiveWarning != null) {
+            warningShown = true
+            prefs.edit().remove("backend_auth_warning").apply()
+            onWarningShown()
+            snackbarHostState.showSnackbar(
+                message = effectiveWarning,
+                withDismissAction = true
+            )
         }
     }
 
@@ -50,7 +83,8 @@ fun SalesScreen(
                     IconButton(onClick = onOpenReports) { Icon(Icons.Default.Assessment, "Отчёты") }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -221,6 +255,23 @@ private fun CartItemRow(
             }
         }
     }
+}
+
+private suspend fun awaitBackendWarning(
+    directWarning: String?,
+    prefs: SharedPreferences,
+    attempts: Int,
+    delayMs: Long
+): String? {
+    if (directWarning != null) return directWarning
+
+    for (i in 0 until attempts) {
+        val warning = prefs.getString("backend_auth_warning", null)
+        if (warning != null) return warning
+        delay(delayMs)
+    }
+
+    return null
 }
 
 @Composable

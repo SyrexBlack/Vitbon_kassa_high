@@ -1,6 +1,12 @@
 package com.vitbon.kkm.ui.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +34,14 @@ fun VitbonNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: String = NavRoutes.AUTH
 ) {
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("vitbon_prefs", Context.MODE_PRIVATE)
+    }
+    var backendWarningMessage by remember {
+        mutableStateOf(prefs.getString("backend_auth_warning", null))
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -39,7 +53,11 @@ fun VitbonNavHost(
                         popUpTo(NavRoutes.AUTH) { inclusive = true }
                     }
                 },
-                onAdminMode = { /* отложено */ }
+                onAdminMode = { /* отложено */ },
+                onBackendWarning = {
+                    backendWarningMessage = it
+                    prefs.edit().putString("backend_auth_warning", it).apply()
+                }
             )
         }
 
@@ -51,6 +69,11 @@ fun VitbonNavHost(
             SalesScreen(
                 cashierName = cashierName,
                 shiftNumber = 1,
+                warningMessage = backendWarningMessage,
+                onWarningShown = {
+                    backendWarningMessage = null
+                    prefs.edit().remove("backend_auth_warning").apply()
+                },
                 onOpenShift = { navController.navigate(NavRoutes.SHIFT) },
                 onOpenReturn = { /* TODO */ },
                 onOpenCorrection = { navController.navigate(NavRoutes.CORRECTION) },

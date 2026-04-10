@@ -443,3 +443,56 @@ Observed notes (non-blocking):
 
 Conclusion:
 - Step 2 verification gate remains reproducible and green for both lanes as of 2026-04-10.
+
+### Runtime UI evidence update (2026-04-10, strict screen-evidence lane)
+
+#### H) Sales screen non-zero item proof (PASS)
+
+Captured runtime evidence after barcode flow (`4607001234567`):
+- Screenshot: `.claude/sales_with_item.png`
+  - visible item: `Вода 0.5л`
+  - quantity: `1.0`
+  - line total: `129.0 ₽`
+  - non-zero cart subtotal path visible on screen.
+- UI dump: `.claude/window_dump_sales_with_item.xml`
+  - contains `Вода 0.5л`, `129.0 ₽`, and `ИТОГО: 129.0 ₽` labels.
+
+#### I) Reports visual capture lane (PASS after runtime fix)
+
+Fresh runtime evidence confirms Reports opens without crash and renders non-zero values after sale:
+- Screenshot: `.claude/reports_after_sale_final2.png`
+- UI dump: `.claude/window_dump_reports_after_sale_final2.xml`
+  - contains `Отчёты`, `💰 Выручка`, `Продажи`, `129.0 ₽`, `Чеков продаж`, `1`.
+
+Crash-regression check (same flow):
+- Logcat: `.claude/logcat_warning_reports_final2.txt`
+- `NoSuchMethodError` / `ProgressIndicator` / `FATAL EXCEPTION` / `ReportsScreenKt` — **not found**.
+
+Interpretation:
+- Runtime crash path from earlier lane is no longer reproduced in this build artifact.
+- Reports non-zero visual evidence is now deterministic and satisfies the screen-level criterion.
+
+#### J) Auth warning visual capture status (PASS)
+
+Fresh offline-backed runtime lane now contains deterministic on-screen warning evidence:
+- Backend deliberately unavailable during auth check (`curl http://127.0.0.1:8080/api/v1/statuses` → HTTP `000` / connection failed).
+- Screenshot: `.claude/warning_sales_final2.png`
+- UI dump: `.claude/window_dump_warning_sales_final2.xml`
+  - contains snackbar text: `Локальный вход выполнен, сервер временно недоступен`.
+
+Corroborating state evidence:
+- Shared prefs snapshot: `.claude/prefs_after_warning_try4.xml`
+  - includes `backend_auth_warning` and `last_backend_auth_ok=false` in the same lane before snackbar consumption.
+
+Interpretation:
+- Session remains active (sales screen visible) while warning is shown non-blockingly.
+- The auth warning criterion is now satisfied at screen-evidence level, not only by unit tests.
+
+#### K) Step 2 evidence posture after fresh UI lane
+
+- Sales visual proof: **PASS** (`.claude/sales_with_item_final2.png`, `.claude/window_dump_sales_with_item_final2.xml`).
+- Reports visual non-zero proof: **PASS** (`.claude/reports_after_sale_final2.png`, `.claude/window_dump_reports_after_sale_final2.xml`).
+- Auth warning visual proof: **PASS** (`.claude/warning_sales_final2.png`, `.claude/window_dump_warning_sales_final2.xml`).
+
+Operational status:
+- Screen-level evidence for the requested `Auth → Sales → Reports` practical lane is now closed with fresh artifacts from one verification cycle.

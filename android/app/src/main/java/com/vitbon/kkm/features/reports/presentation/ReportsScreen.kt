@@ -69,7 +69,7 @@ fun ReportsScreen(onBack: () -> Unit, viewModel: ReportsViewModel = hiltViewMode
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    Text("Загрузка отчёта…")
                 }
             }
         }
