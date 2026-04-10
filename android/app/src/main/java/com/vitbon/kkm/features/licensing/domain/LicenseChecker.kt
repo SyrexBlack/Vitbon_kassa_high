@@ -92,7 +92,7 @@ class LicenseChecker @Inject constructor(
 
     private fun handleExpired(now: Long, graceUntil: Long?): LicenseStatus {
         val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
-        val daysLeft = ((graceTs - now) / DAY_MS).toInt().coerceAtLeast(0)
+        val daysLeft = calculateDaysLeft(graceTs, now)
 
         prefs.edit()
             .putLong(KEY_LAST_CHECK, now)
@@ -115,7 +115,7 @@ class LicenseChecker @Inject constructor(
 
     private fun handleGracePeriod(now: Long, graceUntil: Long?): LicenseStatus {
         val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
-        val daysLeft = ((graceTs - now) / DAY_MS).toInt().coerceAtLeast(0)
+        val daysLeft = calculateDaysLeft(graceTs, now)
 
         prefs.edit()
             .putLong(KEY_LAST_CHECK, now)
@@ -137,7 +137,7 @@ class LicenseChecker @Inject constructor(
     private fun checkGraceExpired(): LicenseStatus {
         val graceUntil = prefs.getLong(KEY_GRACE_UNTIL, 0L)
         val now = System.currentTimeMillis()
-        val daysLeft = ((graceUntil - now) / DAY_MS).toInt().coerceAtLeast(0)
+        val daysLeft = calculateDaysLeft(graceUntil, now)
 
         return if (graceUntil == 0L) {
             // Никогда не проверяли — запустить grace period
@@ -155,6 +155,12 @@ class LicenseChecker @Inject constructor(
             _blockingState.value = AppBlockingState.Blocked("Лицензия просрочена. Обратитесь в поддержку.")
             LicenseStatus.Expired
         }
+    }
+
+    private fun calculateDaysLeft(graceUntil: Long, now: Long): Int {
+        val millisLeft = graceUntil - now
+        if (millisLeft <= 0L) return 0
+        return ((millisLeft + DAY_MS - 1) / DAY_MS).toInt()
     }
 
     /** Должен ли показываться экран блокировки */

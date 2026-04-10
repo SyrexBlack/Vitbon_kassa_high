@@ -67,6 +67,19 @@ class LicenseCheckerTest {
     }
 
     @Test
+    fun `grace period keeps at least one day while remaining ms is positive`() {
+        val dayMs = 24L * 60 * 60 * 1000
+        val graceStart = 1_000_000L
+        val now = graceStart + 6L * dayMs + 23L * 60 * 60 * 1000
+        val graceUntil = graceStart + 7L * dayMs
+
+        val result = invokePrivateGraceMethod("handleExpired", now, graceUntil)
+
+        assertTrue(result is LicenseStatus.GracePeriod)
+        assertEquals(1, (result as LicenseStatus.GracePeriod).daysLeft)
+    }
+
+    @Test
     fun `LicenseStatus — all states covered`() {
         val active = LicenseStatus.Active
         val grace = LicenseStatus.GracePeriod(3)
