@@ -1,26 +1,16 @@
 package com.vitbon.kkm.data.remote
 
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.security.MessageDigest
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
-import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 object ApiClient {
-    private const val BASE_URL = "https://api.vitbon.ru/"
-    private const val PREFS_NAME = "vitbon_secure_prefs"
 
-    fun create(context: Context, token: String?): VitbonApi {
+    fun create(prefs: android.content.SharedPreferences): VitbonApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -30,21 +20,18 @@ object ApiClient {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(logging)
-            .apply {
-                if (token != null) {
-                    addInterceptor { chain ->
-                        chain.proceed(
-                            chain.request().newBuilder()
-                                .addHeader("Authorization", "Bearer $token")
-                                .build()
-                        )
-                    }
+            .addInterceptor { chain ->
+                val token = prefs.getString("auth_token", null)
+                val requestBuilder = chain.request().newBuilder()
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
                 }
+                chain.proceed(requestBuilder.build())
             }
             .build()
 
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

@@ -16,6 +16,8 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
+        buildConfigField("String", "API_BASE_URL", "\"https://api.vitbon.ru/\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -29,11 +31,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://api.vitbon.ru/\"")
         }
         debug {
             isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
         }
     }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -54,10 +59,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-}
 
-composeOptions {
-    kotlinCompilerExtensionVersion = "1.5.8"
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
 }
 
 dependencies {
@@ -116,6 +121,7 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }

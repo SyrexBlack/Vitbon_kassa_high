@@ -6,6 +6,7 @@ import android.provider.Settings
 import android.util.Log
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.LicenseCheckRequestDto
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +19,12 @@ private const val KEY_LAST_CHECK = "last_check_ts"
 private const val KEY_GRACE_UNTIL = "grace_until_ts"
 private const val KEY_LICENSE_STATUS = "license_status"
 private const val GRACE_PERIOD_DAYS = 7L
-private const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L  // 24 hours
+private const val DAY_MS = 24 * 60 * 60 * 1000L
+private const val CHECK_INTERVAL_MS = DAY_MS  // 24 hours
 
 @Singleton
 class LicenseChecker @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val api: VitbonApi,
     private val prefs: SharedPreferences
 ) {
@@ -32,12 +34,12 @@ class LicenseChecker @Inject constructor(
     private val _blockingState = MutableStateFlow<AppBlockingState>(AppBlockingState.Unblocked)
     val blockingState: StateFlow<AppBlockingState> = _blockingState.asStateFlow()
 
-    private val deviceId: String by lazy {
+    private val _deviceId: String by lazy {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
     }
 
     /** Получить deviceId для отправки на сервер */
-    fun getDeviceId(): String = deviceId
+    fun getDeviceId(): String = _deviceId
 
     /**
      * Проверка лицензии. Вызывается:
@@ -46,7 +48,7 @@ class LicenseChecker @Inject constructor(
      */
     suspend fun check(): LicenseStatus {
         return try {
-            val response = api.checkLicense(LicenseCheckRequestDto(deviceId))
+            val response = api.checkLicense(LicenseCheckRequestDto(_deviceId))
             if (response.isSuccessful) {
                 val body = response.body()!!
                 val now = System.currentTimeMillis()
@@ -88,9 +90,9 @@ class LicenseChecker @Inject constructor(
         }
     }
 
-    private fun handleExpired(now: Long, graceUntil: Long?) {
-        val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000L)
-        val daysLeft = ((graceTs - now) / (GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+    private fun handleExpired(now: Long, graceUntil: Long?): LicenseStatus {
+        val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
+        val daysLeft = ((graceTs - now) / DAY_MS).toInt().coerceAtLeast(0)
 
         prefs.edit()
             .putLong(KEY_LAST_CHECK, now)
@@ -102,16 +104,18 @@ class LicenseChecker @Inject constructor(
             _status.value = LicenseStatus.GracePeriod(daysLeft)
             _blockingState.value = AppBlockingState.Unblocked
             Log.d(TAG, "License: GRACE_PERIOD, daysLeft=$daysLeft")
+            return _status.value
         } else {
             _status.value = LicenseStatus.Expired
             _blockingState.value = AppBlockingState.Blocked("Лицензия просрочена. Обратитесь в поддержку.")
             Log.w(TAG, "License: EXPIRED, blocked")
+            return _status.value
         }
     }
 
-    private fun handleGracePeriod(now: Long, graceUntil: Long?) {
-        val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000L)
-        val daysLeft = ((graceTs - now) / (GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+    private fun handleGracePeriod(now: Long, graceUntil: Long?): LicenseStatus {
+        val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
+        val daysLeft = ((graceTs - now) / DAY_MS).toInt().coerceAtLeast(0)
 
         prefs.edit()
             .putLong(KEY_LAST_CHECK, now)
@@ -122,20 +126,22 @@ class LicenseChecker @Inject constructor(
         if (daysLeft > 0) {
             _status.value = LicenseStatus.GracePeriod(daysLeft)
             _blockingState.value = AppBlockingState.Unblocked
+            return _status.value
         } else {
             _status.value = LicenseStatus.Expired
             _blockingState.value = AppBlockingState.Blocked("Лицензия просрочена. Обратитесь в поддержку.")
+            return _status.value
         }
     }
 
     private fun checkGraceExpired(): LicenseStatus {
         val graceUntil = prefs.getLong(KEY_GRACE_UNTIL, 0L)
         val now = System.currentTimeMillis()
-        val daysLeft = ((graceUntil - now) / (GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+        val daysLeft = ((graceUntil - now) / DAY_MS).toInt().coerceAtLeast(0)
 
         return if (graceUntil == 0L) {
             // Никогда не проверяли — запустить grace period
-            val newGrace = now + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000L
+            val newGrace = now + GRACE_PERIOD_DAYS * DAY_MS
             prefs.edit().putLong(KEY_GRACE_UNTIL, newGrace).apply()
             _status.value = LicenseStatus.GracePeriod(7)
             _blockingState.value = AppBlockingState.Unblocked

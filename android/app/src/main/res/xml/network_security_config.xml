@@ -4,4 +4,8 @@
         <domain includeSubdomains="true">vitbon.ru</domain>
         <domain includeSubdomains="true">localhost</domain>  <!-- для УТМ локально -->
     </domain-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
 </network-security-config>

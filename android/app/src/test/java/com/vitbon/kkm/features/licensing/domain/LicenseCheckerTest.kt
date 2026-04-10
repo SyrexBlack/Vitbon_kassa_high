@@ -1,23 +1,69 @@
 package com.vitbon.kkm.features.licensing.domain
 
-import org.junit.Assert.*
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import com.vitbon.kkm.data.remote.api.VitbonApi
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class LicenseCheckerTest {
-    @Test
-    fun `grace period — 7 days counted correctly`() {
-        val now = System.currentTimeMillis()
-        val graceUntil = now + 7L * 24 * 60 * 60 * 1000
-        val daysLeft = ((graceUntil - now) / (7L * 24 * 60 * 60 * 1000)).toInt()
-        assertEquals(7, daysLeft)
+    private val context = mockk<Context>(relaxed = true)
+    private val api = mockk<VitbonApi>(relaxed = true)
+    private val prefs = mockk<SharedPreferences>(relaxed = true)
+    private val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+
+    private lateinit var checker: LicenseChecker
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any<String>()) } returns 0
+        every { Log.w(any(), any<String>()) } returns 0
+
+        every { prefs.edit() } returns editor
+        every { editor.putLong(any(), any()) } returns editor
+        every { editor.putString(any(), any()) } returns editor
+        every { editor.remove(any()) } returns editor
+
+        checker = LicenseChecker(context, api, prefs)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
     }
 
     @Test
-    fun `grace period — expired when 0 days left`() {
-        val now = System.currentTimeMillis()
-        val graceUntil = now - 1  // already expired
-        val daysLeft = ((graceUntil - now) / (7L * 24 * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
-        assertEquals(0, daysLeft)
+    fun `grace period starts with 7 full days`() {
+        val dayMs = 24L * 60 * 60 * 1000
+        val now = 1_000_000L
+        val graceUntil = now + 7L * dayMs
+
+        val result = invokePrivateGraceMethod("handleExpired", now, graceUntil)
+
+        assertTrue(result is LicenseStatus.GracePeriod)
+        assertEquals(7, (result as LicenseStatus.GracePeriod).daysLeft)
+    }
+
+    @Test
+    fun `grace period keeps 6 days after one day elapsed`() {
+        val dayMs = 24L * 60 * 60 * 1000
+        val graceStart = 1_000_000L
+        val now = graceStart + dayMs
+        val graceUntil = graceStart + 7L * dayMs
+
+        val result = invokePrivateGraceMethod("handleExpired", now, graceUntil)
+
+        assertTrue(result is LicenseStatus.GracePeriod)
+        assertEquals(6, (result as LicenseStatus.GracePeriod).daysLeft)
     }
 
     @Test
@@ -43,5 +89,15 @@ class LicenseCheckerTest {
         assertTrue(unblocked is AppBlockingState.Unblocked)
         assertTrue(blocked is AppBlockingState.Blocked)
         assertEquals("Просрочка", (blocked as AppBlockingState.Blocked).reason)
+    }
+
+    private fun invokePrivateGraceMethod(methodName: String, now: Long, graceUntil: Long?): LicenseStatus {
+        val method = LicenseChecker::class.java.getDeclaredMethod(
+            methodName,
+            Long::class.javaPrimitiveType,
+            java.lang.Long::class.java
+        )
+        method.isAccessible = true
+        return method.invoke(checker, now, graceUntil) as LicenseStatus
     }
 }
