@@ -22,5 +22,6 @@ abstract class VitbonDatabase : RoomDatabase() {
     abstract fun cashierDao(): CashierDao
     abstract fun shiftDao(): ShiftDao
     abstract fun checkDao(): CheckDao
+    abstract fun checkItemDao(): CheckItemDao
     abstract fun productDao(): ProductDao
 }

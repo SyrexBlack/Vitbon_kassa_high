@@ -15,12 +15,12 @@ class ProductRepository @Inject constructor(
     fun observeAll(): Flow<List<LocalProduct>> = productDao.observeAll()
 
     /** Найти товар по штрихкоду */
-    suspend fun findByBarcode(barcode: String): LocalProduct? {
-        return productDao.findByBarcode(barcode)
+    suspend fun findByBarcode(barcode: String): Product? {
+        return productDao.findByBarcode(barcode)?.toDomain()
     }
 
-    suspend fun findById(id: String): LocalProduct? {
-        return productDao.findById(id)
+    suspend fun findById(id: String): Product? {
+        return productDao.findById(id)?.toDomain()
     }
 
     /** Поиск по названию или артикулу */

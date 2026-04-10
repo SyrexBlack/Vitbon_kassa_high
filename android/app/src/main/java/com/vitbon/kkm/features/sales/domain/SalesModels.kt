@@ -11,7 +11,7 @@ data class CartItem(
     val discount: Money = Money.ZERO,
     val vatRate: VatRate
 ) {
-    val total: Money get() = Money(price.kopecks * quantity) - discount
+    val total: Money get() = Money((price.kopecks * quantity).toLong()) - discount
 }
 
 data class Cart(

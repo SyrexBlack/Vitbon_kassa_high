@@ -15,6 +15,9 @@ interface CashierDao {
     @Query("SELECT * FROM cashiers WHERE pinHash = :pinHash")
     suspend fun findByPinHash(pinHash: String): LocalCashier?
 
+    @Query("SELECT COUNT(*) FROM cashiers")
+    suspend fun count(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(cashier: LocalCashier)
 

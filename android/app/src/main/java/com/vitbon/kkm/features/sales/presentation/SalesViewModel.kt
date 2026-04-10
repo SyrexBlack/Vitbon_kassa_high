@@ -3,6 +3,7 @@ package com.vitbon.kkm.features.sales.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.sales.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,8 @@ data class SalesState(
 class SalesViewModel @Inject constructor(
     private val scanBarcode: ScanBarcodeUseCase,
     private val processSale: ProcessSaleUseCase,
-    private val authUseCase: AuthUseCase
+    private val authUseCase: AuthUseCase,
+    private val syncService: SyncService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SalesState())
@@ -105,6 +107,11 @@ class SalesViewModel @Inject constructor(
                 deviceId = android.os.Build.MODEL,
                 shiftId = null
             )
+
+            if (result is SaleResult.Success) {
+                syncService.onCheckCreated()
+            }
+
             _state.update { it.copy(isProcessing = false, saleResult = result) }
         }
     }

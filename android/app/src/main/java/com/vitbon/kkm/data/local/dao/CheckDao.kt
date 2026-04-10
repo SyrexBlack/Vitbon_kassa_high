@@ -18,6 +18,9 @@ interface CheckDao {
     @Query("SELECT * FROM checks WHERE shiftId = :shiftId ORDER BY createdAt DESC")
     fun observeByShift(shiftId: String): Flow<List<LocalCheck>>
 
+    @Query("SELECT * FROM checks WHERE createdAt BETWEEN :fromTs AND :toTs ORDER BY createdAt DESC")
+    suspend fun findByDateRange(fromTs: Long, toTs: Long): List<LocalCheck>
+
     @Query("SELECT COUNT(*) FROM checks WHERE status = 'PENDING_SYNC'")
     fun observePendingCount(): Flow<Int>
 
@@ -26,4 +29,7 @@ interface CheckDao {
 
     @Query("UPDATE checks SET status = :status, fiscalSign = :fiscalSign, ofdResponse = :ofdResponse, syncedAt = :syncedAt WHERE id = :id")
     suspend fun updateSyncStatus(id: String, status: String, fiscalSign: String?, ofdResponse: String?, syncedAt: Long?)
+
+    @Query("UPDATE checks SET status = 'SYNCED', syncedAt = :syncedAt WHERE id = :id")
+    suspend fun markSynced(id: String, syncedAt: Long)
 }

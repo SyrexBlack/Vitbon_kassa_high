@@ -18,6 +18,9 @@ interface ProductDao {
     @Query("SELECT * FROM products")
     fun observeAll(): Flow<List<LocalProduct>>
 
+    @Query("SELECT COUNT(*) FROM products")
+    suspend fun count(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(product: LocalProduct)
 

@@ -3,6 +3,7 @@ package com.vitbon.kkm.features.sales.domain
 import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.data.local.dao.CheckDao
+import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import java.util.UUID
@@ -12,7 +13,8 @@ import javax.inject.Singleton
 @Singleton
 class ProcessSaleUseCase @Inject constructor(
     private val fiscalCore: FiscalCore,
-    private val checkDao: CheckDao
+    private val checkDao: CheckDao,
+    private val checkItemDao: CheckItemDao
 ) {
     suspend fun execute(
         cart: Cart,
@@ -67,6 +69,22 @@ class ProcessSaleUseCase @Inject constructor(
             syncedAt = null
         )
         checkDao.insert(localCheck)
+
+        val localItems = fiscalCheck.items.map { item ->
+            LocalCheckItem(
+                id = item.id,
+                checkId = fiscalCheck.id,
+                productId = item.productId,
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = item.price.kopecks,
+                discount = item.discount.kopecks,
+                vatRate = item.vatRate.name,
+                total = item.total.kopecks
+            )
+        }
+        checkItemDao.insertAll(localItems)
 
         // 3. Отправить в FiscalCore
         val fiscalResult = fiscalCore.printSale(fiscalCheck)

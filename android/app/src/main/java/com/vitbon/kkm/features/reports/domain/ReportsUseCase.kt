@@ -8,13 +8,9 @@ import javax.inject.Singleton
 @Singleton
 class ReportsUseCase @Inject constructor(private val checkDao: CheckDao) {
     suspend fun getSalesReport(fromTs: Long, toTs: Long): SalesReport {
-        // В реальности: запрос к БД с фильтрами по дате
-        val checks = checkDao.findPendingSync().filter {
-            it.createdAt in fromTs..toTs && it.type == "SALE"
-        }
-        val returns = checkDao.findPendingSync().filter {
-            it.createdAt in fromTs..toTs && it.type == "RETURN"
-        }
+        val checksInRange = checkDao.findByDateRange(fromTs, toTs)
+        val checks = checksInRange.filter { it.type == "sale" }
+        val returns = checksInRange.filter { it.type == "return" }
         val cashTotal = checks.filter { it.paymentType == "cash" }.sumOf { it.total }
         val cardTotal = checks.filter { it.paymentType == "card" }.sumOf { it.total }
         val sbpTotal = checks.filter { it.paymentType == "sbp" }.sumOf { it.total }
