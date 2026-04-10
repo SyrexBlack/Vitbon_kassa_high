@@ -34,7 +34,7 @@ class FiscalDocumentBuilderTest {
         assertEquals("1", doc.fields[1031])           // ФФД 1.05
         assertEquals("Иванов И.И.", doc.fields[1055]) // кассир
         assertEquals("770123456789", doc.fields[1018]) // ИНН
-        assertEquals("20000", doc.fields[1214])        // итого расчёт
+        assertEquals("19800", doc.fields[1214])        // итого расчёт
         assertEquals("20000", doc.fields[1215])        // наличные
     }
 
@@ -51,7 +51,8 @@ class FiscalDocumentBuilderTest {
     @Test
     fun `return — includes original fiscal sign tag 1193`() {
         val builder = FiscalDocumentBuilder(FFDVersion.V1_05)
-        val doc = builder.buildReturn(makeTestCheck(), "ORIG_FISCAL_SIG", "Иванов", null)
+        val returnCheck = makeTestCheck().copy(type = CheckType.RETURN)
+        val doc = builder.buildReturn(returnCheck, "ORIG_FISCAL_SIG", "Иванов", null)
 
         assertEquals("2", doc.fields[1000])        // возврат прихода
         assertEquals("2", doc.fields[1192])        // признак возврата

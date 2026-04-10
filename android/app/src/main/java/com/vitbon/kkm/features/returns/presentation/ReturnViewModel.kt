@@ -77,7 +77,7 @@ class ReturnViewModel @Inject constructor(
 
     private fun recalcTotal() {
         val total = Money(_state.value.returnItems.filter { it.selected }
-            .sumOf { it.price.kopecks * it.quantity })
+            .sumOf { (it.price.kopecks * it.quantity).toLong() })
         _state.update { it.copy(returnTotal = total) }
     }
 

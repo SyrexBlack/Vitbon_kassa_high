@@ -16,6 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vitbon.kkm.features.sales.domain.CartItem
+import com.vitbon.kkm.features.sales.domain.SaleResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +33,6 @@ fun SalesScreen(
     viewModel: SalesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showPaymentDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.saleResult) {
         if (state.saleResult is SaleResult.Success) {
@@ -157,15 +158,14 @@ fun SalesScreen(
                     Spacer(Modifier.height(12.dp))
 
                     Button(
-                        onClick = { showPaymentDialog = true },
+                        onClick = { viewModel.processSale() },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         enabled = state.cart.items.isNotEmpty() && !state.isProcessing
                     ) {
-                        if (state.isProcessing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Text("ПРОДАТЬ  →", style = MaterialTheme.typography.titleMedium)
-                        }
+                        Text(
+                            if (state.isProcessing) "ОБРАБОТКА..." else "ПРОДАТЬ  →",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
 
                     if (state.saleResult is SaleResult.FiscalError) {

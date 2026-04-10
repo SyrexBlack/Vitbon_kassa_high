@@ -46,10 +46,10 @@ class ReturnUseCase @Inject constructor(
                     price = item.price,
                     discount = item.discount,
                     vatRate = item.vatRate,
-                    total = Money(item.price.kopecks * item.quantity)
+                    total = Money((item.price.kopecks * item.quantity).toLong())
                 )
             },
-            payments = listOf(PaymentLine(PaymentType.CASH, Money(items.sumOf { it.price.kopecks * it.quantity }), "Возврат"))
+            payments = listOf(PaymentLine(PaymentType.CASH, Money((items.sumOf { it.price.kopecks * it.quantity }).toLong()), "Возврат"))
         )
 
         // Сохранить в Room
@@ -64,9 +64,9 @@ class ReturnUseCase @Inject constructor(
             ofdResponse = null,
             ffdVersion = null,
             status = "PENDING_SYNC",
-            subtotal = items.sumOf { it.price.kopecks * it.quantity },
+            subtotal = items.sumOf { (it.price.kopecks * it.quantity).toLong() },
             discount = 0,
-            total = items.sumOf { it.price.kopecks * it.quantity },
+            total = items.sumOf { (it.price.kopecks * it.quantity).toLong() },
             taxAmount = 0,
             paymentType = PaymentType.CASH.value,
             createdAt = System.currentTimeMillis(),

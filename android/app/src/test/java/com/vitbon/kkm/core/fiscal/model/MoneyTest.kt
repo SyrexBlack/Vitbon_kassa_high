@@ -21,8 +21,8 @@ class MoneyTest {
 
     @Test
     fun `Money — fromRubles and rubles conversion`() {
-        assertEquals(Money(999_99L), Money.fromRubles(9.999))
-        assertEquals(9.999, Money(999_99L).rubles, 0.001)
+        assertEquals(Money(999L), Money.fromRubles(9.999))
+        assertEquals(9.99, Money(999L).rubles, 0.001)
     }
 
     @Test
