@@ -5,7 +5,7 @@ import com.vitbon.kkm.domain.service.AuthService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("api/v1/auth")
+@RequestMapping("/api/v1/auth")
 class AuthController(private val authService: AuthService) {
 
     @PostMapping("login")

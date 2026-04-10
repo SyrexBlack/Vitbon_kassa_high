@@ -5,8 +5,8 @@ import com.vitbon.kkm.domain.service.StatusService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("api/v1/statuses")
+@RequestMapping("/api/v1/statuses")
 class StatusController(private val statusService: StatusService) {
-    @GET
+    @GetMapping
     fun getStatuses(): StatusResponseDto = statusService.getStatuses()
 }

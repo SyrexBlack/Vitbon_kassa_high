@@ -5,7 +5,7 @@ import com.vitbon.kkm.domain.service.DocumentService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("api/v1/documents")
+@RequestMapping("/api/v1/documents")
 class DocumentsController(private val documentService: DocumentService) {
     @PostMapping("acceptance") fun sendAcceptance(@RequestBody doc: DocumentDto) = documentService.save(doc, "ACCEPTANCE")
     @PostMapping("writeoff") fun sendWriteoff(@RequestBody doc: DocumentDto) = documentService.save(doc, "WRITEOFF")

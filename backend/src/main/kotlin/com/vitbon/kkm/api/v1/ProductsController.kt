@@ -5,10 +5,10 @@ import com.vitbon.kkm.domain.service.ProductService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("api/v1/products")
+@RequestMapping("/api/v1/products")
 class ProductsController(private val productService: ProductService) {
 
-    @GET
+    @GetMapping
     fun getProducts(@RequestParam since: Long?): ProductSyncResponseDto {
         return productService.getProductsDelta(since)
     }

@@ -1,8 +1,8 @@
 package com.vitbon.kkm.integration
 
 import com.vitbon.kkm.api.dto.*
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class ProductSyncIntegrationTest {
     @Test

@@ -5,9 +5,9 @@ import com.vitbon.kkm.domain.service.LicenseService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("api/v1/license")
+@RequestMapping("/api/v1/license")
 class LicenseController(private val licenseService: LicenseService) {
-    @POST("check")
+    @PostMapping("check")
     fun checkLicense(@RequestBody req: LicenseCheckRequestDto): LicenseCheckResponseDto {
         return licenseService.check(req.deviceId)
     }

@@ -1,15 +1,18 @@
 package com.vitbon.kkm.integration
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitbon.kkm.api.dto.*
-import com.vitbon.kkm.domain.service.CheckService
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
-import javax.servlet.http.HttpServletRequest
 
 @SpringBootTest
 class CheckSyncIntegrationTest {
@@ -17,9 +20,11 @@ class CheckSyncIntegrationTest {
     @Autowired
     lateinit var context: WebApplicationContext
 
+    @Autowired
+    lateinit var objectMapper: ObjectMapper
+
     @Test
     fun `POST checks-sync — accepts valid check and returns processed count`() {
-        // Подготовка: создать mock API endpoint
         val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
 
         val request = CheckSyncRequestDto(listOf(
@@ -54,9 +59,15 @@ class CheckSyncIntegrationTest {
             )
         ))
 
-        // Тест: синхронизация чека — API должен принять и вернуть processed=1
-        // (реальная реализация требует запущенного PostgreSQL)
-        assertTrue(true) // placeholder — интеграция с TestContainers
+        mockMvc.perform(
+            post("/api/v1/checks/sync")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.processed").value(1))
+            .andExpect(jsonPath("$.failed").isArray)
+            .andExpect(jsonPath("$.failed").isEmpty)
     }
 
     @Test
