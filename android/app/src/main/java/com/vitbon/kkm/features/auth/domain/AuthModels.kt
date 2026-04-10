@@ -13,6 +13,10 @@ data class AuthenticatedCashier(
 )
 
 sealed class AuthResult {
-    data class Success(val cashier: AuthenticatedCashier) : AuthResult()
+    data class Success(
+        val cashier: AuthenticatedCashier,
+        val backendWarning: String? = null
+    ) : AuthResult()
+
     data class Error(val message: String) : AuthResult()
 }

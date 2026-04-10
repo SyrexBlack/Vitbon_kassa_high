@@ -15,7 +15,8 @@ import javax.inject.Inject
 data class AuthState(
     val pin: String = "",
     val isLoading: Boolean = false,
-    val result: AuthResult? = null
+    val result: AuthResult? = null,
+    val backendWarning: String? = null
 )
 
 @HiltViewModel
@@ -42,12 +43,24 @@ class AuthViewModel @Inject constructor(
     private fun attemptLogin() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val result = authUseCase.authenticate(_state.value.pin)
+            val pin = _state.value.pin
+            val result = authUseCase.authenticate(pin)
             _state.update { it.copy(isLoading = false, result = result) }
+
+            if (result is AuthResult.Success) {
+                val warning = authUseCase.validateWithBackendBestEffort(pin)
+                if (warning != null) {
+                    _state.update { it.copy(backendWarning = warning) }
+                }
+            }
         }
     }
 
     fun reset() {
-        _state.update { it.copy(pin = "", result = null) }
+        _state.update { it.copy(pin = "", result = null, backendWarning = null) }
+    }
+
+    fun clearBackendWarning() {
+        _state.update { it.copy(backendWarning = null) }
     }
 }

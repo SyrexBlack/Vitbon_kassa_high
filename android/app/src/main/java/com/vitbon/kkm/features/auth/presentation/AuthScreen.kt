@@ -101,6 +101,16 @@ fun AuthScreen(
                 )
             }
 
+            if (state.backendWarning != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = state.backendWarning!!,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             Spacer(Modifier.weight(1f))
 
             // Цифровая клавиатура
