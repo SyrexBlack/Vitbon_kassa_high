@@ -29,36 +29,61 @@ class AcceptanceViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(AcceptanceState())
     val state: StateFlow<AcceptanceState> = _state.asStateFlow()
+    private var nextItemId: Long = 1L
 
     fun addItem(barcode: String? = null, name: String = "Товар", price: Double = 0.0) {
+        val itemId = nextItemId++
         val item = AcceptanceItem(
-            barcode = barcode ?: "TEST-${System.currentTimeMillis()}",
+            id = itemId,
+            barcode = barcode ?: "TEST-$itemId",
             name = name,
             quantity = 1.0,
             price = price
         )
-        _state.update { it.copy(items = it.items + item) }
+        _state.update { it.copy(items = it.items + item, error = null, submitted = false) }
     }
 
-    fun updateQuantity(barcode: String, quantity: Double) {
+    fun updateQuantity(itemId: Long, quantity: Double) {
         _state.update { st ->
-            st.copy(items = st.items.map {
-                if (it.barcode == barcode) it.copy(quantity = quantity) else it
-            })
+            st.copy(
+                items = st.items.map {
+                    if (it.id == itemId) it.copy(quantity = quantity) else it
+                },
+                error = null,
+                submitted = false
+            )
         }
     }
 
-    fun removeItem(barcode: String) {
-        _state.update { st -> st.copy(items = st.items.filter { it.barcode != barcode }) }
+    fun removeItem(itemId: Long) {
+        _state.update {
+            it.copy(
+                items = it.items.filter { item -> item.id != itemId },
+                error = null,
+                submitted = false
+            )
+        }
     }
 
     fun submit() {
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, error = null) }
+            val itemsToSend = _state.value.items
+            if (itemsToSend.isEmpty()) {
+                _state.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submitted = false,
+                        error = "Добавьте хотя бы один товар"
+                    )
+                }
+                return@launch
+            }
+
+            _state.update { it.copy(isSubmitting = true, error = null, submitted = false) }
             try {
                 val dto = DocumentDto(
                     type = "ACCEPTANCE",
-                    items = _state.value.items.map {
+                    items = itemsToSend.map {
                         DocumentItemDto(
                             productId = null,
                             barcode = it.barcode,
@@ -70,12 +95,31 @@ class AcceptanceViewModel @Inject constructor(
                 )
                 val response = api.sendAcceptance(dto)
                 if (response.isSuccessful) {
-                    _state.update { it.copy(isSubmitting = false, submitted = true, items = emptyList()) }
+                    _state.update {
+                        it.copy(
+                            isSubmitting = false,
+                            submitted = true,
+                            error = null,
+                            items = emptyList()
+                        )
+                    }
                 } else {
-                    _state.update { it.copy(isSubmitting = false, error = "Ошибка отправки: ${response.code()}") }
+                    _state.update {
+                        it.copy(
+                            isSubmitting = false,
+                            submitted = false,
+                            error = "Ошибка отправки: ${response.code()}"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isSubmitting = false, error = e.message) }
+                _state.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submitted = false,
+                        error = e.message ?: "Ошибка отправки"
+                    )
+                }
             }
         }
     }

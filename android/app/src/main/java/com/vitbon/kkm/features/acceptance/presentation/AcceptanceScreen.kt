@@ -71,11 +71,11 @@ fun AcceptanceScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(state.items, key = { it.barcode }) { item ->
+                    items(state.items, key = { it.id }) { item ->
                         AcceptanceItemCard(
                             item = item,
-                            onQuantityChange = { viewModel.updateQuantity(item.barcode, it) },
-                            onRemove = { viewModel.removeItem(item.barcode) }
+                            onQuantityChange = { viewModel.updateQuantity(item.id, it) },
+                            onRemove = { viewModel.removeItem(item.id) }
                         )
                     }
                 }
@@ -95,11 +95,11 @@ fun AcceptanceScreen(
                         else Text("Отправить")
                     }
                 }
+            }
 
-                if (state.error != null) {
-                    Text(state.error!!, color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall)
-                }
+            if (state.error != null) {
+                Text(state.error!!, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -144,6 +144,7 @@ private fun AcceptanceItemCard(
 }
 
 data class AcceptanceItem(
+    val id: Long,
     val barcode: String,
     val name: String,
     val quantity: Double,

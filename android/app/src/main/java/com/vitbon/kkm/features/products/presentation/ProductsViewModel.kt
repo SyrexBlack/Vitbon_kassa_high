@@ -2,9 +2,10 @@ package com.vitbon.kkm.features.products.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitbon.kkm.features.products.data.ProductMapper
+import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.features.products.domain.Product
 import com.vitbon.kkm.features.products.domain.ProductRepository
+import com.vitbon.kkm.features.products.domain.toDomain
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,7 +20,8 @@ data class ProductsState(
 
 @HiltViewModel
 class ProductsViewModel @Inject constructor(
-    private val repository: ProductRepository
+    private val repository: ProductRepository,
+    private val syncService: SyncService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductsState())
@@ -28,7 +30,6 @@ class ProductsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             repository.observeAll()
-                .map { entities -> entities.map { ProductMapper.entityToDomain(it) } }
                 .collect { products ->
                     _state.update { it.copy(products = products, isLoading = false) }
                 }
@@ -40,13 +41,12 @@ class ProductsViewModel @Inject constructor(
         viewModelScope.launch {
             if (query.isBlank()) {
                 repository.observeAll()
-                    .map { entities -> entities.map { ProductMapper.entityToDomain(it) } }
                     .first().let { products ->
                         _state.update { it.copy(products = products) }
                     }
             } else {
                 repository.search(query).let { results ->
-                    _state.update { it.copy(products = results.map { ProductMapper.entityToDomain(it) }) }
+                    _state.update { it.copy(products = results.map { it.toDomain() }) }
                 }
             }
         }
@@ -54,9 +54,13 @@ class ProductsViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            // Trigger sync from server
-            _state.update { it.copy(isLoading = false) }
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                syncService.syncProductsNow()
+                _state.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message) }
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.data.local.dao.ProductDao
 import com.vitbon.kkm.data.local.entity.LocalProduct
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +13,9 @@ import javax.inject.Singleton
 class ProductRepository @Inject constructor(
     private val productDao: ProductDao
 ) {
-    fun observeAll(): Flow<List<LocalProduct>> = productDao.observeAll()
+    fun observeAll(): Flow<List<Product>> = productDao.observeAll().map { list ->
+        list.map { it.toDomain() }
+    }
 
     /** Найти товар по штрихкоду */
     suspend fun findByBarcode(barcode: String): Product? {
