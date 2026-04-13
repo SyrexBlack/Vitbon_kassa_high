@@ -30,46 +30,84 @@ fun InventoryScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
         ) {
-            items(state.items) { item ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(item.name, style = MaterialTheme.typography.titleMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Учёт: ${item.accounted} шт.", style = MaterialTheme.typography.bodySmall)
-                            Text("Факт:", style = MaterialTheme.typography.bodySmall)
-                            OutlinedTextField(
-                                value = item.actual.toString(),
-                                onValueChange = { viewModel.setActual(item.barcode, it.toDoubleOrNull() ?: 0.0) },
-                                modifier = Modifier.width(80.dp),
-                                singleLine = true
-                            )
-                            val diff = item.actual - item.accounted
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.items) { item ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text("Учёт: ${item.accounted} шт.", style = MaterialTheme.typography.bodySmall)
+                                Text("Факт:", style = MaterialTheme.typography.bodySmall)
+                                OutlinedTextField(
+                                    value = item.actual.toString(),
+                                    onValueChange = { viewModel.setActual(item.barcode, it.toDoubleOrNull() ?: 0.0) },
+                                    modifier = Modifier.width(80.dp),
+                                    singleLine = true
+                                )
+                                val diff = item.actual - item.accounted
+                                Text(
+                                    "Δ ${if (diff >= 0) "+" else ""}$diff",
+                                    color = if (diff != 0.0) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (state.items.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                "Δ ${if (diff >= 0) "+" else ""}$diff",
-                                color = if (diff != 0.0) MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.labelMedium
+                                "Нажмите «Начать» для запуска инвентаризации",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
             }
 
-            if (state.items.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("Нажмите «Начать» для запуска инвентаризации",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { viewModel.submit() },
+                enabled = !state.submitting,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Отправить инвентаризацию")
+            }
+
+            if (state.error != null) {
+                Text(
+                    text = state.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
 }
 
-data class InventoryItem(val barcode: String, val name: String, val accounted: Double, var actual: Double = 0.0)
-data class InventoryState(val items: List<InventoryItem> = emptyList(), val submitted: Boolean = false)
+data class InventoryItem(val barcode: String, val name: String, val accounted: Double, val actual: Double = 0.0)
+
+data class InventoryState(
+    val items: List<InventoryItem> = emptyList(),
+    val submitted: Boolean = false,
+    val submitting: Boolean = false,
+    val error: String? = null
+)

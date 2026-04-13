@@ -23,26 +23,72 @@ class InventoryViewModel @Inject constructor(private val api: VitbonApi) : ViewM
         // Пока: пустой список — подключить ProductRepository
     }
 
+    fun setItemsForTest(items: List<InventoryItem>) {
+        _state.update { it.copy(items = items, submitted = false, error = null) }
+    }
+
     fun setActual(barcode: String, actual: Double) {
         _state.update { st ->
-            st.copy(items = st.items.map {
-                if (it.barcode == barcode) it.copy(actual = actual) else it
-            })
+            st.copy(
+                items = st.items.map {
+                    if (it.barcode == barcode) it.copy(actual = actual) else it
+                },
+                submitted = false,
+                error = null
+            )
         }
     }
 
     fun submit() {
         viewModelScope.launch {
-            val dto = DocumentDto(
-                type = "INVENTORY",
-                items = _state.value.items.map {
-                    DocumentItemDto(productId = null, barcode = it.barcode, name = it.name,
-                        quantity = it.actual - it.accounted)
-                },
-                timestamp = System.currentTimeMillis()
-            )
-            api.sendInventory(dto)
-            _state.update { it.copy(submitted = true) }
+            val snapshot = _state.value
+            if (snapshot.items.isEmpty()) {
+                _state.update {
+                    it.copy(
+                        submitting = false,
+                        submitted = false,
+                        error = "Нет данных для инвентаризации"
+                    )
+                }
+                return@launch
+            }
+
+            _state.update { it.copy(submitting = true, submitted = false, error = null) }
+            try {
+                val payload = _state.value.items
+                val dto = DocumentDto(
+                    type = "INVENTORY",
+                    items = payload.map {
+                        DocumentItemDto(
+                            productId = null,
+                            barcode = it.barcode,
+                            name = it.name,
+                            quantity = it.actual - it.accounted
+                        )
+                    },
+                    timestamp = System.currentTimeMillis()
+                )
+                val response = api.sendInventory(dto)
+                if (response.isSuccessful) {
+                    _state.update { it.copy(submitting = false, submitted = true, error = null) }
+                } else {
+                    _state.update {
+                        it.copy(
+                            submitting = false,
+                            submitted = false,
+                            error = "Ошибка отправки: ${response.code()}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        submitting = false,
+                        submitted = false,
+                        error = e.message ?: "Ошибка отправки"
+                    )
+                }
+            }
         }
     }
 }

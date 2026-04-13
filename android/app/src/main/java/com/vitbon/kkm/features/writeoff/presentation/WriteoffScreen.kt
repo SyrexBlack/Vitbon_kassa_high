@@ -33,7 +33,7 @@ fun WriteoffScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.items) { item ->
+                items(state.items, key = { it.id }) { item ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -42,7 +42,7 @@ fun WriteoffScreen(
                                 Text(item.name, style = MaterialTheme.typography.titleMedium)
                                 Text("Кол-во: ${item.quantity}", style = MaterialTheme.typography.bodySmall)
                             }
-                            IconButton(onClick = { viewModel.remove(item.barcode) }) {
+                            IconButton(onClick = { viewModel.remove(item.id) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Удалить")
                             }
                         }
@@ -65,9 +65,18 @@ fun WriteoffScreen(
             Button(
                 onClick = { showReasonDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.items.isNotEmpty() && state.reason.isNotBlank()
+                enabled = !state.submitting
             ) {
                 Text("Списать")
+            }
+
+            if (state.error != null) {
+                Text(
+                    text = state.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }

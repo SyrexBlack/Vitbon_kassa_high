@@ -13,42 +13,110 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class WriteoffItem(val barcode: String, val name: String, val quantity: Double)
-data class WriteoffState(val items: List<WriteoffItem> = emptyList(), val reason: String = "", val submitting: Boolean = false)
+data class WriteoffItem(
+    val id: Long,
+    val barcode: String,
+    val name: String,
+    val quantity: Double
+)
+
+data class WriteoffState(
+    val items: List<WriteoffItem> = emptyList(),
+    val reason: String = "",
+    val submitting: Boolean = false,
+    val submitted: Boolean = false,
+    val error: String? = null
+)
 
 @HiltViewModel
 class WriteoffViewModel @Inject constructor(private val api: VitbonApi) : ViewModel() {
     private val _state = MutableStateFlow(WriteoffState())
     val state: StateFlow<WriteoffState> = _state.asStateFlow()
+    private var nextItemId: Long = 1L
 
     fun addItem(barcode: String, name: String, quantity: Double) {
-        _state.update { it.copy(items = it.items + WriteoffItem(barcode, name, quantity)) }
+        val item = WriteoffItem(id = nextItemId++, barcode = barcode, name = name, quantity = quantity)
+        _state.update { it.copy(items = it.items + item, submitted = false, error = null) }
     }
 
-    fun remove(barcode: String) {
-        _state.update { it.copy(items = it.items.filter { i -> i.barcode != barcode }) }
+    fun remove(itemId: Long) {
+        _state.update {
+            it.copy(
+                items = it.items.filter { i -> i.id != itemId },
+                submitted = false,
+                error = null
+            )
+        }
     }
 
     fun setReason(reason: String) {
-        _state.update { it.copy(reason = reason) }
+        _state.update { it.copy(reason = reason, submitted = false, error = null) }
     }
 
     fun submit() {
         viewModelScope.launch {
-            _state.update { it.copy(submitting = true) }
+            val current = _state.value
+            if (current.items.isEmpty()) {
+                _state.update {
+                    it.copy(
+                        submitting = false,
+                        submitted = false,
+                        error = "Добавьте хотя бы один товар"
+                    )
+                }
+                return@launch
+            }
+            if (current.reason.isBlank()) {
+                _state.update {
+                    it.copy(
+                        submitting = false,
+                        submitted = false,
+                        error = "Укажите причину списания"
+                    )
+                }
+                return@launch
+            }
+
+            _state.update { it.copy(submitting = true, submitted = false, error = null) }
             try {
+                val snapshot = _state.value
                 val dto = DocumentDto(
                     type = "WRITEOFF",
-                    items = _state.value.items.map {
-                        DocumentItemDto(productId = null, barcode = it.barcode, name = it.name,
-                            quantity = it.quantity, reason = _state.value.reason)
+                    items = snapshot.items.map {
+                        DocumentItemDto(
+                            productId = null,
+                            barcode = it.barcode,
+                            name = it.name,
+                            quantity = it.quantity,
+                            reason = snapshot.reason
+                        )
                     },
                     timestamp = System.currentTimeMillis()
                 )
-                api.sendWriteoff(dto)
-                _state.update { WriteoffState() }
+                val response = api.sendWriteoff(dto)
+                if (response.isSuccessful) {
+                    _state.update {
+                        WriteoffState(
+                            submitted = true
+                        )
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            submitting = false,
+                            submitted = false,
+                            error = "Ошибка отправки: ${response.code()}"
+                        )
+                    }
+                }
             } catch (e: Exception) {
-                _state.update { it.copy(submitting = false) }
+                _state.update {
+                    it.copy(
+                        submitting = false,
+                        submitted = false,
+                        error = e.message ?: "Ошибка отправки"
+                    )
+                }
             }
         }
     }
