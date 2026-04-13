@@ -496,3 +496,63 @@ Interpretation:
 
 Operational status:
 - Screen-level evidence for the requested `Auth → Sales → Reports` practical lane is now closed with fresh artifacts from one verification cycle.
+
+### Runtime UI evidence refresh (2026-04-13, emulator resume lane)
+
+#### L) Auth → Sales warning lane re-check (PASS)
+
+Fresh artifacts from one resumed emulator run:
+- `.claude/e2e_resume_auth_fresh.png` + `.claude/e2e_resume_auth_fresh.xml` (PIN keypad on auth start).
+- `.claude/e2e_resume_after_login.png` + `.claude/e2e_resume_after_login.xml`.
+  - Sales screen visible with snackbar text: `Локальный вход выполнен, сервер временно недоступен`.
+
+Interpretation:
+- Offline/local login still enters active sales session.
+- Backend warning remains non-blocking and visible in runtime UI.
+
+#### M) Sale execution and cart-clear state (PASS)
+
+Sale flow artifacts:
+- `.claude/e2e_resume_item_added.png` + `.claude/e2e_resume_item_added.xml`
+  - contains `Вода 0.5л` and `ИТОГО: 129.0 ₽`.
+- Post-sale cleared-cart state:
+  - `.claude/e2e_resume_sale_try2.xml`
+  - `.claude/e2e_resume_final_sales.png` + `.claude/e2e_resume_final_sales.xml`
+  - `ИТОГО: 0.0 ₽`, and no `Вода 0.5л` row.
+
+Interpretation:
+- UI-level sale action produced expected cart-clear transition in the same lane.
+
+#### N) Reports non-zero after sale (PASS)
+
+Artifacts:
+- `.claude/e2e_resume_reports_after_sale.png` + `.claude/e2e_resume_reports_after_sale.xml`.
+
+Observed labels:
+- `💰 Выручка` with `129.0 ₽`
+- `Чеков продаж` with value `1`
+- `Средний чек` with `129.0 ₽`
+
+Interpretation:
+- Screen-level report aggregation reflects the created sale in this runtime lane.
+
+#### O) Sync payload lane re-check (PARTIAL PASS; connectivity blocker in this run)
+
+Log evidence:
+- `.claude/e2e_resume_full_run.logcat.txt` contains repeated sync attempts:
+  - `POST http://10.0.2.2:8080/api/v1/checks/sync`
+  - payload includes sold item (`barcode=4607001234567`, `quantity=1.0`, `total=12900`, `paymentType="cash"`).
+
+Observed worker/network outcome in this run:
+- `SocketTimeoutException ... failed to connect to /10.0.2.2:8080`
+- `Worker result RETRY ... SyncUpWorker`
+
+Interpretation:
+- Sync payload formation and dispatch are reconfirmed.
+- `SYNCED` transition is not re-proven in this specific 2026-04-13 lane due backend connectivity timeout.
+- Prior `SYNCED + syncedAt` proof from section **G** (2026-04-09 local-backend lane) remains the closure evidence for transition criterion.
+
+### Combined closure posture (as of 2026-04-13)
+
+- Step 2 practical flow has fresh UI evidence for auth warning, itemized sale, cart clear, and reports non-zero.
+- Sync transition evidence is split by lane: direct `SYNCED` proof exists in section **G**, while 2026-04-13 run revalidates payload behavior under transient backend timeout.
