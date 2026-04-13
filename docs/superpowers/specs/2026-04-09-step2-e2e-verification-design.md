@@ -556,3 +556,17 @@ Interpretation:
 
 - Step 2 practical flow has fresh UI evidence for auth warning, itemized sale, cart clear, and reports non-zero.
 - Sync transition evidence is split by lane: direct `SYNCED` proof exists in section **G**, while 2026-04-13 run revalidates payload behavior under transient backend timeout.
+
+### Backend documents contract hardening evidence (2026-04-13)
+
+Commands executed:
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.DocumentsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD FAILED` (RED: empty-items rejection was not enforced).
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.DocumentsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (GREEN after service validation fix).
+- `cd backend && ./gradlew.bat test --no-daemon` → `BUILD SUCCESSFUL`.
+- `cd backend && ./gradlew.bat clean compileKotlin --no-daemon` → `BUILD SUCCESSFUL`.
+
+What is now proven:
+- `/api/v1/documents/acceptance`, `/api/v1/documents/writeoff`, `/api/v1/documents/inventory` accept valid payloads.
+- Malformed payload returns `400 Bad Request`.
+- Empty `items` payload returns `400 Bad Request` (enforced in service layer).
+- Backend side now aligns with hardened Android document flows for acceptance/writeoff/inventory submit semantics.
