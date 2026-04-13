@@ -1,12 +1,18 @@
 package com.vitbon.kkm.domain.service
 
 import com.vitbon.kkm.api.dto.*
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @Service
 class DocumentService {
-    fun save(doc: DocumentDto, type: String): Unit {}
+    fun save(doc: DocumentDto, type: String): Unit {
+        if (doc.items.isEmpty()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "items must not be empty")
+        }
+    }
 }
 
 @Service
