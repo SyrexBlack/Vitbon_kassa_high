@@ -67,3 +67,11 @@ data class DocumentItemDto(val productId: String?, val barcode: String?, val nam
 data class LicenseCheckRequestDto(val deviceId: String)
 data class LicenseCheckResponseDto(val status: String, val expiryDate: Long?, val graceUntil: Long?)
 data class StatusResponseDto(val ofdQueueLength: Int, val lastSyncTimestamp: Long, val cloudServerOk: Boolean, val licenseStatus: String)
+
+data class SalesReportDto(
+    val totalChecks: Int,
+    val totalRevenue: Long,
+    val cashRevenue: Long,
+    val cardRevenue: Long,
+    val averageCheck: Long
+)
