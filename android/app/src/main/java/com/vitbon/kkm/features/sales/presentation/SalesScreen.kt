@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vitbon.kkm.features.sales.domain.CartItem
 import com.vitbon.kkm.features.sales.domain.SaleResult
+import com.vitbon.kkm.features.statuses.presentation.StatusBar
+import com.vitbon.kkm.features.statuses.presentation.StatusViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,9 +38,11 @@ fun SalesScreen(
     onOpenCashDrawer: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenStatuses: () -> Unit,
-    viewModel: SalesViewModel = hiltViewModel()
+    viewModel: SalesViewModel = hiltViewModel(),
+    statusViewModel: StatusViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val status by statusViewModel.status.collectAsState()
     val context = LocalContext.current
     val prefs = remember(context) {
         context.getSharedPreferences("vitbon_prefs", Context.MODE_PRIVATE)
@@ -114,6 +118,12 @@ fun SalesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            StatusBar(
+                status = status,
+                onClick = onOpenStatuses,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             // Поиск / сканер
             OutlinedTextField(
                 value = state.searchQuery,

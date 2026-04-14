@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.core.sync.SyncService
+import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.sales.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +28,8 @@ class SalesViewModel @Inject constructor(
     private val scanBarcode: ScanBarcodeUseCase,
     private val processSale: ProcessSaleUseCase,
     private val authUseCase: AuthUseCase,
-    private val syncService: SyncService
+    private val syncService: SyncService,
+    private val shiftDao: ShiftDao
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SalesState())
@@ -101,11 +103,13 @@ class SalesViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, saleResult = null) }
             val cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
+            val openShiftId = shiftDao.findOpenShift()?.id
+            val deviceId = android.os.Build.MODEL ?: "unknown-device"
             val result = processSale.execute(
                 cart = _state.value.cart,
                 cashierId = cashierId,
-                deviceId = android.os.Build.MODEL,
-                shiftId = null
+                deviceId = deviceId,
+                shiftId = openShiftId
             )
 
             if (result is SaleResult.Success) {

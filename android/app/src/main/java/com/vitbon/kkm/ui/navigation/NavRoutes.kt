@@ -27,6 +27,9 @@ object NavRoutes {
     const val STATUSES = "statuses"
     const val CORRECTION = "correction"
     const val CASH_DRAWER = "cash_drawer"
+    const val EGAIS = "egais"
+    const val AGE_VERIFY = "age_verify"
+    const val CHASEZNAK = "chaseznak"
 }
 
 @Composable

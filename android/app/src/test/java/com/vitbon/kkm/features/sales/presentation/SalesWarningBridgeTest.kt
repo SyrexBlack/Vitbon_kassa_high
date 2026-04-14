@@ -97,6 +97,7 @@ class SalesWarningBridgeTest {
         assertNull(emitted.get())
         assertEquals("не должно прилететь", prefs.getString(BACKEND_AUTH_WARNING_KEY, null))
     }
+
 }
 
 private class InMemorySharedPreferences : SharedPreferences {

@@ -20,8 +20,6 @@ fun StatusDetailScreen(
 ) {
     val status by viewModel.status.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.refresh() }
-
     Scaffold(
         topBar = {
             TopAppBar(
