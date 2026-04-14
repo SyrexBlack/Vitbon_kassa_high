@@ -55,6 +55,20 @@ interface VitbonApi {
     @GET("api/v1/statuses")
     suspend fun getStatuses(): Response<StatusResponseDto>
 
+    // Reports
+    @GET("api/v1/reports")
+    suspend fun getSalesReport(
+        @Query("period") period: String,
+        @Query("shiftId") shiftId: String?,
+        @Query("since") since: Long?
+    ): Response<SalesReportDto>
+
+    @GET("api/v1/reports/movement")
+    suspend fun getMovementReport(
+        @Query("period") period: String,
+        @Query("since") since: Long?
+    ): Response<MovementReportDto>
+
     // Licensing
     @POST("api/v1/license/check")
     suspend fun checkLicense(@Body req: LicenseCheckRequestDto): Response<LicenseCheckResponseDto>

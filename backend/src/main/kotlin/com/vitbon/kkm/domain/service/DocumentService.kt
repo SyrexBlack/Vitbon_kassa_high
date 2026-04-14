@@ -4,14 +4,21 @@ import com.vitbon.kkm.api.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
-import java.util.UUID
 
 @Service
 class DocumentService {
+    private val savedDocuments = mutableListOf<DocumentDto>()
+
     fun save(doc: DocumentDto, type: String): Unit {
         if (doc.items.isEmpty()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "items must not be empty")
         }
+        savedDocuments.add(doc.copy(type = type.uppercase()))
+    }
+
+    fun findDocuments(since: Long?): List<DocumentDto> {
+        val docs = savedDocuments.toList()
+        return if (since == null) docs else docs.filter { it.timestamp >= since }
     }
 }
 

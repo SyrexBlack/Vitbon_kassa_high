@@ -65,7 +65,7 @@ fun MovementReportScreen(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text("📦 Остаток на начало", style = MaterialTheme.typography.titleSmall)
-                                Text("${r.openingStock} шт.", style = MaterialTheme.typography.headlineSmall)
+                                Text("${"%.3f".format(r.openingStock)} шт.", style = MaterialTheme.typography.headlineSmall)
                             }
                         }
                     }
@@ -86,7 +86,7 @@ fun MovementReportScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text("📦 Остаток на конец", style = MaterialTheme.typography.titleSmall)
-                                Text("${r.closingStock} шт.", style = MaterialTheme.typography.headlineSmall)
+                                Text("${"%.3f".format(r.closingStock)} шт.", style = MaterialTheme.typography.headlineSmall)
                             }
                         }
                     }
@@ -104,9 +104,9 @@ fun MovementReportScreen(
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(item.name, style = MaterialTheme.typography.titleSmall)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Приход: ${item.income}", style = MaterialTheme.typography.bodySmall)
-                                    Text("Расход: ${item.sales}", style = MaterialTheme.typography.bodySmall)
-                                    Text("Остаток: ${item.balance}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Приход: ${"%.3f".format(item.income)}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Расход: ${"%.3f".format(item.sales)}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Остаток: ${"%.3f".format(item.balance)}", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
@@ -125,7 +125,7 @@ fun MovementReportScreen(
 }
 
 @Composable
-private fun MovementRow(emoji: String, label: String, value: Int, sign: String) {
+private fun MovementRow(emoji: String, label: String, value: Double, sign: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -140,7 +140,7 @@ private fun MovementRow(emoji: String, label: String, value: Int, sign: String) 
                 Text(label)
             }
             Text(
-                "$sign$value шт.",
+                "$sign${"%.3f".format(value)} шт.",
                 style = MaterialTheme.typography.titleMedium,
                 color = if (sign == "+") MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.error

@@ -66,6 +66,17 @@ fun ReportsScreen(onBack: () -> Unit, viewModel: ReportsViewModel = hiltViewMode
                             "Средний чек" to "${r.averageCheck / 100.0} ₽"
                         ))
                     }
+
+                    if (r.topProducts.isNotEmpty()) {
+                        item {
+                            ReportCard(
+                                title = "Товары",
+                                items = r.topProducts.map { item ->
+                                    "${item.name} × ${item.quantity}" to "${item.total / 100.0} ₽"
+                                }
+                            )
+                        }
+                    }
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

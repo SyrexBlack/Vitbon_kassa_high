@@ -33,8 +33,9 @@ class ReportsViewModel @Inject constructor(private val useCase: ReportsUseCase) 
     private fun load() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val (from, to) = getPeriodRange(_state.value.period)
-            val report = useCase.getSalesReport(from, to)
+            val period = _state.value.period
+            val (from, to) = getPeriodRange(period)
+            val report = useCase.getSalesReport(period, from, to)
             _state.update { it.copy(report = report, isLoading = false) }
         }
     }
