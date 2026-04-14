@@ -44,3 +44,37 @@ jobs:
           path: |
             backend/build/reports/tests/**
             backend/build/test-results/**
+
+  android-unit-tests:
+    name: android-unit-tests
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: cmd
+        working-directory: android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Run Android unit tests
+        run: gradlew.bat testDebugUnitTest --no-daemon
+
+      - name: Upload Android unit test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-artifacts
+          path: |
+            android/app/build/reports/tests/**
+            android/app/build/test-results/**
