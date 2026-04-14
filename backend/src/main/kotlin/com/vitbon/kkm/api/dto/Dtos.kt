@@ -4,7 +4,15 @@ data class LoginRequestDto(val pin: String)
 
 data class LoginResponseDto(
     val token: String,
-    val cashier: CashierDto
+    val cashier: CashierDto,
+    val features: LoginFeaturesDto = LoginFeaturesDto()
+)
+
+data class LoginFeaturesDto(
+    val egaisEnabled: Boolean = false,
+    val chaseznakEnabled: Boolean = false,
+    val acquiringEnabled: Boolean = false,
+    val sbpEnabled: Boolean = false
 )
 
 data class CashierDto(
@@ -68,10 +76,36 @@ data class LicenseCheckRequestDto(val deviceId: String)
 data class LicenseCheckResponseDto(val status: String, val expiryDate: Long?, val graceUntil: Long?)
 data class StatusResponseDto(val ofdQueueLength: Int, val lastSyncTimestamp: Long, val cloudServerOk: Boolean, val licenseStatus: String)
 
+data class ProductSalesDto(
+    val name: String,
+    val quantity: Double,
+    val total: Long
+)
+
 data class SalesReportDto(
     val totalChecks: Int,
+    val returnChecks: Int,
     val totalRevenue: Long,
+    val totalReturns: Long,
     val cashRevenue: Long,
     val cardRevenue: Long,
-    val averageCheck: Long
+    val averageCheck: Long,
+    val topProducts: List<ProductSalesDto> = emptyList()
+)
+
+data class MovementReportItemDto(
+    val name: String,
+    val income: Double,
+    val sales: Double,
+    val balance: Double
+)
+
+data class MovementReportDto(
+    val openingStock: Double,
+    val income: Double,
+    val sales: Double,
+    val returns: Double,
+    val writeoff: Double,
+    val closingStock: Double,
+    val items: List<MovementReportItemDto>
 )

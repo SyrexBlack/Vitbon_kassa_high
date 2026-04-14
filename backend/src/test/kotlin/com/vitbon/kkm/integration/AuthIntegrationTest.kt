@@ -3,7 +3,9 @@ package com.vitbon.kkm.integration
 import com.vitbon.kkm.api.dto.*
 import com.vitbon.kkm.domain.service.AuthService
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
@@ -19,10 +21,18 @@ class AuthIntegrationTest {
     fun `LoginResponseDto — contains cashier info`() {
         val resp = LoginResponseDto(
             token = "jwt-token-here",
-            cashier = CashierDto(id = "c1", name = "Иванов И.И.", role = "CASHIER")
+            cashier = CashierDto(id = "c1", name = "Иванов И.И.", role = "CASHIER"),
+            features = LoginFeaturesDto(
+                egaisEnabled = true,
+                chaseznakEnabled = false,
+                acquiringEnabled = true,
+                sbpEnabled = false
+            )
         )
         assertEquals("c1", resp.cashier.id)
         assertEquals("CASHIER", resp.cashier.role)
+        assertTrue(resp.features.egaisEnabled)
+        assertFalse(resp.features.chaseznakEnabled)
     }
 
     @Test
@@ -43,6 +53,10 @@ class AuthIntegrationTest {
         assertEquals("cashier-demo-1", result.cashier.id)
         assertEquals("Демо Кассир", result.cashier.name)
         assertEquals("CASHIER", result.cashier.role)
+        assertFalse(result.features.egaisEnabled)
+        assertFalse(result.features.chaseznakEnabled)
+        assertTrue(result.features.acquiringEnabled)
+        assertTrue(result.features.sbpEnabled)
     }
 
     @Test

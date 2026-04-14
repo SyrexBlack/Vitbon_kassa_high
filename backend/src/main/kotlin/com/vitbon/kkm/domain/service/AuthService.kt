@@ -18,6 +18,12 @@ class AuthService {
                 id = DEMO_CASHIER_ID,
                 name = DEMO_CASHIER_NAME,
                 role = DEMO_CASHIER_ROLE
+            ),
+            features = LoginFeaturesDto(
+                egaisEnabled = false,
+                chaseznakEnabled = false,
+                acquiringEnabled = true,
+                sbpEnabled = true
             )
         )
     }
