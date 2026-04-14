@@ -570,3 +570,73 @@ What is now proven:
 - Malformed payload returns `400 Bad Request`.
 - Empty `items` payload returns `400 Bad Request` (enforced in service layer).
 - Backend side now aligns with hardened Android document flows for acceptance/writeoff/inventory submit semantics.
+
+### Android reports backend-consumption evidence (2026-04-13)
+
+Commands executed:
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon` → `BUILD FAILED` (RED: missing reports API DTO/endpoint/usecase integration).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon` → `BUILD SUCCESSFUL` (GREEN after Android API/usecase wiring).
+
+What is now proven:
+- Android `ReportsUseCase` consumes backend `/api/v1/reports` as primary source (`period`, `since`).
+- If backend responds successfully, report values come from backend totals (`totalRevenue`, `cashRevenue`, `cardRevenue`, `averageCheck`, `totalChecks`).
+- If backend responds non-success, `ReportsUseCase` deterministically falls back to local `CheckDao.findByDateRange(...)` aggregation.
+- If backend request throws (network/IO exception), fallback to local aggregation is also deterministic.
+- `ReportsViewModel` passes selected period into use case call, preserving period-driven report behavior while backend integration is active.
+
+### Android sales shift-binding evidence (2026-04-13)
+
+Commands executed:
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.sales.presentation.SalesViewModelTest" --no-daemon` → `BUILD FAILED` (RED: `SalesViewModel` lacked `ShiftDao` binding and hardcoded `shiftId = null`).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.sales.presentation.SalesViewModelTest" --no-daemon` → `BUILD SUCCESSFUL` (GREEN after wiring `ShiftDao.findOpenShift()` into sale flow).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.sales.presentation.SalesViewModelTest" --tests "com.vitbon.kkm.features.sales.presentation.SalesWarningBridgeTest" --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd android && ./gradlew.bat assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+
+What is now proven:
+- `SalesViewModel` no longer passes hardcoded `null` shift id to `ProcessSaleUseCase`.
+- If an open shift exists, `ProcessSaleUseCase` receives that shift id.
+- If no open shift exists, `ProcessSaleUseCase` receives `null` (explicitly tested).
+- Added `deviceId` null-safety in `SalesViewModel` (`Build.MODEL ?: "unknown-device"`) to prevent JVM-test crash and keep sale path deterministic.
+
+### Step5.1 product-level report detail evidence (2026-04-13)
+
+Commands executed:
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest" --no-daemon` → `BUILD FAILED` (RED: reports contract lacked `topProducts`, integration assertion failed with `PathNotFoundException`).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon` → `BUILD FAILED` (RED: `ReportsUseCase` lacked `CheckItemDao` wiring and `topProducts` field support).
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (GREEN after backend DTO/service enrichment).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (GREEN after Android DTO/usecase fallback enrichment).
+- `cd backend && ./gradlew.bat clean compileKotlin --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd android && ./gradlew.bat assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+
+What is now proven:
+- Backend `/api/v1/reports` response now includes `topProducts` with per-product `name`, `quantity`, `total` derived from synced check items.
+- Backend report aggregation remains correct for totals/check count/average while adding product detail.
+- Android `ReportsUseCase` now consumes backend `topProducts` when available.
+- Android fallback path (when backend non-success or request throws) now enriches local report with deterministic product-level aggregation via `CheckItemDao.findByCheckId`.
+- Reports UI now renders product-level detail card (`Товары`) when `topProducts` is non-empty.
+
+### Step5.2 movement+returns report backend/Android evidence (2026-04-13)
+
+Commands executed:
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest.GET movement report returns stock flow totals and item details" --no-daemon` → `BUILD FAILED` (RED: `/api/v1/reports/movement` endpoint missing, 404).
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest.GET movement report returns stock flow totals and item details" --no-daemon` → `BUILD SUCCESSFUL` (GREEN after movement endpoint/controller/service wiring).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest.getMovementReport uses backend report when api succeeds" --no-daemon` → `BUILD FAILED` (RED: missing Android movement DTO/API/usecase method).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest.getMovementReport uses backend report when api succeeds" --no-daemon` → `BUILD SUCCESSFUL` (GREEN after Android movement wiring).
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd backend && ./gradlew.bat clean compileKotlin --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd android && ./gradlew.bat assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL`.
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (re-run after sales returns contract extension).
+- `cd backend && ./gradlew.bat clean compileKotlin --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (re-run after sales returns contract extension).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (re-run after movement precision + domain/presentation decoupling).
+- `cd android && ./gradlew.bat assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (re-run after movement precision + domain/presentation decoupling).
+- `cd android && ./gradlew.bat testDebugUnitTest --tests "com.vitbon.kkm.features.reports.domain.ReportsUseCaseTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (re-run after shiftId propagation for `period=shift`).
+- `cd backend && ./gradlew.bat test --tests "com.vitbon.kkm.integration.ReportsIntegrationTest" --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (final backend re-run).
+- `cd android && ./gradlew.bat assembleDebug --no-daemon --rerun-tasks` → `BUILD SUCCESSFUL` (final Android compile re-run).
+
+What is now proven:
+- Backend now exposes `GET /api/v1/reports/movement` and returns `openingStock`, `income`, `sales`, `returns`, `writeoff`, `closingStock`, and item-level rows.
+- Movement closing stock formula includes returns exactly as required: `opening + income - sales + returns - writeoff`.
+- Movement per-item aggregation now keys by stable identity (`productId`, fallback `barcode`, fallback normalized `name`) to avoid accidental merge of different SKUs that share display name.
+- Document submits (`acceptance`, `writeoff`) are now persisted in backend in-memory service state and used for movement report calculations.
+- Android now has movement report DTO contract, Retrofit API method, usecase method, and `MovementReportViewModel` backend wiring by selected period.
