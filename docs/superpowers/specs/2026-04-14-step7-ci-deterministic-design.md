@@ -162,3 +162,18 @@ Step 7 v1 считается принятым, когда одновременн
 - emulator/androidTest lane,
 - quality metrics,
 - release verification.
+
+## Implementation Evidence (Step 7 v1)
+
+Executed locally on current branch:
+- `cd backend && ./gradlew.bat test --no-daemon` → `BUILD SUCCESSFUL`
+- `cd android && ./gradlew.bat testDebugUnitTest --no-daemon` → `BUILD SUCCESSFUL`
+- `cd android && ./gradlew.bat assembleDebug --no-daemon` → `BUILD SUCCESSFUL`
+
+Workflow file created:
+- `.github/workflows/ci-deterministic.yml`
+
+Deterministic jobs present:
+- `backend-tests`
+- `android-unit-tests`
+- `android-assemble-debug`
