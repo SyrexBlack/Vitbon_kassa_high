@@ -5,16 +5,19 @@ import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.local.entity.LocalCashier
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.CashierDto
+import com.vitbon.kkm.data.remote.dto.LoginFeaturesDto
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import com.vitbon.kkm.data.remote.dto.LoginResponseDto
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -30,11 +33,12 @@ class AuthUseCaseTest {
     private val api = mockk<VitbonApi>()
     private val prefs = InMemorySharedPreferences()
     private val context = mockk<Context>()
+    private val featureManager = mockk<FeatureManager>(relaxed = true)
     private val connectivityManager = mockk<ConnectivityManager>()
     private val network = mockk<Network>()
     private val networkCapabilities = mockk<NetworkCapabilities>()
 
-    private val useCase = AuthUseCase(cashierDao, api, prefs, context)
+    private val useCase = AuthUseCase(cashierDao, api, prefs, context, featureManager)
 
     @Test
     fun `authenticate returns Success and stores current cashier`() = runBlocking {
@@ -88,6 +92,35 @@ class AuthUseCaseTest {
     }
 
     @Test
+    fun `validateWithBackendBestEffort applies backend features when login succeeds online`() = runBlocking {
+        mockOnlineStatus(isOnline = true)
+        val features = LoginFeaturesDto(
+            egaisEnabled = true,
+            chaseznakEnabled = false,
+            acquiringEnabled = true,
+            sbpEnabled = true
+        )
+        coEvery { api.login(LoginRequestDto("1111")) } returns Response.success(
+            LoginResponseDto(
+                token = "token-123",
+                cashier = CashierDto(id = "cashier-1", name = "Иванов", role = "CASHIER"),
+                features = features
+            )
+        )
+        prefs.edit().putString("backend_auth_warning", "stale").apply()
+
+        val warning = useCase.validateWithBackendBestEffort("1111")
+
+        assertNull(warning)
+        assertEquals(true, prefs.getBoolean("last_backend_auth_ok", false))
+        assertEquals("token-123", prefs.getString("auth_token", null))
+        assertNull(prefs.getString("backend_auth_warning", null))
+        assertTrue((prefs.getLong("last_backend_auth_ts", 0L)) > 0L)
+        coVerify(exactly = 1) { api.login(LoginRequestDto("1111")) }
+        verify(exactly = 1) { featureManager.applyFeatures(features) }
+    }
+
+    @Test
     fun `validateWithBackendBestEffort returns warning when backend responds non-success while online`() = runBlocking {
         mockOnlineStatus(isOnline = true)
         coEvery { api.login(LoginRequestDto("1111")) } returns Response.error(
@@ -102,6 +135,7 @@ class AuthUseCaseTest {
         assertEquals(warning, prefs.getString("backend_auth_warning", null))
         assertTrue((prefs.getLong("last_backend_auth_ts", 0L)) > 0L)
         coVerify(exactly = 1) { api.login(LoginRequestDto("1111")) }
+        verify(exactly = 0) { featureManager.applyFeatures(any()) }
     }
 
     @Test
@@ -112,6 +146,7 @@ class AuthUseCaseTest {
 
         assertNull(warning)
         coVerify(exactly = 0) { api.login(any()) }
+        verify(exactly = 0) { featureManager.applyFeatures(any()) }
     }
 
     private fun mockOnlineStatus(isOnline: Boolean) {

@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
@@ -17,7 +18,8 @@ class AuthUseCase @Inject constructor(
     private val cashierDao: CashierDao,
     private val api: VitbonApi,
     private val prefs: SharedPreferences,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val featureManager: FeatureManager
 ) {
     suspend fun authenticate(pin: String): AuthResult {
         if (pin.length < 4 || pin.length > 6) {
@@ -56,6 +58,9 @@ class AuthUseCase @Inject constructor(
             val response = api.login(LoginRequestDto(pin))
             if (response.isSuccessful) {
                 val body = response.body()
+                if (body != null) {
+                    featureManager.applyFeatures(body.features)
+                }
                 prefs.edit()
                     .putLong("last_backend_auth_ts", System.currentTimeMillis())
                     .putBoolean("last_backend_auth_ok", true)

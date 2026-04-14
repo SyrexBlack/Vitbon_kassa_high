@@ -1,20 +1,16 @@
 package com.vitbon.kkm.core.features
 
 import android.content.SharedPreferences
-import android.util.Log
-import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.data.remote.dto.LoginFeaturesDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val TAG = "FeatureManager"
-
 @Singleton
 class FeatureManager @Inject constructor(
-    private val prefs: SharedPreferences,
-    private val api: VitbonApi
+    private val prefs: SharedPreferences
 ) {
     private val _enabledFlags = MutableStateFlow<Set<FeatureFlag>>(emptySet())
     val enabledFlags: StateFlow<Set<FeatureFlag>> = _enabledFlags.asStateFlow()
@@ -33,7 +29,6 @@ class FeatureManager @Inject constructor(
         current.add(flag)
         _enabledFlags.value = current
         persist(flag, true)
-        Log.i(TAG, "Feature enabled: $flag")
     }
 
     /**
@@ -44,7 +39,6 @@ class FeatureManager @Inject constructor(
         current.remove(flag)
         _enabledFlags.value = current
         persist(flag, false)
-        Log.i(TAG, "Feature disabled: $flag")
     }
 
     /**
@@ -57,26 +51,26 @@ class FeatureManager @Inject constructor(
     }
 
     /**
-     * Асинхронная проверка — сначала кеш, затем сервер.
+     * Асинхронная проверка без сетевых сайд-эффектов.
      */
     suspend fun isEnabled(flag: FeatureFlag): Boolean {
-        // 1. Кеш
-        if (isEnabledSync(flag)) return true
+        return isEnabledSync(flag)
+    }
 
-        // 2. Запрос на сервер (при запуске приложения)
-        try {
-            val response = api.getStatuses()
-            if (response.isSuccessful) {
-                val body = response.body()!!
-                // Сервер возвращает список активных флагов в заголовке или теле
-                // Пока считаем что флаги приходят в статусе
-                Log.d(TAG, "Feature flags from server: ${body}")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to fetch feature flags", e)
+    fun applyFeatures(features: LoginFeaturesDto) {
+        val flags = buildSet {
+            if (features.egaisEnabled) add(FeatureFlag.EGAAIS_ENABLED)
+            if (features.chaseznakEnabled) add(FeatureFlag.CHASEZNAK_ENABLED)
+            if (features.acquiringEnabled) add(FeatureFlag.ACQUIRING_ENABLED)
+            if (features.sbpEnabled) add(FeatureFlag.SBP_ENABLED)
         }
 
-        return isEnabledSync(flag)
+        _enabledFlags.value = flags
+        val editor = prefs.edit()
+        FeatureFlag.entries.forEach { flag ->
+            editor.putBoolean(flagKey(flag), flag in flags)
+        }
+        editor.apply()
     }
 
     /**
@@ -93,22 +87,4 @@ class FeatureManager @Inject constructor(
 
     private fun flagKey(flag: FeatureFlag) = "feature_${flag.name}"
 
-    companion object {
-        /**
-         * Активировать все модули по remote key.
-         * Вызывается после верификации ключа от backend.
-         */
-        fun activateAll(
-            manager: FeatureManager,
-            egais: Boolean,
-            chaseznak: Boolean,
-            acquiring: Boolean,
-            sbp: Boolean
-        ) {
-            if (egais) manager.enable(FeatureFlag.EGAAIS_ENABLED)
-            if (chaseznak) manager.enable(FeatureFlag.CHASEZNAK_ENABLED)
-            if (acquiring) manager.enable(FeatureFlag.ACQUIRING_ENABLED)
-            if (sbp) manager.enable(FeatureFlag.SBP_ENABLED)
-        }
-    }
 }
