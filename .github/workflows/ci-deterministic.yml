@@ -1,0 +1,46 @@
+name: CI Deterministic Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-deterministic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: backend-tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: cmd
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Run backend tests
+        run: gradlew.bat test --no-daemon
+
+      - name: Upload backend test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-artifacts
+          path: |
+            backend/build/reports/tests/**
+            backend/build/test-results/**
