@@ -640,3 +640,56 @@ What is now proven:
 - Movement per-item aggregation now keys by stable identity (`productId`, fallback `barcode`, fallback normalized `name`) to avoid accidental merge of different SKUs that share display name.
 - Document submits (`acceptance`, `writeoff`) are now persisted in backend in-memory service state and used for movement report calculations.
 - Android now has movement report DTO contract, Retrofit API method, usecase method, and `MovementReportViewModel` backend wiring by selected period.
+
+### Step 6 runtime manual lane evidence refresh (2026-04-14)
+
+#### P) Sale transition reproduced in one live lane (PASS)
+
+Fresh emulator artifacts from one continuous run:
+- Pre-sale state: `.claude/window_current.xml`
+  - contains `Вода 0.5л` and `ИТОГО: 129.0 ₽`.
+- Post-sale state: `.claude/window_after_keyboard_hide_sale.xml`
+  - contains `ИТОГО: 0.0 ₽`, scanner placeholder `Штрихкод или поиск...`, and disabled sell action (`enabled="false"`).
+  - sold item row is no longer present.
+
+Interpretation:
+- Sale action produced cart-clear transition in runtime, not just by synthetic DB fixtures.
+
+#### Q) Check + item persistence with SYNCED closure (PASS)
+
+Runtime DB snapshot was copied from app sandbox (`run-as com.vitbon.kkm`) and queried via sqlite3.
+
+Observed outputs (`.claude/vitbon_after_sale.db`):
+- `SELECT COUNT(*) FROM checks;` → `3`
+- Latest check row:
+  - `id=6b022402-3892-44d1-9501-6cb0e861c054`
+  - `type=sale`, `status=SYNCED`, `total=12900`, `paymentType=cash`
+  - `createdAt=1776154055943`, `syncedAt=1776154056093`
+- `SELECT COUNT(*) FROM check_items;` → `1`
+- Latest item row:
+  - `checkId=6b022402-3892-44d1-9501-6cb0e861c054`
+  - `name=Вода 0.5л`, `quantity=1.0`, `price=12900`, `total=12900`, `vatRate=NO_VAT`
+
+Interpretation:
+- Runtime path now proves both persisted sold item linkage and successful check status transition to `SYNCED`.
+
+#### R) Sync worker + reports backend consumption in same lane (PASS)
+
+Artifacts:
+- Reports UI dump: `.claude/window_reports_after_sale.xml`
+  - contains `Выручка 129.0 ₽`, `Чеков продаж 1`, `Средний чек 129.0 ₽`, and product detail `Вода 0.5л × 1.0`.
+- Logcat trace: `.claude/logcat_full_after_e2e.txt`
+  - `Worker result SUCCESS ... com.vitbon.kkm.core.sync.worker.SyncUpWorker`
+  - `GET http://10.0.2.2:8080/api/v1/reports?period=shift&since=...`
+  - `<-- 200 http://10.0.2.2:8080/api/v1/reports?period=shift&since=...`
+
+Interpretation:
+- In one practical lane, SyncUp completed successfully and reports were fetched from backend with HTTP 200.
+
+### Step 6 closure posture (as of 2026-04-14)
+
+- Sales → Sync → Reports practical lane is now evidenced end-to-end with fresh runtime artifacts.
+- Unlike prior partial runs, this run includes three closure points with mutually consistent artifacts:
+  1) UI cart-clear sale transition,
+  2) DB-level check+item persistence with `SYNCED`,
+  3) reports screen values and backend `/reports` HTTP 200 in the same session window.
