@@ -54,7 +54,7 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           emulator-options: -no-snapshot -no-boot-anim -no-window -gpu swiftshader_indirect -noaudio -camera-back none
-          script: cd android && ./gradlew connectedDebugAndroidTest --no-daemon
+          script: cd android && chmod +x ./gradlew && ./gradlew connectedDebugAndroidTest --no-daemon
 
       - name: Upload androidTest reports
         if: always()
