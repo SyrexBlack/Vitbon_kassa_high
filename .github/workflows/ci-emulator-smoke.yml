@@ -43,7 +43,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libpulse0
 
       - name: Run emulator smoke tests
-        uses: ReactiveCircus/android-emulator-runner@70f4dee990796918b78d040e3278474bdbd348a7
+        uses: ReactiveCircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a
         with:
           api-level: 34
           target: google_apis
