@@ -177,3 +177,60 @@ Deterministic jobs present:
 - `backend-tests`
 - `android-unit-tests`
 - `android-assemble-debug`
+
+## External Validation Evidence (GitHub)
+
+Repository:
+- `SyrexBlack/Vitbon_kassa_high`
+
+### Green baseline proof (all deterministic jobs succeed)
+
+- Run: `24436566216`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24436566216`
+- Trigger: push to `master`
+- Result:
+  - `backend-tests` ✅
+  - `android-unit-tests` ✅
+  - `android-assemble-debug` ✅
+- Artifacts present:
+  - `backend-test-artifacts`
+  - `android-unit-test-artifacts`
+  - `android-assemble-debug-artifacts`
+
+### Controlled red proof (intentional backend failure)
+
+- Run: `24437524243`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24437524243`
+- Trigger: push to `master` with temporary command `gradlew.bat test definitelyNotATask --no-daemon`
+- Result:
+  - `backend-tests` ❌ (expected)
+  - `android-unit-tests` ✅
+  - `android-assemble-debug` ✅
+- Failed-step evidence (`gh run view --log-failed`):
+  - `Task 'definitelyNotATask' not found in root project 'vitbon-backend' and its subprojects.`
+- Artifact behavior under forced early failure:
+  - Android artifacts uploaded
+  - backend artifact upload step executed, but test report paths were absent (warning: no files found)
+
+### Restore proof (workflow returned to green after rollback)
+
+- Run: `24438169632`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24438169632`
+- Trigger: push to `master` after restoring `Run backend tests` command back to `gradlew.bat test --no-daemon`
+- Result:
+  - `backend-tests` ✅
+  - `android-unit-tests` ✅
+  - `android-assemble-debug` ✅
+- Artifacts present:
+  - `backend-test-artifacts`
+  - `android-unit-test-artifacts`
+  - `android-assemble-debug-artifacts`
+
+### Local artifact snapshots used during verification
+
+- `.claude/ci-artifacts/24436566216/`
+- `.claude/ci-artifacts/24437524243/`
+
+Acceptance criteria coverage from external evidence:
+- AC4 (`master` workflow green) — satisfied by runs `24436566216` and `24438169632`.
+- AC5 (artificial error produces red + diagnostics) — satisfied by run `24437524243`.
