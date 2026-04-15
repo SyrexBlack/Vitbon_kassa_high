@@ -301,3 +301,29 @@ Post-merge deterministic guardrail:
   - `backend-tests` ✅
   - `android-unit-tests` ✅
   - `android-assemble-debug` ✅
+
+## Local Runtime Verification Evidence (2026-04-15)
+
+Root cause investigation summary:
+- Default shell Java pointed to `C:\Program Files\Eclipse Adoptium\jdk-11.0.29.7-hotspot` (insufficient for AGP/Spring plugin requirements in this repo).
+- `C:\Program Files\Eclipse Adoptium\jdk-17` was not available in this shell environment.
+- Verified working runtime: Android Studio JBR at `C:\Program Files\Android\Android Studio\jbr` (`java -version` → `21.0.8`).
+- For isolated worktree execution, `android/local.properties` was created with:
+  - `sdk.dir=C:\Users\user\AppData\Local\Android\Sdk`
+
+Local verification (worktree: `.worktrees/step2-auth-sales-sync`):
+- Backend tests:
+  - `cd backend && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH" ./gradlew.bat test --no-daemon` → `BUILD SUCCESSFUL`
+- Android unit tests:
+  - `cd android && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH" ANDROID_HOME="/c/Users/user/AppData/Local/Android/Sdk" ANDROID_SDK_ROOT="/c/Users/user/AppData/Local/Android/Sdk" ./gradlew.bat testDebugUnitTest --no-daemon` → `BUILD SUCCESSFUL`
+- Android debug assemble:
+  - `cd android && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH" ANDROID_HOME="/c/Users/user/AppData/Local/Android/Sdk" ANDROID_SDK_ROOT="/c/Users/user/AppData/Local/Android/Sdk" ./gradlew.bat :app:assembleDebug --no-daemon` → `BUILD SUCCESSFUL`
+- Android instrumentation smoke:
+  - first run failed as expected with `DeviceException: No connected devices!`
+  - after starting AVD `Pixel_6_Pro` and confirming `adb devices` shows `emulator-5554`, rerun command:
+    - `cd android && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH" ANDROID_HOME="/c/Users/user/AppData/Local/Android/Sdk" ANDROID_SDK_ROOT="/c/Users/user/AppData/Local/Android/Sdk" ./gradlew.bat connectedDebugAndroidTest --no-daemon`
+    - result: `BUILD SUCCESSFUL` (`Starting 1 tests on Pixel_6_Pro(AVD) - 16`)
+
+Evidence interpretation:
+- MVP runtime path is locally reproducible with explicit Java/SDK configuration.
+- Previous local failures were environment bootstrap issues (Java/SDK/device availability), not feature regressions in Step 7 v2 lane or Step 2 MVP flow.
