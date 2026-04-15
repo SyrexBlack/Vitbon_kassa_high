@@ -34,7 +34,7 @@ jobs:
           cache: gradle
 
       - name: Run backend tests
-        run: gradlew.bat test definitelyNotATask --no-daemon
+        run: gradlew.bat test --no-daemon
 
       - name: Upload backend test artifacts
         if: always()
