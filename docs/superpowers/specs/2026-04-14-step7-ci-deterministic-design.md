@@ -260,3 +260,44 @@ Acceptance criteria coverage:
 - AC2 (`.github/dependabot.yml` for weekly github-actions) — satisfied.
 - AC3 (PR required checks green) — satisfied.
 - AC4 (post-merge `master` deterministic run green) — satisfied.
+
+## Step 7 v2 Emulator Smoke Evidence
+
+Emulator lane PR:
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/pull/4`
+- Workflow: `.github/workflows/ci-emulator-smoke.yml`
+- Job: `android-emulator-smoke`
+
+Stabilization fix PR (runtime bootstrap):
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/pull/5`
+- Scope:
+  - install `libpulse0` on ubuntu runner before emulator startup;
+  - run emulator in headless mode (`-no-window`);
+  - invoke Gradle wrapper via `org.gradle.wrapper.GradleWrapperMain` from `android/`.
+
+Initial manual smoke run (before fix):
+- Run: `24450785311`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24450785311`
+- Result: ❌ failure
+- Root cause evidence:
+  - emulator process failed with missing shared library `libpulse.so.0`;
+  - downstream symptom: repeated `adb: device 'emulator-5554' not found`.
+
+Validated manual smoke run (workflow_dispatch, after fix):
+- Run: `24454831086`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24454831086`
+- Result: ✅ success
+- Artifacts:
+  - `emulator-smoke-androidtest-reports`
+
+Observation policy started:
+- Duration: 7 days
+- Promotion rule: >= 6/7 nightly green and last 3 green in a row before required-check promotion.
+
+Post-merge deterministic guardrail:
+- Run: `24454336836`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24454336836`
+- Result:
+  - `backend-tests` ✅
+  - `android-unit-tests` ✅
+  - `android-assemble-debug` ✅
