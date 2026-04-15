@@ -15,6 +15,7 @@ import com.vitbon.kkm.features.auth.presentation.AuthScreen
 import com.vitbon.kkm.features.cashdrawer.presentation.CashDrawerScreen
 import com.vitbon.kkm.features.correction.presentation.CorrectionScreen
 import com.vitbon.kkm.features.reports.presentation.ReportsScreen
+import com.vitbon.kkm.features.returns.presentation.ReturnScreen
 import com.vitbon.kkm.features.sales.presentation.SalesScreen
 import com.vitbon.kkm.features.shift.presentation.ShiftScreen
 import com.vitbon.kkm.features.statuses.presentation.StatusDetailScreen
@@ -23,6 +24,7 @@ object NavRoutes {
     const val AUTH = "auth"
     const val SALES = "sales/{cashierId}/{cashierName}/{shiftId}"
     const val SHIFT = "shift"
+    const val RETURN = "return"
     const val REPORTS = "reports"
     const val STATUSES = "statuses"
     const val CORRECTION = "correction"
@@ -78,7 +80,7 @@ fun VitbonNavHost(
                     prefs.edit().remove("backend_auth_warning").apply()
                 },
                 onOpenShift = { navController.navigate(NavRoutes.SHIFT) },
-                onOpenReturn = { /* TODO */ },
+                onOpenReturn = { navController.navigate(NavRoutes.RETURN) },
                 onOpenCorrection = { navController.navigate(NavRoutes.CORRECTION) },
                 onOpenCashDrawer = { navController.navigate(NavRoutes.CASH_DRAWER) },
                 onOpenReports = { navController.navigate(NavRoutes.REPORTS) },
@@ -91,6 +93,10 @@ fun VitbonNavHost(
                 onBack = { navController.popBackStack() },
                 onShiftOpened = { navController.popBackStack() }
             )
+        }
+
+        composable(NavRoutes.RETURN) {
+            ReturnScreen(onBack = { navController.popBackStack() })
         }
 
         composable(NavRoutes.REPORTS) {

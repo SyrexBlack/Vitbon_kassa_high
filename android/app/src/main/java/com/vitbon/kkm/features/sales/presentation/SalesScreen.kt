@@ -106,6 +106,7 @@ fun SalesScreen(
             TopAppBar(
                 title = { Text("$cashierName  |  Смена $shiftNumber") },
                 actions = {
+                    TextButton(onClick = onOpenReturn) { Text("Возврат") }
                     IconButton(onClick = onOpenStatuses) { Icon(Icons.Default.Info, "Статусы") }
                     IconButton(onClick = onOpenReports) { Icon(Icons.Default.Assessment, "Отчёты") }
                 }

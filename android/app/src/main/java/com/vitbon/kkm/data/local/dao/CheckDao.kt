@@ -15,6 +15,17 @@ interface CheckDao {
     @Query("SELECT * FROM checks WHERE localUuid = :localUuid")
     suspend fun findByLocalUuid(localUuid: String): LocalCheck?
 
+    @Query(
+        """
+        SELECT * FROM checks
+        WHERE type = 'sale'
+          AND (id = :checkIdentifier OR localUuid = :checkIdentifier OR fiscalSign = :checkIdentifier)
+        ORDER BY createdAt DESC, id DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findLatestSaleByIdentifier(checkIdentifier: String): LocalCheck?
+
     @Query("SELECT * FROM checks WHERE shiftId = :shiftId ORDER BY createdAt DESC")
     fun observeByShift(shiftId: String): Flow<List<LocalCheck>>
 
