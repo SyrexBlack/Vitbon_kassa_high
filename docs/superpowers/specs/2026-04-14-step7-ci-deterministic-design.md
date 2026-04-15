@@ -234,3 +234,29 @@ Repository:
 Acceptance criteria coverage from external evidence:
 - AC4 (`master` workflow green) — satisfied by runs `24436566216` and `24438169632`.
 - AC5 (artificial error produces red + diagnostics) — satisfied by run `24437524243`.
+
+## Supply-Chain Hardening Evidence (Step 7)
+
+Hardening PR:
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/pull/2`
+- Scope: pin workflow actions to immutable commit SHAs + add `.github/dependabot.yml` for weekly github-actions updates.
+
+Pinned actions in `ci-deterministic.yml`:
+- `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd`
+- `actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654`
+- `android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699`
+- `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`
+
+Post-merge deterministic run:
+- Run: `24443964881`
+- URL: `https://github.com/SyrexBlack/Vitbon_kassa_high/actions/runs/24443964881`
+- Result:
+  - `backend-tests` ✅
+  - `android-unit-tests` ✅
+  - `android-assemble-debug` ✅
+
+Acceptance criteria coverage:
+- AC1 (`uses` pinned to immutable SHA) — satisfied.
+- AC2 (`.github/dependabot.yml` for weekly github-actions) — satisfied.
+- AC3 (PR required checks green) — satisfied.
+- AC4 (post-merge `master` deterministic run green) — satisfied.
