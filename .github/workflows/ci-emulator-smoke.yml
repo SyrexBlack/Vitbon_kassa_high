@@ -37,6 +37,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Install emulator runtime dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpulse0
+
       - name: Run emulator smoke tests
         uses: ReactiveCircus/android-emulator-runner@70f4dee990796918b78d040e3278474bdbd348a7
         with:
