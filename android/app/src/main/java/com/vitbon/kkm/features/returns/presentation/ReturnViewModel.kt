@@ -3,6 +3,7 @@ package com.vitbon.kkm.features.returns.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.returns.domain.*
@@ -24,11 +25,13 @@ data class ReturnState(
 )
 
 data class SelectableReturnItem(
+    val itemKey: String,
     val productId: String?,
     val barcode: String?,
     val name: String,
     val quantity: Double,
     val price: Money,
+    val discount: Money,
     val vatRate: VatRate,
     val selected: Boolean = true
 )
@@ -36,40 +39,77 @@ data class SelectableReturnItem(
 @HiltViewModel
 class ReturnViewModel @Inject constructor(
     private val returnUseCase: ReturnUseCase,
-    private val authUseCase: AuthUseCase
+    private val authUseCase: AuthUseCase,
+    private val syncService: SyncService
 ) : ViewModel() {
     private val _state = MutableStateFlow(ReturnState())
     val state: StateFlow<ReturnState> = _state.asStateFlow()
 
     fun onCheckInput(input: String) {
         _state.update { it.copy(checkInput = input, error = null) }
-        if (input.length >= 8) {
-            viewModelScope.launch {
-                val check = returnUseCase.findCheckByNumber(input)
-                if (check != null) {
-                    loadCheckItems(check)
+        val normalizedInput = input.trim()
+
+        if (normalizedInput.isEmpty()) {
+            _state.update {
+                it.copy(
+                    originalCheck = null,
+                    returnItems = emptyList(),
+                    returnTotal = Money.ZERO,
+                    error = null
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            val check = returnUseCase.findCheckByNumber(normalizedInput)
+            if (_state.value.checkInput.trim() != normalizedInput) return@launch
+
+            if (check != null) {
+                loadCheckItems(check, normalizedInput)
+            } else {
+                _state.update {
+                    it.copy(
+                        originalCheck = null,
+                        returnItems = emptyList(),
+                        returnTotal = Money.ZERO,
+                        error = if (normalizedInput.length >= 8) "Чек продажи не найден" else null
+                    )
                 }
             }
         }
     }
 
-    private suspend fun loadCheckItems(check: LocalCheck) {
-        // В реальности: загрузить items из чека
+    private suspend fun loadCheckItems(check: LocalCheck, expectedInput: String) {
+        val items = returnUseCase.loadCheckItems(check.id).mapIndexed { index, item ->
+            SelectableReturnItem(
+                itemKey = "$index:${item.productId ?: item.barcode ?: item.name}:${item.quantity}:${item.price.kopecks}",
+                productId = item.productId,
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = item.price,
+                discount = item.discount,
+                vatRate = item.vatRate
+            )
+        }
+
+        if (_state.value.checkInput.trim() != expectedInput) return
+
         _state.update {
             it.copy(
                 originalCheck = check,
-                returnItems = listOf(
-                    SelectableReturnItem("p1", "4601", "Товар", 2.0, Money(100_00L), VatRate.VAT_22)
-                )
+                returnItems = items,
+                error = if (items.isEmpty()) "Позиции исходного чека не найдены" else null
             )
         }
         recalcTotal()
     }
 
-    fun toggleItem(name: String) {
+    fun toggleItem(itemKey: String) {
         _state.update { st ->
             st.copy(returnItems = st.returnItems.map {
-                if (it.name == name) it.copy(selected = !it.selected) else it
+                if (it.itemKey == itemKey) it.copy(selected = !it.selected) else it
             })
         }
         recalcTotal()
@@ -77,18 +117,30 @@ class ReturnViewModel @Inject constructor(
 
     private fun recalcTotal() {
         val total = Money(_state.value.returnItems.filter { it.selected }
-            .sumOf { (it.price.kopecks * it.quantity).toLong() })
+            .sumOf { (it.price.kopecks * it.quantity).toLong() - it.discount.kopecks })
         _state.update { it.copy(returnTotal = total) }
     }
 
     fun processReturn() {
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, error = null) }
-            val check = _state.value.originalCheck ?: return@launch
+            val check = _state.value.originalCheck
+            if (check == null) {
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        error = "Сначала выберите исходный чек продажи"
+                    )
+                }
+                return@launch
+            }
             val items = _state.value.returnItems.filter { it.selected }.map {
-                ReturnItem(it.productId, it.barcode, it.name, it.quantity, it.price, Money.ZERO, it.vatRate)
+                ReturnItem(it.productId, it.barcode, it.name, it.quantity, it.price, it.discount, it.vatRate)
             }
             val result = returnUseCase.processReturn(check, items, authUseCase.getCurrentCashierId() ?: "unknown")
+            if (result is ReturnResult.Success) {
+                syncService.onCheckCreated()
+            }
             _state.update {
                 it.copy(
                     isProcessing = false,

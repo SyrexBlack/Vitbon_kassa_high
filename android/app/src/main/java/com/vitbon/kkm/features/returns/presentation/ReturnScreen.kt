@@ -46,8 +46,10 @@ fun ReturnScreen(
             )
 
             if (state.originalCheck != null) {
-                Text("Чек: ${state.originalCheck!!.total} ₽",
-                    style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Чек: ${state.originalCheck!!.id.take(8)}... / ${state.originalCheck!!.total / 100.0} ₽",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             if (state.returnItems.isNotEmpty()) {
@@ -64,7 +66,7 @@ fun ReturnScreen(
                                 }
                                 Checkbox(
                                     checked = item.selected,
-                                    onCheckedChange = { viewModel.toggleItem(item.name) }
+                                    onCheckedChange = { viewModel.toggleItem(item.itemKey) }
                                 )
                             }
                         }

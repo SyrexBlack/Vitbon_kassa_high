@@ -3,7 +3,9 @@ package com.vitbon.kkm.features.returns.domain
 import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.data.local.dao.CheckDao
+import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
+import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,21 +13,31 @@ import javax.inject.Singleton
 @Singleton
 class ReturnUseCase @Inject constructor(
     private val fiscalCore: FiscalCore,
-    private val checkDao: CheckDao
+    private val checkDao: CheckDao,
+    private val checkItemDao: CheckItemDao
 ) {
     suspend fun findCheckByQr(qrData: String): LocalCheck? {
-        // QR содержит JSON с fiscalSign или localUuid
-        // { "fs": "SIGN123", "dt": "2024-01-01", "sum": 1500 }
-        val check = try {
-            checkDao.findByLocalUuid(qrData)
-        } catch (e: Exception) {
-            null
-        }
-        return check ?: checkDao.findPendingSync().lastOrNull() // fallback
+        return findCheckByNumber(qrData)
     }
 
     suspend fun findCheckByNumber(checkNumber: String): LocalCheck? {
-        return checkDao.findPendingSync().lastOrNull()
+        val normalizedInput = checkNumber.trim()
+        if (normalizedInput.isEmpty()) return null
+        return checkDao.findLatestSaleByIdentifier(normalizedInput)
+    }
+
+    suspend fun loadCheckItems(checkId: String): List<ReturnItem> {
+        return checkItemDao.findByCheckId(checkId).map { item ->
+            ReturnItem(
+                productId = item.productId,
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = Money(item.price),
+                discount = Money(item.discount),
+                vatRate = runCatching { VatRate.valueOf(item.vatRate) }.getOrDefault(VatRate.NO_VAT)
+            )
+        }
     }
 
     suspend fun processReturn(
@@ -33,23 +45,33 @@ class ReturnUseCase @Inject constructor(
         items: List<ReturnItem>,
         cashierId: String
     ): ReturnResult {
+        val fiscalItems = items.map { item ->
+            val lineSubtotal = (item.price.kopecks * item.quantity).toLong()
+            val lineTotal = lineSubtotal - item.discount.kopecks
+            CheckItem(
+                id = UUID.randomUUID().toString(),
+                productId = item.productId,
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = item.price,
+                discount = item.discount,
+                vatRate = item.vatRate,
+                total = Money(lineTotal)
+            )
+        }
+
         val returnCheck = FiscalCheck(
             id = UUID.randomUUID().toString(),
             type = CheckType.RETURN,
-            items = items.map { item ->
-                CheckItem(
-                    id = UUID.randomUUID().toString(),
-                    productId = item.productId,
-                    barcode = item.barcode,
-                    name = item.name,
-                    quantity = item.quantity,
-                    price = item.price,
-                    discount = item.discount,
-                    vatRate = item.vatRate,
-                    total = Money((item.price.kopecks * item.quantity).toLong())
+            items = fiscalItems,
+            payments = listOf(
+                PaymentLine(
+                    PaymentType.CASH,
+                    Money(fiscalItems.sumOf { it.total.kopecks }),
+                    "Возврат"
                 )
-            },
-            payments = listOf(PaymentLine(PaymentType.CASH, Money((items.sumOf { it.price.kopecks * it.quantity }).toLong()), "Возврат"))
+            )
         )
 
         // Сохранить в Room
@@ -64,9 +86,9 @@ class ReturnUseCase @Inject constructor(
             ofdResponse = null,
             ffdVersion = null,
             status = "PENDING_SYNC",
-            subtotal = items.sumOf { (it.price.kopecks * it.quantity).toLong() },
-            discount = 0,
-            total = items.sumOf { (it.price.kopecks * it.quantity).toLong() },
+            subtotal = fiscalItems.sumOf { (it.price.kopecks * it.quantity).toLong() },
+            discount = fiscalItems.sumOf { it.discount.kopecks },
+            total = fiscalItems.sumOf { it.total.kopecks },
             taxAmount = 0,
             paymentType = PaymentType.CASH.value,
             createdAt = System.currentTimeMillis(),
@@ -74,10 +96,44 @@ class ReturnUseCase @Inject constructor(
         )
         checkDao.insert(localCheck)
 
+        val localItems = fiscalItems.map { item ->
+            LocalCheckItem(
+                id = item.id,
+                checkId = returnCheck.id,
+                productId = item.productId,
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = item.price.kopecks,
+                discount = item.discount.kopecks,
+                vatRate = item.vatRate.name,
+                total = item.total.kopecks
+            )
+        }
+        checkItemDao.insertAll(localItems)
+
         val fiscalResult = fiscalCore.printReturn(returnCheck)
         return when (fiscalResult) {
-            is FiscalResult.Success -> ReturnResult.Success(returnCheck.id, fiscalResult.fiscalSign)
-            is FiscalResult.Error -> ReturnResult.FiscalError(fiscalResult.code, fiscalResult.message)
+            is FiscalResult.Success -> {
+                checkDao.updateSyncStatus(
+                    id = returnCheck.id,
+                    status = "PENDING_SYNC",
+                    fiscalSign = fiscalResult.fiscalSign,
+                    ofdResponse = null,
+                    syncedAt = null
+                )
+                ReturnResult.Success(returnCheck.id, fiscalResult.fiscalSign)
+            }
+            is FiscalResult.Error -> {
+                checkDao.updateSyncStatus(
+                    id = returnCheck.id,
+                    status = "FISCAL_ERROR",
+                    fiscalSign = null,
+                    ofdResponse = null,
+                    syncedAt = null
+                )
+                ReturnResult.FiscalError(fiscalResult.code, fiscalResult.message)
+            }
         }
     }
 }
