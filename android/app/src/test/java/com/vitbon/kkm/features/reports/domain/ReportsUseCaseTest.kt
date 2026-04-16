@@ -60,6 +60,7 @@ class ReportsUseCaseTest {
         assertEquals(2, report.checkCount)
         assertEquals(1, report.returnCount)
         assertEquals(7_500L, report.averageCheck)
+        assertEquals(ReportDataSource.REMOTE, report.source)
     }
 
     @Test
@@ -111,6 +112,7 @@ class ReportsUseCaseTest {
         assertEquals("Лимонад", report.topProducts[2].name)
         assertEquals(1.0, report.topProducts[2].quantity, 0.0001)
         assertEquals(1_000L, report.topProducts[2].total)
+        assertEquals(ReportDataSource.LOCAL, report.source)
     }
 
     @Test
@@ -136,6 +138,7 @@ class ReportsUseCaseTest {
         assertEquals(1, report.returnCount)
         assertEquals(2_000L, report.averageCheck)
         assertEquals(0, report.topProducts.size)
+        assertEquals(ReportDataSource.LOCAL, report.source)
     }
 
     @Test
