@@ -2,6 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "server",
-  "dolt_database": "vitbon_kassa",
+  "dolt_database": "vitbon-kassa",
   "project_id": "f13e0c81-f496-4f2c-a85b-3da6a27a95cb"
 }
