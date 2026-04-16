@@ -76,7 +76,8 @@ class ReportsUseCase @Inject constructor(
                             quantity = it.quantity,
                             total = it.total
                         )
-                    }
+                    },
+                    source = ReportDataSource.REMOTE
                 )
             }
         }
@@ -109,7 +110,8 @@ class ReportsUseCase @Inject constructor(
             checkCount = checks.size,
             returnCount = returns.size,
             averageCheck = if (checks.isNotEmpty()) checks.sumOf { it.total } / checks.size else 0L,
-            topProducts = topProducts
+            topProducts = topProducts,
+            source = ReportDataSource.LOCAL
         )
     }
 }
@@ -137,6 +139,11 @@ data class ProductSales(
     val total: Long
 )
 
+enum class ReportDataSource {
+    REMOTE,
+    LOCAL
+}
+
 data class SalesReport(
     val totalSales: Long,     // копейки
     val totalReturns: Long,
@@ -146,5 +153,6 @@ data class SalesReport(
     val checkCount: Int,
     val returnCount: Int,
     val averageCheck: Long,   // копейки
-    val topProducts: List<ProductSales> = emptyList()
+    val topProducts: List<ProductSales> = emptyList(),
+    val source: ReportDataSource
 )

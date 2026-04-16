@@ -60,6 +60,7 @@ class ReportsUseCaseTest {
         assertEquals(2, report.checkCount)
         assertEquals(1, report.returnCount)
         assertEquals(7_500L, report.averageCheck)
+        assertEquals(ReportDataSource.REMOTE, report.source)
     }
 
     @Test
