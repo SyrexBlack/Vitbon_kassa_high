@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vitbon.kkm.features.reports.domain.ReportDataSource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +39,24 @@ fun ReportsScreen(onBack: () -> Unit, viewModel: ReportsViewModel = hiltViewMode
 
             if (state.report != null) {
                 val r = state.report!!
+                val sourceLabel = when (r.source) {
+                    ReportDataSource.REMOTE -> "Источник: Облако"
+                    ReportDataSource.LOCAL -> "Источник: Локально"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(sourceLabel) }
+                    )
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
