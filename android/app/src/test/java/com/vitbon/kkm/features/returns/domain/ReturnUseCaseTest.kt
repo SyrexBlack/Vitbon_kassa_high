@@ -18,6 +18,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,6 +61,50 @@ class ReturnUseCaseTest {
 
         assertEquals(saleByFiscalSign, found)
         coVerify(exactly = 1) { checkDao.findLatestSaleByIdentifier("FS-SRC") }
+    }
+
+    @Test
+    fun `findCheckByQr parses raw payload and looks up by fp`() = runBlocking {
+        val saleCheck = localCheck(id = "sale-qr-raw", type = "sale")
+        val qrPayload = "t=20260416T101010&s=129.00&fn=9960440502979149&i=100&fp=FAKE-QR-FS&n=1"
+        coEvery { checkDao.findLatestSaleByIdentifier("FAKE-QR-FS") } returns saleCheck
+
+        val found = useCase.findCheckByQr(qrPayload)
+
+        assertEquals(saleCheck, found)
+        coVerify(exactly = 1) { checkDao.findLatestSaleByIdentifier("FAKE-QR-FS") }
+    }
+
+    @Test
+    fun `findCheckByQr parses url payload and looks up by fp`() = runBlocking {
+        val saleCheck = localCheck(id = "sale-qr-url", type = "sale")
+        val qrPayload = "https://check.example/receipt?t=20260416T101010&s=129.00&fn=9960440502979149&i=100&fp=FAKE-QR-URL&n=1"
+        coEvery { checkDao.findLatestSaleByIdentifier("FAKE-QR-URL") } returns saleCheck
+
+        val found = useCase.findCheckByQr(qrPayload)
+
+        assertEquals(saleCheck, found)
+        coVerify(exactly = 1) { checkDao.findLatestSaleByIdentifier("FAKE-QR-URL") }
+    }
+
+    @Test
+    fun `findCheckByQr without fp returns null and skips lookup`() = runBlocking {
+        val qrPayloadWithoutFp = "t=20260416T101010&s=129.00&fn=9960440502979149&i=100&n=1"
+
+        val found = useCase.findCheckByQr(qrPayloadWithoutFp)
+
+        assertNull(found)
+        coVerify(exactly = 0) { checkDao.findLatestSaleByIdentifier(any()) }
+    }
+
+    @Test
+    fun `findCheckByQr malformed payload returns null and does not crash`() = runBlocking {
+        val malformedPayload = "###not-a-qr###"
+
+        val found = useCase.findCheckByQr(malformedPayload)
+
+        assertNull(found)
+        coVerify(exactly = 0) { checkDao.findLatestSaleByIdentifier(any()) }
     }
 
     @Test

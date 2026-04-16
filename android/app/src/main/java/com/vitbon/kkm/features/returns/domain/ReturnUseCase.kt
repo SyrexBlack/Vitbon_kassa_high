@@ -17,7 +17,22 @@ class ReturnUseCase @Inject constructor(
     private val checkItemDao: CheckItemDao
 ) {
     suspend fun findCheckByQr(qrData: String): LocalCheck? {
-        return findCheckByNumber(qrData)
+        val normalized = qrData.trim()
+        if (normalized.isEmpty()) return null
+
+        val payload = normalized.substringAfter('?', normalized)
+        val fp = payload.split('&')
+            .asSequence()
+            .mapNotNull { token ->
+                val separatorIndex = token.indexOf('=')
+                if (separatorIndex <= 0 || separatorIndex == token.lastIndex) return@mapNotNull null
+                val key = token.substring(0, separatorIndex).trim().lowercase()
+                val value = token.substring(separatorIndex + 1).trim()
+                if (key == "fp" && value.isNotEmpty()) value else null
+            }
+            .firstOrNull()
+
+        return fp?.let { checkDao.findLatestSaleByIdentifier(it) }
     }
 
     suspend fun findCheckByNumber(checkNumber: String): LocalCheck? {

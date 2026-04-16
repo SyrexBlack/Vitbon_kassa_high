@@ -62,7 +62,11 @@ class ReturnViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val check = returnUseCase.findCheckByNumber(normalizedInput)
+            val check = if (looksLikeQrPayload(normalizedInput)) {
+                returnUseCase.findCheckByQr(normalizedInput)
+            } else {
+                returnUseCase.findCheckByNumber(normalizedInput)
+            }
             if (_state.value.checkInput.trim() != normalizedInput) return@launch
 
             if (check != null) {
@@ -119,6 +123,17 @@ class ReturnViewModel @Inject constructor(
         val total = Money(_state.value.returnItems.filter { it.selected }
             .sumOf { (it.price.kopecks * it.quantity).toLong() - it.discount.kopecks })
         _state.update { it.copy(returnTotal = total) }
+    }
+
+    private fun looksLikeQrPayload(input: String): Boolean {
+        val normalized = input.lowercase()
+        val hasEquals = normalized.contains("=")
+        val hasQrTokens = normalized.contains("fp=") ||
+            normalized.contains("fn=") ||
+            normalized.contains("t=") ||
+            normalized.contains("i=") ||
+            normalized.contains("s=")
+        return hasEquals && hasQrTokens
     }
 
     fun processReturn() {

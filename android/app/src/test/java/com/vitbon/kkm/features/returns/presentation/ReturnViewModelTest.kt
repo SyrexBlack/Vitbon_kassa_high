@@ -109,6 +109,34 @@ class ReturnViewModelTest {
     }
 
     @Test
+    fun `onCheckInput with qr-like payload uses findCheckByQr and loads items`() = runTest {
+        val qrPayload = "t=20260416T101010&s=129.00&fn=9960440502979149&i=100&fp=FAKE-QR-FS&n=1"
+        val sourceCheck = localSaleCheck(id = "sale-qr-vm")
+        coEvery { returnUseCase.findCheckByQr(qrPayload) } returns sourceCheck
+        coEvery { returnUseCase.loadCheckItems("sale-qr-vm") } returns listOf(
+            ReturnItem(
+                productId = "prod-qr",
+                barcode = "4607001234567",
+                name = "Вода",
+                quantity = 1.0,
+                price = Money(129_00L),
+                discount = Money.ZERO,
+                vatRate = VatRate.NO_VAT
+            )
+        )
+
+        val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
+        vm.onCheckInput(qrPayload)
+        advanceUntilIdle()
+
+        val st = vm.state.value
+        assertEquals(sourceCheck, st.originalCheck)
+        assertEquals(1, st.returnItems.size)
+        coVerify(exactly = 1) { returnUseCase.findCheckByQr(qrPayload) }
+        coVerify(exactly = 0) { returnUseCase.findCheckByNumber(qrPayload) }
+    }
+
+    @Test
     fun `onCheckInput ignores stale async result when input changed and clears loaded source`() = runTest {
         val sourceCheck = localSaleCheck(id = "sale-0003")
         coEvery { returnUseCase.findCheckByNumber("sale-0003") } returns sourceCheck
