@@ -62,7 +62,8 @@ class ReturnViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val check = if (looksLikeQrPayload(normalizedInput)) {
+            val isQrLike = looksLikeQrPayload(normalizedInput)
+            val check = if (isQrLike) {
                 returnUseCase.findCheckByQr(normalizedInput)
             } else {
                 returnUseCase.findCheckByNumber(normalizedInput)
