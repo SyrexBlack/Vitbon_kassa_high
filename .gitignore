@@ -22,3 +22,4 @@ backend/build/
 # Local temp artifacts
 .tmp*
 **/.tmp*
+android/tmp_hb3_runner.py
