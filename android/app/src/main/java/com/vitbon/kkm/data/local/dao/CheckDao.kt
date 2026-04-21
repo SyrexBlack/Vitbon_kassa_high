@@ -29,6 +29,9 @@ interface CheckDao {
     @Query("SELECT * FROM checks WHERE shiftId = :shiftId ORDER BY createdAt DESC")
     fun observeByShift(shiftId: String): Flow<List<LocalCheck>>
 
+    @Query("SELECT * FROM checks WHERE shiftId = :shiftId ORDER BY createdAt DESC")
+    suspend fun findByShiftId(shiftId: String): List<LocalCheck>
+
     @Query("SELECT * FROM checks WHERE createdAt BETWEEN :fromTs AND :toTs ORDER BY createdAt DESC")
     suspend fun findByDateRange(fromTs: Long, toTs: Long): List<LocalCheck>
 
