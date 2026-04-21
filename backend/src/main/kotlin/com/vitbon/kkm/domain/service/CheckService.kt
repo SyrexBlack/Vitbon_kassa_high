@@ -1,28 +1,49 @@
 package com.vitbon.kkm.domain.service
 
 import com.vitbon.kkm.api.dto.*
+import com.vitbon.kkm.domain.persistence.CheckEntity
+import com.vitbon.kkm.domain.persistence.CheckItemEntity
+import com.vitbon.kkm.domain.persistence.CheckRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.util.UUID
 
 @Service
-class CheckService {
-    private val syncedChecks = mutableListOf<CheckDto>()
+class CheckService(
+    private val checkRepository: CheckRepository
+) {
 
+    @Transactional
     fun processSync(checks: List<CheckDto>): CheckSyncResponseDto {
         val failed = mutableListOf<FailedCheckDto>()
-        syncedChecks.addAll(checks)
-        val processed = checks.size
-        return CheckSyncResponseDto(processed, failed)
+
+        checks.forEach { dto ->
+            val entity = dto.toEntity()
+            checkRepository.save(entity)
+        }
+
+        return CheckSyncResponseDto(checks.size, failed)
     }
 
     fun findChecks(shiftId: String?, date: String?, since: Long?): List<CheckDto> {
-        var result = syncedChecks.toList()
-        if (shiftId != null) {
-            result = result.filter { it.shiftId == shiftId }
+        val entities = when {
+            shiftId != null && since != null -> {
+                checkRepository.findByShiftIdAndCreatedAtGreaterThanEqual(
+                    shiftId.toUUID(),
+                    since.toOffsetDateTime()
+                )
+            }
+            shiftId != null -> checkRepository.findByShiftId(shiftId.toUUID())
+            since != null -> checkRepository.findByCreatedAtGreaterThanEqual(since.toOffsetDateTime())
+            else -> checkRepository.findAll()
         }
-        if (since != null) {
-            result = result.filter { it.createdAt >= since }
-        }
-        return result
+
+        return entities
+            .sortedByDescending { it.createdAt }
+            .map { it.toDto() }
     }
 
     fun buildSalesReport(checks: List<CheckDto>, period: String): SalesReportDto {
@@ -145,5 +166,82 @@ class CheckService {
             closingStock = closingStock,
             items = items
         )
+    }
+
+    private fun CheckDto.toEntity(): CheckEntity {
+        val checkEntity = CheckEntity(
+            id = id.toUUID(),
+            localUuid = localUuid,
+            shiftId = shiftId?.toUUID(),
+            cashierId = cashierId?.toUUID(),
+            deviceId = deviceId,
+            type = type.uppercase(),
+            fiscalSign = fiscalSign,
+            ffdVersion = ffdVersion,
+            subtotal = subtotal,
+            discount = discount,
+            total = total,
+            taxAmount = taxAmount,
+            paymentType = paymentType,
+            createdAt = createdAt.toOffsetDateTime()
+        )
+
+        val itemEntities = items.map { item ->
+            CheckItemEntity(
+                id = item.id.toUUID(),
+                check = checkEntity,
+                productId = item.productId?.toUUID(),
+                barcode = item.barcode,
+                name = item.name,
+                quantity = item.quantity,
+                price = item.price,
+                discount = item.discount,
+                vatRate = item.vatRate,
+                total = item.total
+            )
+        }
+        checkEntity.items.addAll(itemEntities)
+        return checkEntity
+    }
+
+    private fun CheckEntity.toDto(): CheckDto {
+        return CheckDto(
+            id = id.toString(),
+            localUuid = localUuid,
+            shiftId = shiftId?.toString(),
+            cashierId = cashierId?.toString(),
+            deviceId = deviceId,
+            type = type,
+            fiscalSign = fiscalSign,
+            ffdVersion = ffdVersion,
+            subtotal = subtotal,
+            discount = discount,
+            total = total,
+            taxAmount = taxAmount,
+            paymentType = paymentType,
+            items = items.map { item ->
+                CheckItemDto(
+                    id = item.id.toString(),
+                    productId = item.productId?.toString(),
+                    barcode = item.barcode,
+                    name = item.name,
+                    quantity = item.quantity,
+                    price = item.price,
+                    discount = item.discount,
+                    vatRate = item.vatRate,
+                    total = item.total
+                )
+            },
+            createdAt = createdAt.toInstant().toEpochMilli()
+        )
+    }
+
+    private fun String.toUUID(): UUID {
+        return runCatching { UUID.fromString(this) }
+            .getOrElse { UUID.nameUUIDFromBytes(toByteArray()) }
+    }
+
+    private fun Long.toOffsetDateTime(): OffsetDateTime {
+        return OffsetDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneOffset.UTC)
     }
 }
