@@ -18,3 +18,7 @@ android/local.properties
 # Backend local/generated
 backend/.gradle/
 backend/build/
+
+# Local temp artifacts
+.tmp*
+**/.tmp*
