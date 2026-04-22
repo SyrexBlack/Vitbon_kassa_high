@@ -1,7 +1,11 @@
 package com.vitbon.kkm.ui.navigation
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -11,9 +15,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.vitbon.kkm.core.features.FeatureFlag
 import com.vitbon.kkm.features.auth.presentation.AuthScreen
 import com.vitbon.kkm.features.cashdrawer.presentation.CashDrawerScreen
+import com.vitbon.kkm.features.chaseznak.presentation.ChaseznakScreen
 import com.vitbon.kkm.features.correction.presentation.CorrectionScreen
+import com.vitbon.kkm.features.egais.presentation.EgaisScreen
 import com.vitbon.kkm.features.reports.presentation.ReportsScreen
 import com.vitbon.kkm.features.returns.presentation.ReturnScreen
 import com.vitbon.kkm.features.sales.presentation.SalesScreen
@@ -46,6 +53,7 @@ fun VitbonNavHost(
     var backendWarningMessage by remember {
         mutableStateOf(prefs.getString("backend_auth_warning", null))
     }
+    val enabledFeatures by rememberEnabledFeatures(prefs)
 
     NavHost(
         navController = navController,
@@ -67,9 +75,7 @@ fun VitbonNavHost(
         }
 
         composable(NavRoutes.SALES) { backStackEntry ->
-            val cashierId = backStackEntry.arguments?.getString("cashierId") ?: "unknown"
             val cashierName = backStackEntry.arguments?.getString("cashierName") ?: ""
-            val shiftId = backStackEntry.arguments?.getString("shiftId")
 
             SalesScreen(
                 cashierName = cashierName,
@@ -84,7 +90,10 @@ fun VitbonNavHost(
                 onOpenCorrection = { navController.navigate(NavRoutes.CORRECTION) },
                 onOpenCashDrawer = { navController.navigate(NavRoutes.CASH_DRAWER) },
                 onOpenReports = { navController.navigate(NavRoutes.REPORTS) },
-                onOpenStatuses = { navController.navigate(NavRoutes.STATUSES) }
+                onOpenStatuses = { navController.navigate(NavRoutes.STATUSES) },
+                onOpenEgais = { navController.navigate(NavRoutes.EGAIS) },
+                onOpenChaseznak = { navController.navigate(NavRoutes.CHASEZNAK) },
+                enabledFeatures = enabledFeatures
             )
         }
 
@@ -113,6 +122,74 @@ fun VitbonNavHost(
 
         composable(NavRoutes.CASH_DRAWER) {
             CashDrawerScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(NavRoutes.EGAIS) {
+            if (FeatureFlag.EGAAIS_ENABLED !in enabledFeatures) {
+                LaunchedFeatureRedirect(navController)
+            } else {
+                EgaisScreen(
+                    onBack = { navController.popBackStack() },
+                    onVerifyAge = {
+                        if (FeatureFlag.CHASEZNAK_ENABLED in enabledFeatures) {
+                            navController.navigate(NavRoutes.CHASEZNAK)
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(NavRoutes.CHASEZNAK) {
+            if (FeatureFlag.CHASEZNAK_ENABLED !in enabledFeatures) {
+                LaunchedFeatureRedirect(navController)
+            } else {
+                ChaseznakScreen(
+                    onBack = { navController.popBackStack() },
+                    onSellComplete = { navController.popBackStack() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberEnabledFeatures(
+    prefs: SharedPreferences
+): State<Set<FeatureFlag>> {
+    val enabled = remember(prefs) { mutableStateOf(loadEnabledFeatures(prefs)) }
+
+    DisposableEffect(prefs) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key != null && key.startsWith("feature_")) {
+                enabled.value = loadEnabledFeatures(prefs)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    return enabled
+}
+
+private fun loadEnabledFeatures(prefs: SharedPreferences): Set<FeatureFlag> {
+    return FeatureFlag.entries.filter { flag ->
+        prefs.getBoolean("feature_${flag.name}", false)
+    }.toSet()
+}
+
+@Composable
+private fun LaunchedFeatureRedirect(navController: NavHostController) {
+    LaunchedEffect(Unit) {
+        val popped = navController.popBackStack()
+        if (!popped) {
+            navController.navigate(NavRoutes.AUTH) {
+                popUpTo(navController.graph.startDestinationId) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
         }
     }
 }

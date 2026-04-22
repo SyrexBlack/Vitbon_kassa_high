@@ -55,3 +55,23 @@ class ProductDeletionEntity(
     @Column(name = "deleted_at", nullable = false)
     val deletedAt: OffsetDateTime
 )
+
+@Entity
+@Table(name = "device_licenses")
+class DeviceLicenseEntity(
+    @Id
+    @Column(name = "device_id", nullable = false)
+    val deviceId: String,
+
+    @Column(name = "status", nullable = false)
+    val status: String,
+
+    @Column(name = "expiry_date")
+    val expiryDate: OffsetDateTime?,
+
+    @Column(name = "grace_until")
+    val graceUntil: OffsetDateTime?,
+
+    @Column(name = "updated_at", nullable = false)
+    val updatedAt: OffsetDateTime
+)

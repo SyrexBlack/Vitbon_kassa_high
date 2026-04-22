@@ -7,11 +7,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitbon.kkm.ui.navigation.NavRoutes
 
 @Composable
 fun LicenseBlockedScreen(
     reason: String,
-    onContactSupport: () -> Unit
+    onContactSupport: () -> Unit,
+    onOpenReports: () -> Unit,
+    onOpenStatuses: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -42,6 +45,24 @@ fun LicenseBlockedScreen(
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Spacer(modifier = Modifier.height(32.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onOpenReports,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Отчёты")
+                }
+                OutlinedButton(
+                    onClick = onOpenStatuses,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Статусы")
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onContactSupport,
                 colors = ButtonDefaults.buttonColors(
@@ -52,4 +73,9 @@ fun LicenseBlockedScreen(
             }
         }
     }
+}
+
+fun isRouteAllowedWhenBlocked(route: String): Boolean {
+    val baseRoute = route.substringBefore("/")
+    return baseRoute == NavRoutes.REPORTS || baseRoute == NavRoutes.STATUSES
 }

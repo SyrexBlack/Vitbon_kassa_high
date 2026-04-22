@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vitbon.kkm.core.features.FeatureFlag
 import com.vitbon.kkm.features.sales.domain.CartItem
 import com.vitbon.kkm.features.sales.domain.SaleResult
 import com.vitbon.kkm.features.statuses.presentation.StatusBar
@@ -38,6 +39,9 @@ fun SalesScreen(
     onOpenCashDrawer: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenStatuses: () -> Unit,
+    onOpenEgais: () -> Unit,
+    onOpenChaseznak: () -> Unit,
+    enabledFeatures: Set<FeatureFlag>,
     viewModel: SalesViewModel = hiltViewModel(),
     statusViewModel: StatusViewModel = hiltViewModel()
 ) {
@@ -124,6 +128,32 @@ fun SalesScreen(
                 onClick = onOpenStatuses,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (shouldShowEgaisAction(enabledFeatures) || shouldShowChaseznakAction(enabledFeatures)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (shouldShowEgaisAction(enabledFeatures)) {
+                        OutlinedButton(
+                            onClick = onOpenEgais,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("ЕГАИС")
+                        }
+                    }
+                    if (shouldShowChaseznakAction(enabledFeatures)) {
+                        OutlinedButton(
+                            onClick = onOpenChaseznak,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Честный ЗНАК")
+                        }
+                    }
+                }
+            }
 
             // Поиск / сканер
             OutlinedTextField(
@@ -324,6 +354,14 @@ fun createBackendWarningPreferenceListener(
             }
         }
     }
+}
+
+fun shouldShowEgaisAction(enabledFeatures: Set<FeatureFlag>): Boolean {
+    return FeatureFlag.EGAAIS_ENABLED in enabledFeatures
+}
+
+fun shouldShowChaseznakAction(enabledFeatures: Set<FeatureFlag>): Boolean {
+    return FeatureFlag.CHASEZNAK_ENABLED in enabledFeatures
 }
 
 @Composable

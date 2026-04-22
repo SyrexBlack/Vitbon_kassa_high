@@ -1,6 +1,7 @@
 package com.vitbon.kkm.domain.service
 
 import com.vitbon.kkm.api.dto.*
+import com.vitbon.kkm.domain.persistence.DeviceLicenseRepository
 import com.vitbon.kkm.domain.persistence.DocumentEntity
 import com.vitbon.kkm.domain.persistence.DocumentItemEntity
 import com.vitbon.kkm.domain.persistence.DocumentRepository
@@ -12,6 +13,10 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+
+private const val LICENSE_STATUS_ACTIVE = "ACTIVE"
+private const val LICENSE_STATUS_EXPIRED = "EXPIRED"
+private const val LICENSE_STATUS_GRACE_PERIOD = "GRACE_PERIOD"
 
 @Service
 class DocumentService(
@@ -99,12 +104,33 @@ class StatusService {
 }
 
 @Service
-class LicenseService {
-    fun check(deviceId: String): LicenseCheckResponseDto = LicenseCheckResponseDto(
-        status = "ACTIVE",
-        expiryDate = System.currentTimeMillis() + 30L * 24 * 3600 * 1000,
-        graceUntil = null
-    )
+class LicenseService(
+    private val deviceLicenseRepository: DeviceLicenseRepository
+) {
+    fun check(deviceId: String): LicenseCheckResponseDto {
+        val row = deviceLicenseRepository.findById(deviceId).orElse(null)
+            ?: return LicenseCheckResponseDto(
+                status = LICENSE_STATUS_ACTIVE,
+                expiryDate = null,
+                graceUntil = null
+            )
+
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        val graceActive = row.graceUntil?.let { !it.isBefore(now) } == true
+        val expiredByDate = row.expiryDate?.let { !it.isAfter(now) } == true
+
+        val resolvedStatus = when {
+            row.status == LICENSE_STATUS_ACTIVE && !expiredByDate -> LICENSE_STATUS_ACTIVE
+            row.status != LICENSE_STATUS_ACTIVE && graceActive -> LICENSE_STATUS_GRACE_PERIOD
+            else -> LICENSE_STATUS_EXPIRED
+        }
+
+        return LicenseCheckResponseDto(
+            status = resolvedStatus,
+            expiryDate = row.expiryDate?.toInstant()?.toEpochMilli(),
+            graceUntil = row.graceUntil?.toInstant()?.toEpochMilli()
+        )
+    }
 }
 
 @Service
