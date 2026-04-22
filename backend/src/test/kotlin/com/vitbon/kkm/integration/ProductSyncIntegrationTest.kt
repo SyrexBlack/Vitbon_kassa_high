@@ -56,7 +56,28 @@ class ProductSyncIntegrationTest {
         val newTs = base
 
         withConnection { conn ->
+            conn.prepareStatement("DELETE FROM product_deletions").executeUpdate()
             conn.prepareStatement("DELETE FROM products").executeUpdate()
+            conn.prepareStatement(
+                """
+                INSERT INTO product_deletions (product_id, deleted_at)
+                VALUES (?, ?)
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1, java.util.UUID.fromString("66666666-6666-6666-6666-666666666666"))
+                ps.setTimestamp(2, Timestamp(oldTs))
+                ps.executeUpdate()
+            }
+            conn.prepareStatement(
+                """
+                INSERT INTO product_deletions (product_id, deleted_at)
+                VALUES (?, ?)
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1, java.util.UUID.fromString("99999999-9999-9999-9999-999999999999"))
+                ps.setTimestamp(2, Timestamp(newTs))
+                ps.executeUpdate()
+            }
             conn.prepareStatement(
                 """
                 INSERT INTO products (
@@ -112,6 +133,8 @@ class ProductSyncIntegrationTest {
             .andExpect(jsonPath("$.products.length()").value(1))
             .andExpect(jsonPath("$.products[0].name").value("New"))
             .andExpect(jsonPath("$.products[0].id").value("88888888-8888-8888-8888-888888888888"))
+            .andExpect(jsonPath("$.deletedIds.length()").value(1))
+            .andExpect(jsonPath("$.deletedIds[0]").value("99999999-9999-9999-9999-999999999999"))
     }
 
     private fun withConnection(block: (Connection) -> Unit) {

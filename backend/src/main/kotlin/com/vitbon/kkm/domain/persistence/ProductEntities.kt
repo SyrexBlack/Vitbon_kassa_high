@@ -44,3 +44,14 @@ class ProductEntity(
     @Column(name = "updated_at", nullable = false)
     val updatedAt: OffsetDateTime
 )
+
+@Entity
+@Table(name = "product_deletions")
+class ProductDeletionEntity(
+    @Id
+    @Column(name = "product_id", nullable = false)
+    val productId: UUID,
+
+    @Column(name = "deleted_at", nullable = false)
+    val deletedAt: OffsetDateTime
+)

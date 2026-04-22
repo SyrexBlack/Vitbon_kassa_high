@@ -22,3 +22,7 @@ interface ProductRepository : JpaRepository<ProductEntity, UUID> {
     fun findByUpdatedAtGreaterThanEqualOrderByUpdatedAtAsc(updatedAt: OffsetDateTime): List<ProductEntity>
     fun findAllByOrderByUpdatedAtAsc(): List<ProductEntity>
 }
+
+interface ProductDeletionRepository : JpaRepository<ProductDeletionEntity, UUID> {
+    fun findByDeletedAtGreaterThanEqualOrderByDeletedAtAsc(deletedAt: OffsetDateTime): List<ProductDeletionEntity>
+}
