@@ -89,17 +89,6 @@ class DocumentService(
 }
 
 @Service
-class ShiftService {
-    fun findByCashier(cashierId: String): List<ShiftDto> {
-        return emptyList()
-    }
-
-    fun open(shift: ShiftDto): ShiftDto = shift
-
-    fun close(id: String): Unit {}
-}
-
-@Service
 class StatusService {
     fun getStatuses(): StatusResponseDto = StatusResponseDto(
         ofdQueueLength = 0,
