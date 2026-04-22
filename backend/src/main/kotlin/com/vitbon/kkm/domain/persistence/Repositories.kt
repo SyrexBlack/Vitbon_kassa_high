@@ -17,3 +17,8 @@ interface DocumentRepository : JpaRepository<DocumentEntity, UUID> {
 interface ShiftRepository : JpaRepository<ShiftEntity, UUID> {
     fun findByCashierIdOrderByOpenedAtDesc(cashierId: UUID): List<ShiftEntity>
 }
+
+interface ProductRepository : JpaRepository<ProductEntity, UUID> {
+    fun findByUpdatedAtGreaterThanEqualOrderByUpdatedAtAsc(updatedAt: OffsetDateTime): List<ProductEntity>
+    fun findAllByOrderByUpdatedAtAsc(): List<ProductEntity>
+}
