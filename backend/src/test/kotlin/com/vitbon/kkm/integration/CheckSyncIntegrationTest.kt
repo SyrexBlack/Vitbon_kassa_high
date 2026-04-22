@@ -72,6 +72,65 @@ class CheckSyncIntegrationTest {
     }
 
     @Test
+    fun `POST checks creates single check and GET checks by id returns it`() {
+        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val now = System.currentTimeMillis()
+        val checkId = "33333333-3333-3333-3333-333333333333"
+        val itemId = "44444444-4444-4444-4444-444444444444"
+
+        val check = CheckDto(
+            id = checkId,
+            localUuid = "single-local-1",
+            shiftId = "shift-single-1",
+            cashierId = null,
+            deviceId = "TEST-DEVICE",
+            type = "SALE",
+            fiscalSign = null,
+            ffdVersion = "1.05",
+            subtotal = 12000L,
+            discount = 0L,
+            total = 12000L,
+            taxAmount = 2200L,
+            paymentType = "cash",
+            items = listOf(
+                CheckItemDto(
+                    id = itemId,
+                    productId = null,
+                    barcode = "4601234567891",
+                    name = "Одиночный товар",
+                    quantity = 1.0,
+                    price = 12000L,
+                    discount = 0L,
+                    vatRate = "VAT_22",
+                    total = 12000L
+                )
+            ),
+            createdAt = now
+        )
+
+        mockMvc.perform(
+            post("/api/v1/checks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(check))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(checkId))
+
+        mockMvc.perform(get("/api/v1/checks/$checkId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(checkId))
+            .andExpect(jsonPath("$.items[0].id").value(itemId))
+    }
+
+    @Test
+    fun `GET checks by id returns 404 for unknown id`() {
+        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+
+        mockMvc.perform(get("/api/v1/checks/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
     fun `GET checks returns persisted checks after sync`() {
         val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
         val now = System.currentTimeMillis()

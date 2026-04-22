@@ -25,6 +25,15 @@ class ReportsController(
         return checkService.buildSalesReport(checks, period)
     }
 
+    @GetMapping("/sales")
+    fun salesReportAlias(
+        @RequestParam period: String,
+        @RequestParam(required = false) shiftId: String?,
+        @RequestParam(required = false) since: Long?
+    ): SalesReportDto {
+        return salesReport(period = period, shiftId = shiftId, since = since)
+    }
+
     @GetMapping("/movement")
     fun movementReport(
         @RequestParam period: String,

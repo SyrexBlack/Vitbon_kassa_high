@@ -175,6 +175,13 @@ class ReportsIntegrationTest {
             .andExpect(jsonPath("$.topProducts[1].name").value("Сок"))
             .andExpect(jsonPath("$.topProducts[1].quantity").value(1.0))
             .andExpect(jsonPath("$.topProducts[1].total").value(5000))
+
+        mockMvc.perform(get("/api/v1/reports/sales").param("period", "day").param("shiftId", "shift-1"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalChecks").value(2))
+            .andExpect(jsonPath("$.returnChecks").value(1))
+            .andExpect(jsonPath("$.totalRevenue").value(15000))
+            .andExpect(jsonPath("$.totalReturns").value(2000))
     }
 
     @Test
