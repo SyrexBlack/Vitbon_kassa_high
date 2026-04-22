@@ -18,3 +18,8 @@ android/local.properties
 # Backend local/generated
 backend/.gradle/
 backend/build/
+
+# Local temp artifacts
+.tmp*
+**/.tmp*
+android/tmp_hb3_runner.py

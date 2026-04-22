@@ -52,8 +52,32 @@ class ShiftViewModel @Inject constructor(
     fun closeShift() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            // найти открытую смену
-            _state.update { it.copy(shiftStatus = ShiftStatus.CLOSED, isLoading = false) }
+            val shiftId = useCase.findOpenShiftId()
+            if (shiftId == null) {
+                _state.update { it.copy(isLoading = false, error = "Нет открытой смены для закрытия") }
+                return@launch
+            }
+
+            when (val result = useCase.closeShift(shiftId)) {
+                is ShiftResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            shiftStatus = ShiftStatus.CLOSED,
+                            opened = false,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }
+                is ShiftResult.Error -> {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "${result.code}: ${result.message}"
+                        )
+                    }
+                }
+            }
         }
     }
 

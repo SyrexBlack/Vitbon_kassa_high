@@ -2,6 +2,7 @@ package com.vitbon.kkm.features.shift.domain
 
 import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalShift
 import java.util.UUID
@@ -11,7 +12,8 @@ import javax.inject.Singleton
 @Singleton
 class ShiftUseCase @Inject constructor(
     private val fiscalCore: FiscalCore,
-    private val shiftDao: ShiftDao
+    private val shiftDao: ShiftDao,
+    private val checkDao: CheckDao
 ) {
     /**
      * Алгоритм старта по ТЗ:
@@ -51,12 +53,22 @@ class ShiftUseCase @Inject constructor(
     suspend fun closeShift(shiftId: String): ShiftResult {
         return when (val r = fiscalCore.closeShift()) {
             is FiscalResult.Success -> {
-                shiftDao.closeShift(shiftId, System.currentTimeMillis(), 0L, 0L)
+                val checks = checkDao.findByShiftId(shiftId)
+                val sales = checks.filter { it.type.equals("sale", ignoreCase = true) }
+                val totalCash = sales
+                    .filter { it.paymentType.equals("cash", ignoreCase = true) }
+                    .sumOf { it.total }
+                val totalCard = sales
+                    .filter { it.paymentType.equals("card", ignoreCase = true) }
+                    .sumOf { it.total }
+                shiftDao.closeShift(shiftId, System.currentTimeMillis(), totalCash, totalCard)
                 ShiftResult.Success(shiftId)
             }
             is FiscalResult.Error -> ShiftResult.Error(r.code, r.message)
         }
     }
+
+    suspend fun findOpenShiftId(): String? = shiftDao.findOpenShift()?.id
 
     suspend fun printXReport(): FiscalResult = fiscalCore.printXReport()
 }
