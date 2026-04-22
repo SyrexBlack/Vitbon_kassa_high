@@ -12,4 +12,9 @@ class ProductsController(private val productService: ProductService) {
     fun getProducts(@RequestParam since: Long?): ProductSyncResponseDto {
         return productService.getProductsDelta(since)
     }
+
+    @PostMapping("sync")
+    fun syncProducts(@RequestBody req: ProductSyncResponseDto): ProductSyncResponseDto {
+        return req
+    }
 }

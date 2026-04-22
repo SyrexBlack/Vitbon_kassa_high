@@ -45,6 +45,72 @@ paths:
         '401':
           description: Неверный ПИН
 
+  /checks:
+    post:
+      tags: [Checks]
+      summary: Создать чек
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckDto'
+      responses:
+        '200':
+          description: Созданный чек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckDto'
+    get:
+      tags: [Checks]
+      summary: Список чеков
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: shiftId
+          in: query
+          schema: { type: string }
+        - name: date
+          in: query
+          schema: { type: string }
+        - name: since
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Список чеков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CheckDto'
+
+  /checks/{id}:
+    get:
+      tags: [Checks]
+      summary: Получить чек по id
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Чек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckDto'
+        '404':
+          description: Чек не найден
+
   /checks/sync:
     post:
       tags: [Checks]
@@ -94,6 +160,33 @@ paths:
       responses:
         '200':
           description: Delta-обновление каталога
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products: { type: array, items: { $ref: '#/components/schemas/ProductDto' } }
+                  deletedIds: { type: array, items: { type: string } }
+                  serverTimestamp: { type: integer, format: int64 }
+
+  /products/sync:
+    post:
+      tags: [Products]
+      summary: Синхронизация каталога товаров (compat echo)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                products: { type: array, items: { $ref: '#/components/schemas/ProductDto' } }
+                deletedIds: { type: array, items: { type: string } }
+                serverTimestamp: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Echo payload
           content:
             application/json:
               schema:
@@ -165,6 +258,84 @@ paths:
                   status: { type: string, enum: [ACTIVE, EXPIRED, GRACE_PERIOD] }
                   expiryDate: { type: integer, format: int64, nullable: true }
                   graceUntil: { type: integer, format: int64, nullable: true }
+
+  /reports:
+    get:
+      tags: [Reports]
+      summary: Отчёт по продажам
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { type: string }
+        - name: shiftId
+          in: query
+          schema: { type: string }
+        - name: since
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Отчёт по продажам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReportDto'
+
+  /reports/sales:
+    get:
+      tags: [Reports]
+      summary: Отчёт по продажам (compat alias)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { type: string }
+        - name: shiftId
+          in: query
+          schema: { type: string }
+        - name: since
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Отчёт по продажам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReportDto'
+
+  /reports/movement:
+    get:
+      tags: [Reports]
+      summary: Отчёт по движению товаров
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { type: string }
+        - name: since
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Отчёт по движению товаров
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementReportDto'
 
   /documents/acceptance:
     post:
@@ -355,3 +526,47 @@ components:
         name: { type: string }
         quantity: { type: number }
         reason: { type: string, nullable: true }
+
+    ProductSalesDto:
+      type: object
+      properties:
+        name: { type: string }
+        quantity: { type: number }
+        total: { type: integer }
+
+    SalesReportDto:
+      type: object
+      properties:
+        totalChecks: { type: integer }
+        returnChecks: { type: integer }
+        totalRevenue: { type: integer }
+        totalReturns: { type: integer }
+        cashRevenue: { type: integer }
+        cardRevenue: { type: integer }
+        averageCheck: { type: integer }
+        topProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSalesDto'
+
+    MovementReportItemDto:
+      type: object
+      properties:
+        name: { type: string }
+        income: { type: number }
+        sales: { type: number }
+        balance: { type: number }
+
+    MovementReportDto:
+      type: object
+      properties:
+        openingStock: { type: number }
+        income: { type: number }
+        sales: { type: number }
+        returns: { type: number }
+        writeoff: { type: number }
+        closingStock: { type: number }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovementReportItemDto'

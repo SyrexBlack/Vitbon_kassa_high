@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -46,6 +47,40 @@ class ProductSyncIntegrationTest {
         assertEquals(1, resp.products.size)
         assertEquals(1, resp.deletedIds.size)
         assertTrue(resp.serverTimestamp > 0)
+    }
+
+    @Test
+    fun `POST products-sync echoes payload contract`() {
+        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val payload = ProductSyncResponseDto(
+            products = listOf(
+                ProductDto(
+                    id = "11111111-1111-1111-1111-111111111111",
+                    barcode = "4601000000003",
+                    name = "Echo",
+                    article = "ECHO-1",
+                    price = 300L,
+                    vatRate = "VAT_22",
+                    categoryId = null,
+                    stock = 3.0,
+                    egaisFlag = false,
+                    chaseznakFlag = false,
+                    updatedAt = System.currentTimeMillis()
+                )
+            ),
+            deletedIds = listOf("aaaaaaa1-1111-1111-1111-111111111111"),
+            serverTimestamp = System.currentTimeMillis()
+        )
+
+        mockMvc.perform(
+            post("/api/v1/products/sync")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.products.length()").value(1))
+            .andExpect(jsonPath("$.products[0].name").value("Echo"))
+            .andExpect(jsonPath("$.deletedIds.length()").value(1))
     }
 
     @Test

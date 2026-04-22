@@ -28,6 +28,16 @@ class CheckService(
         return CheckSyncResponseDto(checks.size, failed)
     }
 
+    @Transactional
+    fun create(check: CheckDto): CheckDto {
+        val saved = checkRepository.save(check.toEntity())
+        return saved.toDto()
+    }
+
+    fun findById(id: String): CheckDto? {
+        return checkRepository.findById(id.toUUID()).orElse(null)?.toDto()
+    }
+
     fun findChecks(shiftId: String?, date: String?, since: Long?): List<CheckDto> {
         val entities = when {
             shiftId != null && since != null -> {
