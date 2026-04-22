@@ -13,3 +13,7 @@ interface CheckRepository : JpaRepository<CheckEntity, UUID> {
 interface DocumentRepository : JpaRepository<DocumentEntity, UUID> {
     fun findByTimestampGreaterThanEqual(since: OffsetDateTime): List<DocumentEntity>
 }
+
+interface ShiftRepository : JpaRepository<ShiftEntity, UUID> {
+    fun findByCashierIdOrderByOpenedAtDesc(cashierId: UUID): List<ShiftEntity>
+}
