@@ -1,8 +1,11 @@
 package com.vitbon.kkm.features.sales.presentation
 
 import android.content.SharedPreferences
+import com.vitbon.kkm.core.features.FeatureFlag
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicReference
 
@@ -96,6 +99,38 @@ class SalesWarningBridgeTest {
 
         assertNull(emitted.get())
         assertEquals("не должно прилететь", prefs.getString(BACKEND_AUTH_WARNING_KEY, null))
+    }
+
+    @Test
+    fun `module actions are hidden when both optional features are disabled`() {
+        val enabledFlags = emptySet<FeatureFlag>()
+
+        assertFalse(shouldShowEgaisAction(enabledFlags))
+        assertFalse(shouldShowChaseznakAction(enabledFlags))
+    }
+
+    @Test
+    fun `egais action is visible only when EGAAIS feature is enabled`() {
+        val enabledFlags = setOf(FeatureFlag.EGAAIS_ENABLED)
+
+        assertTrue(shouldShowEgaisAction(enabledFlags))
+        assertFalse(shouldShowChaseznakAction(enabledFlags))
+    }
+
+    @Test
+    fun `chaseznak action is visible only when CHASEZNAK feature is enabled`() {
+        val enabledFlags = setOf(FeatureFlag.CHASEZNAK_ENABLED)
+
+        assertFalse(shouldShowEgaisAction(enabledFlags))
+        assertTrue(shouldShowChaseznakAction(enabledFlags))
+    }
+
+    @Test
+    fun `both module actions are visible when both optional features are enabled`() {
+        val enabledFlags = setOf(FeatureFlag.EGAAIS_ENABLED, FeatureFlag.CHASEZNAK_ENABLED)
+
+        assertTrue(shouldShowEgaisAction(enabledFlags))
+        assertTrue(shouldShowChaseznakAction(enabledFlags))
     }
 
 }

@@ -26,3 +26,5 @@ interface ProductRepository : JpaRepository<ProductEntity, UUID> {
 interface ProductDeletionRepository : JpaRepository<ProductDeletionEntity, UUID> {
     fun findByDeletedAtGreaterThanEqualOrderByDeletedAtAsc(deletedAt: OffsetDateTime): List<ProductDeletionEntity>
 }
+
+interface DeviceLicenseRepository : JpaRepository<DeviceLicenseEntity, String>
