@@ -8,6 +8,26 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Entity
+@Table(name = "cashiers")
+class CashierEntity(
+    @Id
+    @Column(name = "id", nullable = false)
+    val id: UUID,
+
+    @Column(name = "name", nullable = false)
+    val name: String,
+
+    @Column(name = "pin_hash", nullable = false)
+    val pinHash: String,
+
+    @Column(name = "role", nullable = false)
+    val role: String,
+
+    @Column(name = "created_at", nullable = false)
+    val createdAt: OffsetDateTime
+)
+
+@Entity
 @Table(name = "auth_sessions")
 class AuthSessionEntity(
     @Id

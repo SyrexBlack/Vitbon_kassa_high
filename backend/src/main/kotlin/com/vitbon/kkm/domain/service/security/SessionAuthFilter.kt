@@ -1,6 +1,7 @@
 package com.vitbon.kkm.domain.service.security
 
 import com.vitbon.kkm.domain.persistence.AuthSessionRepository
+import com.vitbon.kkm.domain.persistence.CashierRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -11,6 +12,7 @@ import java.time.OffsetDateTime
 @Component
 class SessionAuthFilter(
     private val authSessionRepository: AuthSessionRepository,
+    private val cashierRepository: CashierRepository,
     private val sessionTokenService: SessionTokenService,
     private val routeAccessPolicy: RouteAccessPolicy,
     private val auditService: AuditService
@@ -41,9 +43,11 @@ class SessionAuthFilter(
             return
         }
 
-        val role = "CASHIER"
+        val role = cashierRepository.findById(session.cashierId)
+            .map { it.role }
+            .orElse(null)
 
-        if (!requiredRoles.contains(role)) {
+        if (role == null || !requiredRoles.contains(role)) {
             auditService.write(
                 actorId = session.cashierId,
                 actorRole = role,

@@ -34,4 +34,6 @@ interface AuthSessionRepository : JpaRepository<AuthSessionEntity, UUID> {
     fun findByCashierIdAndRevokedAtIsNull(cashierId: UUID): AuthSessionEntity?
 }
 
+interface CashierRepository : JpaRepository<CashierEntity, UUID>
+
 interface AuditEventRepository : JpaRepository<AuditEventEntity, UUID>
