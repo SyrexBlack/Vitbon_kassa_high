@@ -1,7 +1,8 @@
 package com.vitbon.kkm.features.sales.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
@@ -12,7 +13,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ProcessSaleUseCase @Inject constructor(
-    private val fiscalCore: FiscalCore,
+    private val fiscalOrchestrator: FiscalOperationOrchestrator,
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao
 ) {
@@ -86,14 +87,14 @@ class ProcessSaleUseCase @Inject constructor(
         }
         checkItemDao.insertAll(localItems)
 
-        // 3. Отправить в FiscalCore
-        val fiscalResult = fiscalCore.printSale(fiscalCheck)
+        // 3. Отправить в FiscalRuntime
+        val fiscalResult = fiscalOrchestrator.executeSale(fiscalCheck)
 
         return when (fiscalResult) {
-            is FiscalResult.Success -> {
+            is FiscalRuntimeResult.Success -> {
                 checkDao.updateSyncStatus(
                     id = fiscalCheck.id,
-                    status = "PENDING_SYNC",  // всё ещё ожидает sync up
+                    status = "PENDING_SYNC",
                     fiscalSign = fiscalResult.fiscalSign,
                     ofdResponse = null,
                     syncedAt = null
@@ -104,7 +105,7 @@ class ProcessSaleUseCase @Inject constructor(
                     total = cart.total.rubles
                 )
             }
-            is FiscalResult.Error -> {
+            is FiscalRuntimeResult.Error -> {
                 checkDao.updateSyncStatus(
                     id = fiscalCheck.id,
                     status = "FISCAL_ERROR",
@@ -112,7 +113,7 @@ class ProcessSaleUseCase @Inject constructor(
                     ofdResponse = null,
                     syncedAt = null
                 )
-                SaleResult.FiscalError(fiscalResult.code, fiscalResult.message)
+                SaleResult.FiscalError(-1, fiscalResult.message)
             }
         }
     }
