@@ -2,6 +2,7 @@ package com.vitbon.kkm.data.remote
 
 import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.features.auth.domain.AuthTokenStore
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -10,7 +11,12 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    fun create(prefs: android.content.SharedPreferences): VitbonApi {
+    internal fun buildAuthorizationHeader(tokenStore: AuthTokenStore): String? {
+        val token = tokenStore.read()
+        return if (token.isNullOrBlank()) null else "Bearer $token"
+    }
+
+    fun create(tokenStore: AuthTokenStore): VitbonApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -21,10 +27,9 @@ object ApiClient {
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(logging)
             .addInterceptor { chain ->
-                val token = prefs.getString("auth_token", null)
                 val requestBuilder = chain.request().newBuilder()
-                if (!token.isNullOrBlank()) {
-                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                buildAuthorizationHeader(tokenStore)?.let {
+                    requestBuilder.addHeader("Authorization", it)
                 }
                 chain.proceed(requestBuilder.build())
             }

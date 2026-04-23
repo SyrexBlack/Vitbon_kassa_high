@@ -5,6 +5,8 @@ import com.vitbon.kkm.api.dto.LoginFeaturesDto
 import com.vitbon.kkm.api.dto.LoginResponseDto
 import com.vitbon.kkm.domain.persistence.AuthSessionEntity
 import com.vitbon.kkm.domain.persistence.AuthSessionRepository
+import com.vitbon.kkm.domain.persistence.CashierEntity
+import com.vitbon.kkm.domain.persistence.CashierRepository
 import com.vitbon.kkm.domain.service.security.AuditService
 import com.vitbon.kkm.domain.service.security.SessionTokenService
 import org.springframework.http.HttpStatus
@@ -16,6 +18,7 @@ import java.util.UUID
 @Service
 class AuthService(
     private val authSessionRepository: AuthSessionRepository,
+    private val cashierRepository: CashierRepository,
     private val sessionTokenService: SessionTokenService,
     private val auditService: AuditService
 ) {
@@ -26,6 +29,18 @@ class AuthService(
         }
 
         val cashierId = UUID.fromString(DEMO_CASHIER_ID_UUID)
+        val cashier = cashierRepository.findById(cashierId)
+            .orElseGet {
+                cashierRepository.save(
+                    CashierEntity(
+                        id = cashierId,
+                        name = DEMO_CASHIER_NAME,
+                        pinHash = "demo-pin-hash",
+                        role = DEMO_CASHIER_ROLE,
+                        createdAt = OffsetDateTime.now()
+                    )
+                )
+            }
 
         authSessionRepository.findByCashierIdAndRevokedAtIsNull(cashierId)?.let { oldSession ->
             authSessionRepository.save(
@@ -65,8 +80,8 @@ class AuthService(
             token = token,
             cashier = CashierDto(
                 id = DEMO_CASHIER_ID,
-                name = DEMO_CASHIER_NAME,
-                role = DEMO_CASHIER_ROLE
+                name = cashier.name,
+                role = cashier.role
             ),
             features = LoginFeaturesDto(
                 egaisEnabled = false,
