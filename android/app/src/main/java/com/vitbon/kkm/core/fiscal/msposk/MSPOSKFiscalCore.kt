@@ -33,9 +33,7 @@ class MSPOSKFiscalCore @Inject constructor(
     private var cachedStatus: FiscalStatus? = null
 
     private val sdk: MSPOSKProtocol by lazy {
-        // В реальной реализации: MSPOSKSDK.getInstance(context)
-        // Заглушка — заменить на реальный SDK после получения .aar
-        MSPOSKStub()
+        RealMSPOSKProtocol(context)
     }
 
     override suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
@@ -59,126 +57,54 @@ class MSPOSKFiscalCore @Inject constructor(
 
     override suspend fun openShift(): FiscalResult = executeFiscal {
         Log.d(TAG, "Opening shift...")
-        // val result = sdk.openShift()
-        // FiscalResult.Success(result.fiscalSign, result.fnNumber, result.fdNumber, System.currentTimeMillis())
-        FiscalResult.Success(
-            fiscalSign = "MSP_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = "1",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.openShift()
     }
 
     override suspend fun printSale(check: FiscalCheck): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing SALE check ${check.id}")
         require(check.type == CheckType.SALE) { "Expected SALE, got ${check.type}" }
-        // val doc = buildFFDDocument(check) // уже построен в FiscalDocumentBuilder
-        // val result = sdk.printCheck(doc)
-        FiscalResult.Success(
-            fiscalSign = "MSP_FISCAL_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = (check.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printSale(check)
     }
 
     override suspend fun printReturn(check: FiscalCheck): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing RETURN check ${check.id}")
         require(check.type == CheckType.RETURN) { "Expected RETURN, got ${check.type}" }
-        // val result = sdk.printReturn(check)
-        FiscalResult.Success(
-            fiscalSign = "MSP_RETURN_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = (check.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printReturn(check)
     }
 
     override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing CORRECTION ${doc.id}")
-        // val result = sdk.printCorrection(doc)
-        FiscalResult.Success(
-            fiscalSign = "MSP_CORR_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = (doc.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printCorrection(doc)
     }
 
     override suspend fun closeShift(): FiscalResult = executeFiscal {
         Log.d(TAG, "Closing shift...")
-        // val result = sdk.closeShift()
-        cachedStatus = null // инвалидировать кэш
-        FiscalResult.Success(
-            fiscalSign = "MSP_CLOSE_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        cachedStatus = null
+        sdk.closeShift()
     }
 
     override suspend fun printXReport(): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing X-report...")
-        FiscalResult.Success(
-            fiscalSign = "MSP_XREP_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printXReport()
     }
 
     override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Cash in: ${amount.rubles}₽")
-        FiscalResult.Success(
-            fiscalSign = "MSP_CASHIN_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.cashIn(amount, comment)
     }
 
     override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Cash out: ${amount.rubles}₽")
-        FiscalResult.Success(
-            fiscalSign = "MSP_CASHOUT_${System.currentTimeMillis()}",
-            fnNumber = "0000000000000000",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.cashOut(amount, comment)
     }
 
     override suspend fun getStatus(): FiscalStatus = withContext(Dispatchers.IO) {
         cachedStatus?.let { return@withContext it }
-        try {
-            // val raw = sdk.getStatus()
-            val status = FiscalStatus(
-                fnRegistered = true,
-                fnNumber = "0000000000000000",
-                shiftOpen = true,
-                shiftAgeHours = 2L,
-                currentFdNumber = 42,
-                ofdConnected = true,
-                lastError = null
-            )
-            cachedStatus = status
-            status
-        } catch (e: Exception) {
-            FiscalStatus(
-                fnRegistered = false, fnNumber = null, shiftOpen = false,
-                shiftAgeHours = null, currentFdNumber = 0,
-                ofdConnected = false, lastError = e.message
-            )
-        }
+        sdk.getStatus().also { cachedStatus = it }
     }
 
     override suspend fun getFFDVersion(): FFDVersion = withContext(Dispatchers.IO) {
-        try {
-            // val version = sdk.getFFDVersion() // "1.05" or "1.2"
-            // FFDVersion.fromString(version)
-            FFDVersion.V1_05 // default
-        } catch (e: Exception) {
-            FFDVersion.V1_05
-        }
+        sdk.getFFDVersion()
     }
 
     /**
@@ -204,15 +130,28 @@ class MSPOSKFiscalCore @Inject constructor(
     }
 }
 
-/** Stub-протокол MSPOS-K (заменить на реальный SDK после получения .aar) */
 interface MSPOSKProtocol {
-    fun initialize(context: Context)
-    fun shutdown()
-    // Добавить все методы SDK после получения документации производителя
+    suspend fun openShift(): FiscalResult
+    suspend fun printSale(check: FiscalCheck): FiscalResult
+    suspend fun printReturn(check: FiscalCheck): FiscalResult
+    suspend fun printCorrection(doc: CorrectionDoc): FiscalResult
+    suspend fun closeShift(): FiscalResult
+    suspend fun printXReport(): FiscalResult
+    suspend fun cashIn(amount: Money, comment: String?): FiscalResult
+    suspend fun cashOut(amount: Money, comment: String?): FiscalResult
+    suspend fun getStatus(): FiscalStatus
+    suspend fun getFFDVersion(): FFDVersion
 }
 
-/** Stub реализация до интеграции SDK */
-class MSPOSKStub : MSPOSKProtocol {
-    override fun initialize(context: Context) {}
-    override fun shutdown() {}
+class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
+    override suspend fun openShift(): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun printSale(check: FiscalCheck): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun printReturn(check: FiscalCheck): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun closeShift(): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun printXReport(): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun getStatus(): FiscalStatus = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
+    override suspend fun getFFDVersion(): FFDVersion = throw UnsupportedOperationException("MSPOS-K SDK integration is required")
 }
