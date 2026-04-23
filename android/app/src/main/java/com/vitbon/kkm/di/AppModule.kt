@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import androidx.room.Room
 import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.fiscal.*
+import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
+import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.data.local.VitbonDatabase
 import com.vitbon.kkm.data.local.dao.*
@@ -84,6 +87,24 @@ object AppModule {
             runBlocking { provider.get() }
         }
     )
+
+    @Provides
+    @Singleton
+    fun provideFfdPolicyStore(prefs: SharedPreferences): FfdPolicyStore = FfdPolicyStore(prefs)
+
+    @Provides
+    @Singleton
+    fun provideFfdVersionResolver(
+        fiscalCore: FiscalCore,
+        ffdPolicyStore: FfdPolicyStore
+    ): FfdVersionResolver = FfdVersionResolver(fiscalCore, ffdPolicyStore)
+
+    @Provides
+    @Singleton
+    fun provideFiscalOperationOrchestrator(
+        fiscalCore: FiscalCore,
+        ffdVersionResolver: FfdVersionResolver
+    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver)
 }
 
 internal fun createFiscalCore(
