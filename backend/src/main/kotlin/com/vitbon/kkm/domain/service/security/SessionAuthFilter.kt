@@ -41,10 +41,7 @@ class SessionAuthFilter(
             return
         }
 
-        val role = when (session.cashierId.toString()) {
-            "11111111-1111-1111-1111-111111111111" -> "CASHIER"
-            else -> "CASHIER"
-        }
+        val role = "CASHIER"
 
         if (!requiredRoles.contains(role)) {
             auditService.write(

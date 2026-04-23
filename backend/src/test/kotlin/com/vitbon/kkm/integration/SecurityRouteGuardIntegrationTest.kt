@@ -30,7 +30,14 @@ class SecurityRouteGuardIntegrationTest {
 
     @Test
     fun `statuses endpoint returns 403 for cashier token`() {
-        val loginBody = LoginRequestDto(pin = "1111", deviceId = "DEVICE-RBAC-1")
+        val token = loginAndGetToken(deviceId = "DEVICE-RBAC-1")
+
+        mockMvc.perform(get("/api/v1/statuses").header("Authorization", "Bearer $token"))
+            .andExpect(status().isForbidden)
+    }
+
+    private fun loginAndGetToken(deviceId: String): String {
+        val loginBody = LoginRequestDto(pin = "1111", deviceId = deviceId)
         val loginResponse = mockMvc.perform(
             post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -39,9 +46,6 @@ class SecurityRouteGuardIntegrationTest {
             .andReturn()
 
         val node = objectMapper.readTree(loginResponse.response.contentAsString)
-        val token = node.get("token").asText()
-
-        mockMvc.perform(get("/api/v1/statuses").header("Authorization", "Bearer $token"))
-            .andExpect(status().isForbidden)
+        return node.get("token").asText()
     }
 }

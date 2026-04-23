@@ -19,7 +19,7 @@ class RouteAccessPolicy {
             normalized.startsWith("/api/v1/documents") -> setOf("SENIOR_CASHIER", "ADMIN")
             normalized.startsWith("/api/v1/egais") -> setOf("SENIOR_CASHIER", "ADMIN")
             normalized.startsWith("/api/v1/chaseznak") -> setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
-            else -> setOf("ADMIN", "SENIOR_CASHIER", "CASHIER")
+            else -> emptySet()
         }
     }
 }
