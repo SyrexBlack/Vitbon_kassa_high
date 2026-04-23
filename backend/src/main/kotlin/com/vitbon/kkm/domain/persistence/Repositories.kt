@@ -28,3 +28,10 @@ interface ProductDeletionRepository : JpaRepository<ProductDeletionEntity, UUID>
 }
 
 interface DeviceLicenseRepository : JpaRepository<DeviceLicenseEntity, String>
+
+interface AuthSessionRepository : JpaRepository<AuthSessionEntity, UUID> {
+    fun findByTokenHash(tokenHash: String): AuthSessionEntity?
+    fun findByCashierIdAndRevokedAtIsNull(cashierId: UUID): AuthSessionEntity?
+}
+
+interface AuditEventRepository : JpaRepository<AuditEventEntity, UUID>
