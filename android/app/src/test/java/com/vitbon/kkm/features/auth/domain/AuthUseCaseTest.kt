@@ -19,14 +19,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Response
-import java.security.MessageDigest
 
 class AuthUseCaseTest {
     private val cashierDao = mockk<CashierDao>()
@@ -37,20 +34,48 @@ class AuthUseCaseTest {
     private val connectivityManager = mockk<ConnectivityManager>()
     private val network = mockk<Network>()
     private val networkCapabilities = mockk<NetworkCapabilities>()
+    private val tokenStore = mockk<AuthTokenStore>(relaxed = true)
 
-    private val useCase = AuthUseCase(cashierDao, api, prefs, context, featureManager)
+    private val useCase = AuthUseCase(cashierDao, api, prefs, context, featureManager, tokenStore)
 
     @Test
-    fun `authenticate returns Success and stores current cashier`() = runBlocking {
+    fun `authenticate fails when backend unavailable even if local cashier exists`() = runBlocking {
         val pin = "1111"
         val localCashier = LocalCashier(
             id = "cashier-1",
             name = "Иванов",
-            pinHash = sha256(pin),
+            pinHash = "hash-1111",
             role = "CASHIER",
             createdAt = 1L
         )
-        coEvery { cashierDao.findByPinHash(sha256(pin)) } returns localCashier
+        mockOnlineStatus(isOnline = false)
+        coEvery { cashierDao.findByPinHash(any()) } returns localCashier
+
+        val result = useCase.authenticate(pin)
+
+        assertTrue(result is AuthResult.Error)
+        assertEquals("Требуется подключение к серверу для входа", (result as AuthResult.Error).message)
+    }
+
+    @Test
+    fun `authenticate stores token via token store on success`() = runBlocking {
+        val pin = "1111"
+        val features = LoginFeaturesDto(
+            egaisEnabled = true,
+            chaseznakEnabled = false,
+            acquiringEnabled = true,
+            sbpEnabled = true
+        )
+        mockOnlineStatus(isOnline = true)
+        prefs.edit().putString("device_id", "DEVICE-1").apply()
+        coEvery { api.login(LoginRequestDto(pin = "1111", deviceId = "DEVICE-1")) } returns Response.success(
+            LoginResponseDto(
+                token = "opaque-token",
+                cashier = CashierDto(id = "cashier-1", name = "Иванов", role = "CASHIER"),
+                features = features,
+                expiresAt = System.currentTimeMillis() + 60_000
+            )
+        )
 
         val result = useCase.authenticate(pin)
 
@@ -59,20 +84,11 @@ class AuthUseCaseTest {
         assertEquals("cashier-1", success.cashier.id)
         assertEquals("Иванов", success.cashier.name)
         assertEquals(CashierRole.CASHIER, success.cashier.role)
+        verify(exactly = 1) { tokenStore.save("opaque-token") }
+        verify(exactly = 1) { featureManager.applyFeatures(features) }
         assertEquals("cashier-1", prefs.getString("current_cashier_id", null))
         assertEquals("Иванов", prefs.getString("current_cashier_name", null))
         assertEquals("CASHIER", prefs.getString("current_cashier_role", null))
-    }
-
-    @Test
-    fun `authenticate returns Error for wrong pin`() = runBlocking {
-        val pin = "1234"
-        coEvery { cashierDao.findByPinHash(sha256(pin)) } returns null
-
-        val result = useCase.authenticate(pin)
-
-        assertTrue(result is AuthResult.Error)
-        assertEquals("Неверный ПИН", (result as AuthResult.Error).message)
     }
 
     @Test
@@ -91,63 +107,6 @@ class AuthUseCaseTest {
         assertEquals("ПИН должен состоять только из цифр", (result as AuthResult.Error).message)
     }
 
-    @Test
-    fun `validateWithBackendBestEffort applies backend features when login succeeds online`() = runBlocking {
-        mockOnlineStatus(isOnline = true)
-        val features = LoginFeaturesDto(
-            egaisEnabled = true,
-            chaseznakEnabled = false,
-            acquiringEnabled = true,
-            sbpEnabled = true
-        )
-        coEvery { api.login(LoginRequestDto("1111")) } returns Response.success(
-            LoginResponseDto(
-                token = "token-123",
-                cashier = CashierDto(id = "cashier-1", name = "Иванов", role = "CASHIER"),
-                features = features
-            )
-        )
-        prefs.edit().putString("backend_auth_warning", "stale").apply()
-
-        val warning = useCase.validateWithBackendBestEffort("1111")
-
-        assertNull(warning)
-        assertEquals(true, prefs.getBoolean("last_backend_auth_ok", false))
-        assertEquals("token-123", prefs.getString("auth_token", null))
-        assertNull(prefs.getString("backend_auth_warning", null))
-        assertTrue((prefs.getLong("last_backend_auth_ts", 0L)) > 0L)
-        coVerify(exactly = 1) { api.login(LoginRequestDto("1111")) }
-        verify(exactly = 1) { featureManager.applyFeatures(features) }
-    }
-
-    @Test
-    fun `validateWithBackendBestEffort returns warning when backend responds non-success while online`() = runBlocking {
-        mockOnlineStatus(isOnline = true)
-        coEvery { api.login(LoginRequestDto("1111")) } returns Response.error(
-            401,
-            "unauthorized".toResponseBody("application/json".toMediaType())
-        )
-
-        val warning = useCase.validateWithBackendBestEffort("1111")
-
-        assertEquals("Локальный вход выполнен, но сервер не подтвердил авторизацию", warning)
-        assertEquals(false, prefs.getBoolean("last_backend_auth_ok", true))
-        assertEquals(warning, prefs.getString("backend_auth_warning", null))
-        assertTrue((prefs.getLong("last_backend_auth_ts", 0L)) > 0L)
-        coVerify(exactly = 1) { api.login(LoginRequestDto("1111")) }
-        verify(exactly = 0) { featureManager.applyFeatures(any()) }
-    }
-
-    @Test
-    fun `validateWithBackendBestEffort returns null when offline`() = runBlocking {
-        mockOnlineStatus(isOnline = false)
-
-        val warning = useCase.validateWithBackendBestEffort("1111")
-
-        assertNull(warning)
-        coVerify(exactly = 0) { api.login(any()) }
-        verify(exactly = 0) { featureManager.applyFeatures(any()) }
-    }
 
     private fun mockOnlineStatus(isOnline: Boolean) {
         every { context.getSystemService(ConnectivityManager::class.java) } returns connectivityManager
@@ -156,10 +115,6 @@ class AuthUseCaseTest {
         every { networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns isOnline
     }
 
-    private fun sha256(input: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 }
 
 private class InMemorySharedPreferences : SharedPreferences {

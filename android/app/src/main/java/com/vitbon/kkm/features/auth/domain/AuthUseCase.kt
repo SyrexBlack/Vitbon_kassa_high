@@ -9,7 +9,6 @@ import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +18,8 @@ class AuthUseCase @Inject constructor(
     private val api: VitbonApi,
     private val prefs: SharedPreferences,
     @ApplicationContext private val context: Context,
-    private val featureManager: FeatureManager
+    private val featureManager: FeatureManager,
+    private val tokenStore: AuthTokenStore
 ) {
     suspend fun authenticate(pin: String): AuthResult {
         if (pin.length < 4 || pin.length > 6) {
@@ -28,72 +28,46 @@ class AuthUseCase @Inject constructor(
         if (!pin.all { it.isDigit() }) {
             return AuthResult.Error("ПИН должен состоять только из цифр")
         }
-
-        val pinHash = sha256(pin)
-        val cashier = cashierDao.findByPinHash(pinHash)
-
-        return if (cashier != null) {
-            prefs.edit()
-                .putString("current_cashier_id", cashier.id)
-                .putString("current_cashier_name", cashier.name)
-                .putString("current_cashier_role", cashier.role)
-                .apply()
-
-            AuthResult.Success(
-                cashier = AuthenticatedCashier(
-                    id = cashier.id,
-                    name = cashier.name,
-                    role = CashierRole.entries.find { it.name == cashier.role } ?: CashierRole.CASHIER
-                )
-            )
-        } else {
-            AuthResult.Error("Неверный ПИН")
+        if (!isOnline()) {
+            return AuthResult.Error("Требуется подключение к серверу для входа")
         }
-    }
 
-    suspend fun validateWithBackendBestEffort(pin: String): String? {
-        if (!isOnline()) return null
-
-        return try {
-            val response = api.login(LoginRequestDto(pin))
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    featureManager.applyFeatures(body.features)
-                }
-                prefs.edit()
-                    .putLong("last_backend_auth_ts", System.currentTimeMillis())
-                    .putBoolean("last_backend_auth_ok", true)
-                    .putString("auth_token", body?.token)
-                    .remove("backend_auth_warning")
-                    .apply()
-                null
-            } else {
-                val warning = "Локальный вход выполнен, но сервер не подтвердил авторизацию"
-                prefs.edit()
-                    .putLong("last_backend_auth_ts", System.currentTimeMillis())
-                    .putBoolean("last_backend_auth_ok", false)
-                    .putString("backend_auth_warning", warning)
-                    .apply()
-                warning
-            }
+        val deviceId = prefs.getString("device_id", null) ?: "UNKNOWN_DEVICE"
+        val response = try {
+            api.login(LoginRequestDto(pin = pin, deviceId = deviceId))
         } catch (e: Exception) {
-            val warning = "Локальный вход выполнен, сервер временно недоступен"
-            prefs.edit()
-                .putLong("last_backend_auth_ts", System.currentTimeMillis())
-                .putBoolean("last_backend_auth_ok", false)
-                .putString("backend_auth_warning", warning)
-                .apply()
-            warning
+            return AuthResult.Error("Сервер авторизации недоступен")
         }
+
+        if (!response.isSuccessful || response.body() == null) {
+            return AuthResult.Error("Неверный ПИН")
+        }
+
+        val body = response.body()!!
+        tokenStore.save(body.token)
+        featureManager.applyFeatures(body.features)
+
+        prefs.edit()
+            .putString("current_cashier_id", body.cashier.id)
+            .putString("current_cashier_name", body.cashier.name)
+            .putString("current_cashier_role", body.cashier.role)
+            .apply()
+
+        return AuthResult.Success(
+            cashier = AuthenticatedCashier(
+                id = body.cashier.id,
+                name = body.cashier.name,
+                role = CashierRole.entries.find { it.name == body.cashier.role } ?: CashierRole.CASHIER
+            )
+        )
     }
 
     fun logout() {
+        tokenStore.clear()
         prefs.edit()
             .remove("current_cashier_id")
             .remove("current_cashier_name")
             .remove("current_cashier_role")
-            .remove("auth_token")
             .apply()
     }
 
@@ -109,10 +83,5 @@ class AuthUseCase @Inject constructor(
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private fun sha256(input: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
     }
 }
