@@ -1,23 +1,24 @@
 package com.vitbon.kkm.features.cashdrawer.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CashDrawerUseCase @Inject constructor(private val fiscalCore: FiscalCore) {
+class CashDrawerUseCase @Inject constructor(private val fiscalOrchestrator: FiscalOperationOrchestrator) {
     suspend fun cashIn(amount: Money, comment: String?): CashDrawerResult {
-        return when (val r = fiscalCore.cashIn(amount, comment)) {
-            is FiscalResult.Success -> CashDrawerResult.Success(r.fiscalSign)
-            is FiscalResult.Error -> CashDrawerResult.Error(r.code, r.message)
+        return when (val r = fiscalOrchestrator.executeCashIn(amount, comment)) {
+            is FiscalRuntimeResult.Success -> CashDrawerResult.Success(r.fiscalSign)
+            is FiscalRuntimeResult.Error -> CashDrawerResult.Error(-1, r.message)
         }
     }
 
     suspend fun cashOut(amount: Money, comment: String?): CashDrawerResult {
-        return when (val r = fiscalCore.cashOut(amount, comment)) {
-            is FiscalResult.Success -> CashDrawerResult.Success(r.fiscalSign)
-            is FiscalResult.Error -> CashDrawerResult.Error(r.code, r.message)
+        return when (val r = fiscalOrchestrator.executeCashOut(amount, comment)) {
+            is FiscalRuntimeResult.Success -> CashDrawerResult.Success(r.fiscalSign)
+            is FiscalRuntimeResult.Error -> CashDrawerResult.Error(-1, r.message)
         }
     }
 }

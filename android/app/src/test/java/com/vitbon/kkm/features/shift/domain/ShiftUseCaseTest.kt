@@ -1,7 +1,8 @@
 package com.vitbon.kkm.features.shift.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
-import com.vitbon.kkm.core.fiscal.model.FiscalResult
+import com.vitbon.kkm.core.fiscal.model.FiscalStatus
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
@@ -14,10 +15,10 @@ import org.junit.Test
 
 class ShiftUseCaseTest {
 
-    private val fiscalCore = mockk<FiscalCore>()
+    private val orchestrator = mockk<FiscalOperationOrchestrator>()
     private val shiftDao = mockk<ShiftDao>(relaxed = true)
     private val checkDao = mockk<CheckDao>()
-    private val useCase = ShiftUseCase(fiscalCore, shiftDao, checkDao)
+    private val useCase = ShiftUseCase(orchestrator, shiftDao, checkDao)
 
     @Test
     fun `closeShift aggregates cash and card totals from open shift checks`() = runBlocking {
@@ -29,18 +30,18 @@ class ShiftUseCaseTest {
             check(id = "sale-sbp-1", shiftId = shiftId, type = "sale", paymentType = "sbp", total = 700L)
         )
 
-        coEvery { fiscalCore.closeShift() } returns FiscalResult.Success(
+        coEvery { orchestrator.executeCloseShift() } returns FiscalRuntimeResult.Success(
             fiscalSign = "fs-close-1",
             fnNumber = "fn-1",
             fdNumber = "fd-1",
-            timestamp = 1_700_000_000_000L
+            ffdVersion = "1.2"
         )
         coEvery { checkDao.findByShiftId(shiftId) } returns checks
 
         val result = useCase.closeShift(shiftId)
 
         assertEquals(ShiftResult.Success(shiftId), result)
-        coVerify(exactly = 1) { fiscalCore.closeShift() }
+        coVerify(exactly = 1) { orchestrator.executeCloseShift() }
         coVerify(exactly = 1) { checkDao.findByShiftId(shiftId) }
         coVerify(exactly = 1) {
             shiftDao.closeShift(
@@ -56,17 +57,36 @@ class ShiftUseCaseTest {
     fun `closeShift does not update dao when fiscal close fails`() = runBlocking {
         val shiftId = "shift-open-2"
 
-        coEvery { fiscalCore.closeShift() } returns FiscalResult.Error(
-            code = 42,
-            message = "fiscal close failed"
+        coEvery { orchestrator.executeCloseShift() } returns FiscalRuntimeResult.Error(
+            code = "FISCAL_ERROR",
+            message = "fiscal close failed",
+            recoverable = false
         )
 
         val result = useCase.closeShift(shiftId)
 
-        assertEquals(ShiftResult.Error(42, "fiscal close failed"), result)
-        coVerify(exactly = 1) { fiscalCore.closeShift() }
+        assertEquals(ShiftResult.Error(-1, "fiscal close failed"), result)
+        coVerify(exactly = 1) { orchestrator.executeCloseShift() }
         coVerify(exactly = 0) { checkDao.findByShiftId(any()) }
         coVerify(exactly = 0) { shiftDao.closeShift(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `checkShiftStatus delegates to orchestrator status and maps OPEN`() = runBlocking {
+        coEvery { orchestrator.executeStatusCheck() } returns FiscalStatus(
+            fnRegistered = true,
+            fnNumber = "fn-1",
+            shiftOpen = true,
+            shiftAgeHours = 12,
+            currentFdNumber = 100,
+            ofdConnected = true,
+            lastError = null
+        )
+
+        val status = useCase.checkShiftStatus()
+
+        assertEquals(ShiftStatus.OPEN, status)
+        coVerify(exactly = 1) { orchestrator.executeStatusCheck() }
     }
 
     private fun check(

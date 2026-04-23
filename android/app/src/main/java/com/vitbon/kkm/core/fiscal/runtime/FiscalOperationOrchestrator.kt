@@ -4,6 +4,7 @@ import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.CorrectionDoc
 import com.vitbon.kkm.core.fiscal.model.FiscalCheck
 import com.vitbon.kkm.core.fiscal.model.FiscalResult
+import com.vitbon.kkm.core.fiscal.model.FiscalStatus
 import com.vitbon.kkm.core.fiscal.model.Money
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,6 +60,10 @@ class FiscalOperationOrchestrator @Inject constructor(
         return executeWithFormatRetry(
             primary = { fiscalCore.printXReport() }
         )
+    }
+
+    suspend fun executeStatusCheck(): FiscalStatus {
+        return fiscalCore.getStatus()
     }
 
     private suspend fun executeWithFormatRetry(
