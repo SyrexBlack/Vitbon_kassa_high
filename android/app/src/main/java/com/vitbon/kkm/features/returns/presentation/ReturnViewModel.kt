@@ -6,6 +6,8 @@ import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import com.vitbon.kkm.features.returns.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,6 +142,18 @@ class ReturnViewModel @Inject constructor(
     fun processReturn() {
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, error = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive || !RolePolicy.canPerform(role, RoleOperation.RETURN)) {
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        error = RolePolicy.ACCESS_DENIED_MESSAGE
+                    )
+                }
+                return@launch
+            }
+
             val check = _state.value.originalCheck
             if (check == null) {
                 _state.update {

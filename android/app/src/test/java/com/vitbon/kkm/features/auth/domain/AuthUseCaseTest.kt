@@ -18,6 +18,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.security.MessageDigest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -35,8 +36,17 @@ class AuthUseCaseTest {
     private val network = mockk<Network>()
     private val networkCapabilities = mockk<NetworkCapabilities>()
     private val tokenStore = mockk<AuthTokenStore>(relaxed = true)
+    private val emergencyAdminSessionManager = mockk<EmergencyAdminSessionManager>(relaxed = true)
 
-    private val useCase = AuthUseCase(cashierDao, api, prefs, context, featureManager, tokenStore)
+    private val useCase = AuthUseCase(
+        cashierDao,
+        api,
+        prefs,
+        context,
+        featureManager,
+        tokenStore,
+        emergencyAdminSessionManager
+    )
 
     @Test
     fun `authenticate fails when backend unavailable even if local cashier exists`() = runBlocking {
@@ -86,6 +96,7 @@ class AuthUseCaseTest {
         assertEquals(CashierRole.CASHIER, success.cashier.role)
         verify(exactly = 1) { tokenStore.save("opaque-token") }
         verify(exactly = 1) { featureManager.applyFeatures(features) }
+        verify(exactly = 1) { emergencyAdminSessionManager.clear() }
         assertEquals("cashier-1", prefs.getString("current_cashier_id", null))
         assertEquals("Иванов", prefs.getString("current_cashier_name", null))
         assertEquals("CASHIER", prefs.getString("current_cashier_role", null))
@@ -107,12 +118,75 @@ class AuthUseCaseTest {
         assertEquals("ПИН должен состоять только из цифр", (result as AuthResult.Error).message)
     }
 
+    @Test
+    fun `authenticateEmergencyAdmin activates emergency session for local admin`() = runBlocking {
+        val localAdmin = LocalCashier(
+            id = "admin-1",
+            name = "Админ",
+            pinHash = sha256("1111"),
+            role = "ADMIN",
+            createdAt = 1L
+        )
+        coEvery { cashierDao.findByPinHash(sha256("1111")) } returns localAdmin
+
+        val result = useCase.authenticateEmergencyAdmin("1111")
+
+        assertTrue(result is AuthResult.Success)
+        val success = result as AuthResult.Success
+        assertEquals(CashierRole.ADMIN, success.cashier.role)
+        assertEquals("admin-1", success.cashier.id)
+        verify(exactly = 1) { emergencyAdminSessionManager.activate("admin-1") }
+        verify(exactly = 1) { tokenStore.clear() }
+        assertEquals("admin-1", prefs.getString("current_cashier_id", null))
+        assertEquals("Админ", prefs.getString("current_cashier_name", null))
+        assertEquals("ADMIN", prefs.getString("current_cashier_role", null))
+    }
+
+    @Test
+    fun `authenticateEmergencyAdmin rejects non-admin local role`() = runBlocking {
+        val localCashier = LocalCashier(
+            id = "cashier-1",
+            name = "Кассир",
+            pinHash = sha256("1111"),
+            role = "CASHIER",
+            createdAt = 1L
+        )
+        coEvery { cashierDao.findByPinHash(sha256("1111")) } returns localCashier
+
+        val result = useCase.authenticateEmergencyAdmin("1111")
+
+        assertTrue(result is AuthResult.Error)
+        assertEquals("Аварийный вход разрешён только для ADMIN", (result as AuthResult.Error).message)
+    }
+
+    @Test
+    fun `isEmergencySessionActive clears stale admin context when emergency session expired`() = runBlocking {
+        every { emergencyAdminSessionManager.isActive() } returns false
+        every { tokenStore.read() } returns null
+        prefs.edit()
+            .putString("current_cashier_id", "admin-1")
+            .putString("current_cashier_name", "Админ")
+            .putString("current_cashier_role", "ADMIN")
+            .apply()
+
+        val active = useCase.isEmergencySessionActive()
+
+        assertEquals(false, active)
+        assertNull(prefs.getString("current_cashier_id", null))
+        assertNull(prefs.getString("current_cashier_name", null))
+        assertNull(prefs.getString("current_cashier_role", null))
+    }
 
     private fun mockOnlineStatus(isOnline: Boolean) {
         every { context.getSystemService(ConnectivityManager::class.java) } returns connectivityManager
         every { connectivityManager.activeNetwork } returns network
         every { connectivityManager.getNetworkCapabilities(network) } returns networkCapabilities
         every { networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns isOnline
+    }
+
+    private fun sha256(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
 }

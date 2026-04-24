@@ -1,11 +1,13 @@
 package com.vitbon.kkm.features.shift.presentation
 
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.CashierRole
 import com.vitbon.kkm.features.shift.domain.ShiftResult
 import com.vitbon.kkm.features.shift.domain.ShiftStatus
 import com.vitbon.kkm.features.shift.domain.ShiftUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,6 +33,7 @@ class ShiftViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
+        every { authUseCase.isEmergencySessionActive() } returns false
     }
 
     @After
@@ -40,6 +43,8 @@ class ShiftViewModelTest {
 
     @Test
     fun `closeShift closes currently open shift and updates state to CLOSED`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.SENIOR_CASHIER
+        every { shiftUseCase.canCloseShift(CashierRole.SENIOR_CASHIER) } returns true
         coEvery { shiftUseCase.findOpenShiftId() } returns "shift-open-1"
         coEvery { shiftUseCase.closeShift("shift-open-1") } returns ShiftResult.Success("shift-open-1")
 
@@ -59,6 +64,8 @@ class ShiftViewModelTest {
 
     @Test
     fun `closeShift without open shift sets user-facing error`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.SENIOR_CASHIER
+        every { shiftUseCase.canCloseShift(CashierRole.SENIOR_CASHIER) } returns true
         coEvery { shiftUseCase.findOpenShiftId() } returns null
 
         val vm = ShiftViewModel(shiftUseCase, authUseCase)
@@ -76,6 +83,8 @@ class ShiftViewModelTest {
 
     @Test
     fun `closeShift fiscal failure keeps shift open and exposes error`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.SENIOR_CASHIER
+        every { shiftUseCase.canCloseShift(CashierRole.SENIOR_CASHIER) } returns true
         coEvery { shiftUseCase.checkShiftStatus() } returns ShiftStatus.OPEN
         coEvery { shiftUseCase.findOpenShiftId() } returns "shift-open-2"
         coEvery { shiftUseCase.closeShift("shift-open-2") } returns ShiftResult.Error(
@@ -98,5 +107,52 @@ class ShiftViewModelTest {
         coVerify(exactly = 1) { shiftUseCase.checkShiftStatus() }
         coVerify(exactly = 1) { shiftUseCase.findOpenShiftId() }
         coVerify(exactly = 1) { shiftUseCase.closeShift("shift-open-2") }
+    }
+
+    @Test
+    fun `openShift denies cashier role`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
+        every { shiftUseCase.canOpenShift(CashierRole.CASHIER) } returns false
+
+        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+
+        vm.openShift()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertFalse(state.isLoading)
+        assertEquals("Операция запрещена для текущей роли", state.error)
+        coVerify(exactly = 0) { shiftUseCase.openShift(any(), any()) }
+    }
+
+    @Test
+    fun `printXReport denies cashier role`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
+        every { shiftUseCase.canPrintXReport(CashierRole.CASHIER) } returns false
+
+        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+
+        vm.printXReport()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertEquals("Операция запрещена для текущей роли", state.error)
+        coVerify(exactly = 0) { shiftUseCase.printXReport() }
+    }
+
+    @Test
+    fun `openShift denies during active emergency session`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
+        every { authUseCase.isEmergencySessionActive() } returns true
+
+        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+
+        vm.openShift()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertFalse(state.isLoading)
+        assertEquals("Операция запрещена для текущей роли", state.error)
+        coVerify(exactly = 0) { shiftUseCase.openShift(any(), any()) }
     }
 }

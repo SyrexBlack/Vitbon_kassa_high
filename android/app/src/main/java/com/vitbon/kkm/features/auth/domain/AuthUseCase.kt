@@ -9,6 +9,7 @@ import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +20,8 @@ class AuthUseCase @Inject constructor(
     private val prefs: SharedPreferences,
     @ApplicationContext private val context: Context,
     private val featureManager: FeatureManager,
-    private val tokenStore: AuthTokenStore
+    private val tokenStore: AuthTokenStore,
+    private val emergencyAdminSessionManager: EmergencyAdminSessionManager
 ) {
     suspend fun authenticate(pin: String): AuthResult {
         if (pin.length < 4 || pin.length > 6) {
@@ -46,6 +48,7 @@ class AuthUseCase @Inject constructor(
         val body = response.body()!!
         tokenStore.save(body.token)
         featureManager.applyFeatures(body.features)
+        emergencyAdminSessionManager.clear()
 
         prefs.edit()
             .putString("current_cashier_id", body.cashier.id)
@@ -62,8 +65,43 @@ class AuthUseCase @Inject constructor(
         )
     }
 
+    suspend fun authenticateEmergencyAdmin(pin: String): AuthResult {
+        if (pin.length < 4 || pin.length > 6) {
+            return AuthResult.Error("ПИН должен быть от 4 до 6 цифр")
+        }
+        if (!pin.all { it.isDigit() }) {
+            return AuthResult.Error("ПИН должен состоять только из цифр")
+        }
+
+        val localCashier = cashierDao.findByPinHash(sha256(pin))
+            ?: return AuthResult.Error("Неверный ПИН")
+
+        val role = CashierRole.entries.find { it.name == localCashier.role } ?: CashierRole.CASHIER
+        if (role != CashierRole.ADMIN) {
+            return AuthResult.Error("Аварийный вход разрешён только для ADMIN")
+        }
+
+        tokenStore.clear()
+        prefs.edit()
+            .putString("current_cashier_id", localCashier.id)
+            .putString("current_cashier_name", localCashier.name)
+            .putString("current_cashier_role", CashierRole.ADMIN.name)
+            .apply()
+
+        emergencyAdminSessionManager.activate(localCashier.id)
+
+        return AuthResult.Success(
+            cashier = AuthenticatedCashier(
+                id = localCashier.id,
+                name = localCashier.name,
+                role = CashierRole.ADMIN
+            )
+        )
+    }
+
     fun logout() {
         tokenStore.clear()
+        emergencyAdminSessionManager.clear()
         prefs.edit()
             .remove("current_cashier_id")
             .remove("current_cashier_name")
@@ -73,6 +111,20 @@ class AuthUseCase @Inject constructor(
 
     fun getCurrentCashierId(): String? = prefs.getString("current_cashier_id", null)
     fun getCurrentCashierName(): String? = prefs.getString("current_cashier_name", null)
+    fun isEmergencySessionActive(): Boolean {
+        val active = emergencyAdminSessionManager.isActive()
+        if (!active) {
+            val role = prefs.getString("current_cashier_role", null)
+            if (role == CashierRole.ADMIN.name && tokenStore.read() == null) {
+                prefs.edit()
+                    .remove("current_cashier_id")
+                    .remove("current_cashier_name")
+                    .remove("current_cashier_role")
+                    .apply()
+            }
+        }
+        return active
+    }
     fun getCurrentCashierRole(): CashierRole? {
         val role = prefs.getString("current_cashier_role", null) ?: return null
         return CashierRole.entries.find { it.name == role }
@@ -83,5 +135,10 @@ class AuthUseCase @Inject constructor(
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun sha256(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }

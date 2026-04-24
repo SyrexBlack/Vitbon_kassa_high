@@ -6,6 +6,8 @@ import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import com.vitbon.kkm.features.sales.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,6 +104,18 @@ class SalesViewModel @Inject constructor(
     fun processSale() {
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, saleResult = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive || !RolePolicy.canPerform(role, RoleOperation.SALE)) {
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        saleResult = SaleResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+                    )
+                }
+                return@launch
+            }
+
             val cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
             val openShiftId = shiftDao.findOpenShift()?.id
             val deviceId = android.os.Build.MODEL ?: "unknown-device"

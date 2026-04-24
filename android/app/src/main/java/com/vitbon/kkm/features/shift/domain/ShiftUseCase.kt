@@ -6,6 +6,9 @@ import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalShift
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,6 +19,12 @@ class ShiftUseCase @Inject constructor(
     private val shiftDao: ShiftDao,
     private val checkDao: CheckDao
 ) {
+    fun canOpenShift(role: CashierRole?): Boolean = RolePolicy.canPerform(role, RoleOperation.SHIFT_OPEN)
+
+    fun canCloseShift(role: CashierRole?): Boolean = RolePolicy.canPerform(role, RoleOperation.SHIFT_CLOSE)
+
+    fun canPrintXReport(role: CashierRole?): Boolean = RolePolicy.canPerform(role, RoleOperation.SHIFT_X_REPORT)
+
     /**
      * Алгоритм старта по ТЗ:
      * 1. getStatus() → смена открыта <24ч → OK
