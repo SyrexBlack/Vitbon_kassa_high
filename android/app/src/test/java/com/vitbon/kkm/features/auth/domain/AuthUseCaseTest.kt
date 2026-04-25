@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import com.vitbon.kkm.core.features.FeatureManager
+import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.local.entity.LocalCashier
 import com.vitbon.kkm.data.remote.api.VitbonApi
@@ -37,6 +38,7 @@ class AuthUseCaseTest {
     private val networkCapabilities = mockk<NetworkCapabilities>()
     private val tokenStore = mockk<AuthTokenStore>(relaxed = true)
     private val emergencyAdminSessionManager = mockk<EmergencyAdminSessionManager>(relaxed = true)
+    private val localAuditBufferRepository = mockk<LocalAuditBufferRepository>(relaxed = true)
 
     private val useCase = AuthUseCase(
         cashierDao,
@@ -45,7 +47,8 @@ class AuthUseCaseTest {
         context,
         featureManager,
         tokenStore,
-        emergencyAdminSessionManager
+        emergencyAdminSessionManager,
+        localAuditBufferRepository
     )
 
     @Test
@@ -127,6 +130,7 @@ class AuthUseCaseTest {
             role = "ADMIN",
             createdAt = 1L
         )
+        mockOnlineStatus(isOnline = false)
         coEvery { cashierDao.findByPinHash(sha256("1111")) } returns localAdmin
 
         val result = useCase.authenticateEmergencyAdmin("1111")
@@ -151,12 +155,23 @@ class AuthUseCaseTest {
             role = "CASHIER",
             createdAt = 1L
         )
+        mockOnlineStatus(isOnline = false)
         coEvery { cashierDao.findByPinHash(sha256("1111")) } returns localCashier
 
         val result = useCase.authenticateEmergencyAdmin("1111")
 
         assertTrue(result is AuthResult.Error)
         assertEquals("Аварийный вход разрешён только для ADMIN", (result as AuthResult.Error).message)
+    }
+
+    @Test
+    fun `authenticateEmergencyAdmin rejects when backend is reachable`() = runBlocking {
+        mockOnlineStatus(isOnline = true)
+
+        val result = useCase.authenticateEmergencyAdmin("1111")
+
+        assertTrue(result is AuthResult.Error)
+        assertEquals("Аварийный вход доступен только при недоступности сервера", (result as AuthResult.Error).message)
     }
 
     @Test

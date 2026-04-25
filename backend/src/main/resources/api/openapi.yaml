@@ -21,12 +21,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [pin]
+              required: [pin, deviceId]
               properties:
                 pin:
                   type: string
                   minLength: 4
                   maxLength: 6
+                deviceId:
+                  type: string
       responses:
         '200':
           description: Успешная авторизация
@@ -44,6 +46,20 @@ paths:
                       role: { type: string, enum: [ADMIN, SENIOR_CASHIER, CASHIER] }
         '401':
           description: Неверный ПИН
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выход кассира
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Сессия отозвана
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
 
   /checks:
     post:

@@ -4,9 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.vitbon.kkm.core.features.FeatureManager
+import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
-import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
@@ -21,7 +22,8 @@ class AuthUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
     private val featureManager: FeatureManager,
     private val tokenStore: AuthTokenStore,
-    private val emergencyAdminSessionManager: EmergencyAdminSessionManager
+    private val emergencyAdminSessionManager: EmergencyAdminSessionManager,
+    private val localAuditBufferRepository: LocalAuditBufferRepository
 ) {
     suspend fun authenticate(pin: String): AuthResult {
         if (pin.length < 4 || pin.length > 6) {
@@ -48,7 +50,12 @@ class AuthUseCase @Inject constructor(
         val body = response.body()!!
         tokenStore.save(body.token)
         featureManager.applyFeatures(body.features)
+
+        val emergencyWasActive = emergencyAdminSessionManager.isActive()
         emergencyAdminSessionManager.clear()
+        if (emergencyWasActive) {
+            enqueueAudit("auth.emergency.exit", "SUCCESS")
+        }
 
         prefs.edit()
             .putString("current_cashier_id", body.cashier.id)
@@ -72,12 +79,17 @@ class AuthUseCase @Inject constructor(
         if (!pin.all { it.isDigit() }) {
             return AuthResult.Error("ПИН должен состоять только из цифр")
         }
+        if (isOnline()) {
+            enqueueAudit("auth.emergency.enter", "DENY:BACKEND_AVAILABLE")
+            return AuthResult.Error("Аварийный вход доступен только при недоступности сервера")
+        }
 
         val localCashier = cashierDao.findByPinHash(sha256(pin))
             ?: return AuthResult.Error("Неверный ПИН")
 
         val role = CashierRole.entries.find { it.name == localCashier.role } ?: CashierRole.CASHIER
         if (role != CashierRole.ADMIN) {
+            enqueueAudit("auth.emergency.enter", "DENY:ROLE_FORBIDDEN")
             return AuthResult.Error("Аварийный вход разрешён только для ADMIN")
         }
 
@@ -89,6 +101,7 @@ class AuthUseCase @Inject constructor(
             .apply()
 
         emergencyAdminSessionManager.activate(localCashier.id)
+        enqueueAudit("auth.emergency.enter", "SUCCESS")
 
         return AuthResult.Success(
             cashier = AuthenticatedCashier(
@@ -100,6 +113,7 @@ class AuthUseCase @Inject constructor(
     }
 
     fun logout() {
+        val emergencyWasActive = emergencyAdminSessionManager.isActive()
         tokenStore.clear()
         emergencyAdminSessionManager.clear()
         prefs.edit()
@@ -107,6 +121,10 @@ class AuthUseCase @Inject constructor(
             .remove("current_cashier_name")
             .remove("current_cashier_role")
             .apply()
+
+        if (emergencyWasActive) {
+            enqueueAudit("auth.emergency.exit", "SUCCESS")
+        }
     }
 
     fun getCurrentCashierId(): String? = prefs.getString("current_cashier_id", null)
@@ -121,6 +139,7 @@ class AuthUseCase @Inject constructor(
                     .remove("current_cashier_name")
                     .remove("current_cashier_role")
                     .apply()
+                enqueueAudit("auth.emergency.exit", "SUCCESS")
             }
         }
         return active
@@ -140,5 +159,18 @@ class AuthUseCase @Inject constructor(
     private fun sha256(input: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun enqueueAudit(action: String, details: String?) {
+        val cashierId = prefs.getString("current_cashier_id", null)
+        val deviceId = prefs.getString("device_id", null)
+        kotlinx.coroutines.runBlocking {
+            localAuditBufferRepository.enqueue(
+                cashierId = cashierId,
+                deviceId = deviceId,
+                action = action,
+                details = details
+            )
+        }
     }
 }

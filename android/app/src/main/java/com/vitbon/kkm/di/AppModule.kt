@@ -48,6 +48,8 @@ object AppModule {
     fun provideCheckItemDao(db: VitbonDatabase): CheckItemDao = db.checkItemDao()
     @Provides
     fun provideProductDao(db: VitbonDatabase): ProductDao = db.productDao()
+    @Provides
+    fun provideAuditLogDao(db: VitbonDatabase): AuditLogDao = db.auditLogDao()
 
     @Provides
     @Singleton

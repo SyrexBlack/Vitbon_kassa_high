@@ -32,8 +32,12 @@ interface DeviceLicenseRepository : JpaRepository<DeviceLicenseEntity, String>
 interface AuthSessionRepository : JpaRepository<AuthSessionEntity, UUID> {
     fun findByTokenHash(tokenHash: String): AuthSessionEntity?
     fun findByCashierIdAndRevokedAtIsNull(cashierId: UUID): AuthSessionEntity?
+    fun findAllByCashierIdAndRevokedAtIsNull(cashierId: UUID): List<AuthSessionEntity>
+    fun findAllByCashierIdOrderByIssuedAtDesc(cashierId: UUID): List<AuthSessionEntity>
 }
 
-interface CashierRepository : JpaRepository<CashierEntity, UUID>
+interface CashierRepository : JpaRepository<CashierEntity, UUID> {
+    fun findByPinHash(pinHash: String): CashierEntity?
+}
 
 interface AuditEventRepository : JpaRepository<AuditEventEntity, UUID>

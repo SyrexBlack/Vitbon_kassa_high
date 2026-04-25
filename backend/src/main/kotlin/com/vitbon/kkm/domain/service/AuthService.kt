@@ -23,26 +23,16 @@ class AuthService(
     private val auditService: AuditService
 ) {
     fun login(pin: String, deviceId: String): LoginResponseDto {
-        if (pin != DEMO_PIN) {
+        val pinHash = sessionTokenService.sha256(pin)
+        val cashier = cashierRepository.findByPinHash(pinHash)
+        if (cashier == null) {
             auditService.write(null, null, deviceId, null, "auth.login", "cashier", "FAIL", "INVALID_PIN")
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный ПИН")
         }
 
-        val cashierId = UUID.fromString(DEMO_CASHIER_ID_UUID)
-        val cashier = cashierRepository.findById(cashierId)
-            .orElseGet {
-                cashierRepository.save(
-                    CashierEntity(
-                        id = cashierId,
-                        name = DEMO_CASHIER_NAME,
-                        pinHash = "demo-pin-hash",
-                        role = DEMO_CASHIER_ROLE,
-                        createdAt = OffsetDateTime.now()
-                    )
-                )
-            }
-
-        authSessionRepository.findByCashierIdAndRevokedAtIsNull(cashierId)?.let { oldSession ->
+        val now = OffsetDateTime.now()
+        val oldSessions = authSessionRepository.findAllByCashierIdAndRevokedAtIsNull(cashier.id)
+        oldSessions.forEach { oldSession ->
             authSessionRepository.save(
                 AuthSessionEntity(
                     id = oldSession.id,
@@ -51,20 +41,19 @@ class AuthService(
                     tokenHash = oldSession.tokenHash,
                     issuedAt = oldSession.issuedAt,
                     expiresAt = oldSession.expiresAt,
-                    revokedAt = OffsetDateTime.now(),
+                    revokedAt = now,
                     revokeReason = "REPLACED_BY_NEW_LOGIN"
                 )
             )
-            auditService.write(cashierId, DEMO_CASHIER_ROLE, oldSession.deviceId, oldSession.id, "auth.session.revoke", "cashier", "SUCCESS", "REPLACED_BY_NEW_LOGIN")
+            auditService.write(cashier.id, cashier.role, oldSession.deviceId, oldSession.id, "auth.session.revoke", "cashier", "SUCCESS", "REPLACED_BY_NEW_LOGIN")
         }
 
         val token = sessionTokenService.generateOpaqueToken()
-        val now = OffsetDateTime.now()
         val expiresAt = now.plusHours(8)
 
         val session = AuthSessionEntity(
             id = UUID.randomUUID(),
-            cashierId = cashierId,
+            cashierId = cashier.id,
             deviceId = deviceId,
             tokenHash = sessionTokenService.sha256(token),
             issuedAt = now,
@@ -74,12 +63,12 @@ class AuthService(
         )
         authSessionRepository.save(session)
 
-        auditService.write(cashierId, DEMO_CASHIER_ROLE, deviceId, session.id, "auth.login", "cashier", "SUCCESS", null)
+        auditService.write(cashier.id, cashier.role, deviceId, session.id, "auth.login", "cashier", "SUCCESS", null)
 
         return LoginResponseDto(
             token = token,
             cashier = CashierDto(
-                id = DEMO_CASHIER_ID,
+                id = cashier.id.toString(),
                 name = cashier.name,
                 role = cashier.role
             ),
@@ -110,13 +99,5 @@ class AuthService(
         )
         authSessionRepository.save(revokedSession)
         auditService.write(session.cashierId, null, session.deviceId, session.id, "auth.logout", "cashier", "SUCCESS", null)
-    }
-
-    private companion object {
-        const val DEMO_PIN = "1111"
-        const val DEMO_CASHIER_ID = "cashier-demo-1"
-        const val DEMO_CASHIER_ID_UUID = "11111111-1111-1111-1111-111111111111"
-        const val DEMO_CASHIER_NAME = "Демо Кассир"
-        const val DEMO_CASHIER_ROLE = "CASHIER"
     }
 }

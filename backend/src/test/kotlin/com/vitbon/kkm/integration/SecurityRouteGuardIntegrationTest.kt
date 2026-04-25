@@ -2,6 +2,10 @@ package com.vitbon.kkm.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitbon.kkm.api.dto.LoginRequestDto
+import com.vitbon.kkm.domain.persistence.AuthSessionRepository
+import com.vitbon.kkm.domain.persistence.CashierEntity
+import com.vitbon.kkm.domain.persistence.CashierRepository
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -11,10 +15,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.Timestamp
-import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @SpringBootTest
@@ -26,6 +27,27 @@ class SecurityRouteGuardIntegrationTest {
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    lateinit var authSessionRepository: AuthSessionRepository
+
+    @Autowired
+    lateinit var cashierRepository: CashierRepository
+
+    @BeforeEach
+    fun setUpCashierFixture() {
+        authSessionRepository.deleteAll()
+        cashierRepository.deleteAll()
+        cashierRepository.save(
+            CashierEntity(
+                id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                name = "Демо Кассир",
+                pinHash = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+                role = "CASHIER",
+                createdAt = OffsetDateTime.now()
+            )
+        )
+    }
 
     @Test
     fun `checks endpoint returns 401 without bearer token`() {
@@ -51,8 +73,16 @@ class SecurityRouteGuardIntegrationTest {
             .andExpect(status().isOk)
     }
 
+    @Test
+    fun `unknown protected route returns 403 with valid token by default-deny policy`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-UNKNOWN-ROUTE")
+
+        mockMvc.perform(get("/api/v1/unknown-protected").header("Authorization", "Bearer $token"))
+            .andExpect(status().isForbidden)
+    }
+
     private fun loginAndGetToken(deviceId: String): String {
-        val loginBody = LoginRequestDto(pin = "1111", deviceId = deviceId)
+        val loginBody = LoginRequestDto(pin = "1234", deviceId = deviceId)
         val loginResponse = mockMvc.perform(
             post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -65,24 +95,14 @@ class SecurityRouteGuardIntegrationTest {
     }
 
     private fun upsertDemoCashierRole(role: String) {
-        withConnection { conn ->
-            conn.prepareStatement(
-                """
-                MERGE INTO cashiers (id, name, pin_hash, role, created_at)
-                VALUES (?, ?, ?, ?, ?)
-                """.trimIndent()
-            ).use { ps ->
-                ps.setObject(1, UUID.fromString("11111111-1111-1111-1111-111111111111"))
-                ps.setString(2, "Демо Кассир")
-                ps.setString(3, "demo-pin-hash")
-                ps.setString(4, role)
-                ps.setTimestamp(5, Timestamp.from(Instant.now()))
-                ps.executeUpdate()
-            }
-        }
-    }
-
-    private fun withConnection(block: (Connection) -> Unit) {
-        DriverManager.getConnection("jdbc:h2:mem:vitbon;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE", "sa", "").use(block)
+        cashierRepository.save(
+            CashierEntity(
+                id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                name = "Демо Кассир",
+                pinHash = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+                role = role,
+                createdAt = OffsetDateTime.now()
+            )
+        )
     }
 }
