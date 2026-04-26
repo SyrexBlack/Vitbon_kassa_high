@@ -13,6 +13,7 @@ class FiscalAdapterContractTest {
 
         assertFalse(source.contains("MSP_"))
         assertFalse(source.contains("MSPOSKStub"))
+        assertFalse(source.contains("MSPOS-K SDK integration is required"))
     }
 
     @Test
