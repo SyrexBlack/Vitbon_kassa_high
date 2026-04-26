@@ -73,6 +73,22 @@ class SessionAuthFilter(
             return
         }
 
+        val requestDeviceId = request.getHeader("X-Device-Id")?.trim()
+        if (requestDeviceId.isNullOrBlank() || requestDeviceId != session.deviceId) {
+            auditService.write(
+                actorId = session.cashierId,
+                actorRole = null,
+                deviceId = requestDeviceId,
+                sessionId = session.id,
+                action = "security.auth_deny",
+                target = request.requestURI,
+                result = "DENY",
+                reason = "DEVICE_MISMATCH"
+            )
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid device binding")
+            return
+        }
+
         val role = cashierRepository.findById(session.cashierId)
             .map { it.role }
             .orElse(null)

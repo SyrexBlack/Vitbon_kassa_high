@@ -28,4 +28,11 @@ class AuthTokenStoreTest {
 
         assertNull(header)
     }
+
+    @Test
+    fun `api client normalizes device id and drops blank value`() {
+        assertEquals("DEVICE-1", ApiClient.normalizeDeviceId("  DEVICE-1  "))
+        assertNull(ApiClient.normalizeDeviceId("   "))
+        assertNull(ApiClient.normalizeDeviceId(null))
+    }
 }

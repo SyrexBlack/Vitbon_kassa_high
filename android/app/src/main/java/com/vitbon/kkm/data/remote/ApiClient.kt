@@ -16,7 +16,11 @@ object ApiClient {
         return if (token.isNullOrBlank()) null else "Bearer $token"
     }
 
-    fun create(tokenStore: AuthTokenStore): VitbonApi {
+    internal fun normalizeDeviceId(rawDeviceId: String?): String? {
+        return rawDeviceId?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    fun create(tokenStore: AuthTokenStore, deviceIdProvider: () -> String?): VitbonApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -30,6 +34,9 @@ object ApiClient {
                 val requestBuilder = chain.request().newBuilder()
                 buildAuthorizationHeader(tokenStore)?.let {
                     requestBuilder.addHeader("Authorization", it)
+                }
+                normalizeDeviceId(deviceIdProvider())?.let {
+                    requestBuilder.addHeader("X-Device-Id", it)
                 }
                 chain.proceed(requestBuilder.build())
             }

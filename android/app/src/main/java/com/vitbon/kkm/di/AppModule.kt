@@ -63,8 +63,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideVitbonApi(tokenStore: AuthTokenStore): VitbonApi {
-        return ApiClient.create(tokenStore)
+    fun provideVitbonApi(tokenStore: AuthTokenStore, prefs: SharedPreferences): VitbonApi {
+        return ApiClient.create(tokenStore) {
+            prefs.getString("device_id", null)
+        }
     }
 
     @Provides
