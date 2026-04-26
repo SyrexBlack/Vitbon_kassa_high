@@ -81,6 +81,14 @@ class SecurityRouteGuardIntegrationTest {
             .andExpect(status().isForbidden)
     }
 
+    @Test
+    fun `logout endpoint returns 200 with valid bearer token`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-LOGOUT-OK")
+
+        mockMvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+    }
+
     private fun loginAndGetToken(deviceId: String): String {
         val loginBody = LoginRequestDto(pin = "1234", deviceId = deviceId)
         val loginResponse = mockMvc.perform(

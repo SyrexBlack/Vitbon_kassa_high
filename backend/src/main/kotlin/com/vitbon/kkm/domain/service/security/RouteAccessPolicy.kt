@@ -8,6 +8,7 @@ class RouteAccessPolicy {
         val normalized = path.substringBefore('?')
 
         if (normalized == "/api/v1/auth/login") return emptySet()
+        if (normalized == "/api/v1/auth/logout") return setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
 
         return when {
             normalized == "/api/v1/license/check" -> emptySet()
