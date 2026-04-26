@@ -36,8 +36,6 @@ interface AuthSessionRepository : JpaRepository<AuthSessionEntity, UUID> {
     fun findAllByCashierIdOrderByIssuedAtDesc(cashierId: UUID): List<AuthSessionEntity>
 }
 
-interface CashierRepository : JpaRepository<CashierEntity, UUID> {
-    fun findByPinHash(pinHash: String): CashierEntity?
-}
+interface CashierRepository : JpaRepository<CashierEntity, UUID>
 
 interface AuditEventRepository : JpaRepository<AuditEventEntity, UUID>

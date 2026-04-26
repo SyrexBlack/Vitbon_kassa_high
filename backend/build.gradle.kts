@@ -18,6 +18,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
+    implementation("org.springframework.security:spring-security-crypto")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.h2database:h2")
 }

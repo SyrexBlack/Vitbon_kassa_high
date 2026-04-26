@@ -1,0 +1,2 @@
+ALTER TABLE cashiers
+    ALTER COLUMN pin_hash TYPE VARCHAR(1024);

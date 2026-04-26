@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import java.time.OffsetDateTime
 import java.util.UUID
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
 
 @SpringBootTest
 class AuthIntegrationTest {
@@ -175,5 +176,37 @@ class AuthIntegrationTest {
             it.action == "auth.login" && it.result == "DENY" && it.reason == "RATE_LIMITED"
         }
         assertTrue(hasAudit)
+    }
+
+    @Test
+    fun `AuthService login accepts PBKDF2 hashed PIN and rotates legacy SHA-256 hash`() {
+        cashierRepository.deleteAll()
+        val cashierId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        cashierRepository.save(
+            CashierEntity(
+                id = cashierId,
+                name = "Legacy Cashier",
+                pinHash = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+                role = "CASHIER",
+                createdAt = OffsetDateTime.now()
+            )
+        )
+
+        authService.login("1234", "DEVICE-LEGACY")
+        val rotated = cashierRepository.findById(cashierId).orElseThrow()
+        assertTrue(rotated.pinHash.startsWith("pbkdf2$"))
+        assertTrue(verifyPbkdf2("1234", rotated.pinHash))
+
+        authService.login("1234", "DEVICE-LEGACY-2")
+        val unchanged = cashierRepository.findById(cashierId).orElseThrow().pinHash
+        assertEquals(rotated.pinHash, unchanged)
+    }
+
+    private fun verifyPbkdf2(pin: String, encoded: String): Boolean {
+        if (!encoded.startsWith("pbkdf2$")) return false
+        val springEncoded = encoded.removePrefix("pbkdf2$")
+        return Pbkdf2PasswordEncoder.defaultsForSpringSecurity_v5_8().apply {
+            setEncodeHashAsBase64(true)
+        }.matches(pin, springEncoded)
     }
 }

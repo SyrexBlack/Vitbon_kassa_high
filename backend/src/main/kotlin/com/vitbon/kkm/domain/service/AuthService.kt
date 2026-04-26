@@ -8,6 +8,7 @@ import com.vitbon.kkm.domain.persistence.AuthSessionRepository
 import com.vitbon.kkm.domain.persistence.CashierEntity
 import com.vitbon.kkm.domain.persistence.CashierRepository
 import com.vitbon.kkm.domain.service.security.AuditService
+import com.vitbon.kkm.domain.service.security.PinHashService
 import com.vitbon.kkm.domain.service.security.SessionTokenService
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -22,6 +23,7 @@ class AuthService(
     private val authSessionRepository: AuthSessionRepository,
     private val cashierRepository: CashierRepository,
     private val sessionTokenService: SessionTokenService,
+    private val pinHashService: PinHashService,
     private val auditService: AuditService
 ) {
     private data class FailedLoginState(
@@ -34,12 +36,23 @@ class AuthService(
     fun login(pin: String, deviceId: String): LoginResponseDto {
         enforceRateLimit(deviceId)
 
-        val pinHash = sessionTokenService.sha256(pin)
-        val cashier = cashierRepository.findByPinHash(pinHash)
+        val cashier = cashierRepository.findAll().firstOrNull { pinHashService.matches(pin, it.pinHash) }
         if (cashier == null) {
             registerFailedAttempt(deviceId)
             auditService.write(null, null, deviceId, null, "auth.login", "cashier", "FAIL", "INVALID_PIN")
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный ПИН")
+        }
+
+        if (pinHashService.needsRehash(cashier.pinHash)) {
+            cashierRepository.save(
+                CashierEntity(
+                    id = cashier.id,
+                    name = cashier.name,
+                    pinHash = pinHashService.hash(pin),
+                    role = cashier.role,
+                    createdAt = cashier.createdAt
+                )
+            )
         }
 
         clearFailedAttempts(deviceId)
