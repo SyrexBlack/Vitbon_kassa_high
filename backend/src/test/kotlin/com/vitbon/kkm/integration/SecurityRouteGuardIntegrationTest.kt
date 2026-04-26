@@ -2,9 +2,12 @@ package com.vitbon.kkm.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitbon.kkm.api.dto.LoginRequestDto
+import com.vitbon.kkm.domain.persistence.AuditEventRepository
 import com.vitbon.kkm.domain.persistence.AuthSessionRepository
 import com.vitbon.kkm.domain.persistence.CashierEntity
 import com.vitbon.kkm.domain.persistence.CashierRepository
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -32,11 +35,15 @@ class SecurityRouteGuardIntegrationTest {
     lateinit var authSessionRepository: AuthSessionRepository
 
     @Autowired
+    lateinit var auditEventRepository: AuditEventRepository
+
+    @Autowired
     lateinit var cashierRepository: CashierRepository
 
     @BeforeEach
     fun setUpCashierFixture() {
         authSessionRepository.deleteAll()
+        auditEventRepository.deleteAll()
         cashierRepository.deleteAll()
         cashierRepository.save(
             CashierEntity(
@@ -53,6 +60,20 @@ class SecurityRouteGuardIntegrationTest {
     fun `checks endpoint returns 401 without bearer token`() {
         mockMvc.perform(get("/api/v1/checks"))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `checks endpoint writes audit event for missing bearer token`() {
+        mockMvc.perform(get("/api/v1/checks"))
+            .andExpect(status().isUnauthorized)
+
+        val events = auditEventRepository.findAll()
+        val deny = events.lastOrNull { it.action == "security.auth_deny" }
+        assertNotNull(deny)
+        val audited = deny!!
+        assertEquals("DENY", audited.result)
+        assertEquals("MISSING_BEARER", audited.reason)
+        assertEquals("/api/v1/checks", audited.target)
     }
 
     @Test

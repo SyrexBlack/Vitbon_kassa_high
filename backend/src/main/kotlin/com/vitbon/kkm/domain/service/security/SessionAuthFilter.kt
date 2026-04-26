@@ -27,18 +27,48 @@ class SessionAuthFilter(
 
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank() || !authHeader.startsWith("Bearer ")) {
+            auditService.write(
+                actorId = null,
+                actorRole = null,
+                deviceId = request.getHeader("X-Device-Id"),
+                sessionId = null,
+                action = "security.auth_deny",
+                target = request.requestURI,
+                result = "DENY",
+                reason = "MISSING_BEARER"
+            )
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing bearer token")
             return
         }
 
         val rawToken = authHeader.removePrefix("Bearer ").trim()
         if (rawToken.isBlank()) {
+            auditService.write(
+                actorId = null,
+                actorRole = null,
+                deviceId = request.getHeader("X-Device-Id"),
+                sessionId = null,
+                action = "security.auth_deny",
+                target = request.requestURI,
+                result = "DENY",
+                reason = "MISSING_BEARER"
+            )
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing bearer token")
             return
         }
 
         val session = authSessionRepository.findByTokenHash(sessionTokenService.sha256(rawToken))
         if (session == null || session.revokedAt != null || session.expiresAt.isBefore(OffsetDateTime.now())) {
+            auditService.write(
+                actorId = null,
+                actorRole = null,
+                deviceId = request.getHeader("X-Device-Id"),
+                sessionId = null,
+                action = "security.auth_deny",
+                target = request.requestURI,
+                result = "DENY",
+                reason = "INVALID_SESSION"
+            )
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid session")
             return
         }
