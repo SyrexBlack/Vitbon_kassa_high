@@ -5,6 +5,7 @@ import android.util.Log
 import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.FiscalException
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.msposk.RealMSPOSKProtocol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -127,14 +128,26 @@ interface Neva01FProtocol {
 }
 
 class RealNeva01FProtocol(private val context: Context) : Neva01FProtocol {
-    override suspend fun openShift(): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun closeShift(): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun printXReport(): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun getStatus(): FiscalStatus = throw UnsupportedOperationException("Neva 01F SDK integration is required")
-    override suspend fun getFFDVersion(): FFDVersion = throw UnsupportedOperationException("Neva 01F SDK integration is required")
+    // До поставки отдельного Neva SDK-контракта используем runtime binder bridge фискального сервиса.
+    private val fallbackBridge by lazy { RealMSPOSKProtocol(context) }
+
+    override suspend fun openShift(): FiscalResult = fallbackBridge.openShift()
+
+    override suspend fun printSale(check: FiscalCheck): FiscalResult = fallbackBridge.printSale(check)
+
+    override suspend fun printReturn(check: FiscalCheck): FiscalResult = fallbackBridge.printReturn(check)
+
+    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = fallbackBridge.printCorrection(doc)
+
+    override suspend fun closeShift(): FiscalResult = fallbackBridge.closeShift()
+
+    override suspend fun printXReport(): FiscalResult = fallbackBridge.printXReport()
+
+    override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = fallbackBridge.cashIn(amount, comment)
+
+    override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = fallbackBridge.cashOut(amount, comment)
+
+    override suspend fun getStatus(): FiscalStatus = fallbackBridge.getStatus()
+
+    override suspend fun getFFDVersion(): FFDVersion = fallbackBridge.getFFDVersion()
 }

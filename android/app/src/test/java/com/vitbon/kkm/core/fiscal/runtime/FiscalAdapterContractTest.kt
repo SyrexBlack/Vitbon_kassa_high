@@ -23,5 +23,6 @@ class FiscalAdapterContractTest {
 
         assertFalse(source.contains("NEVA_"))
         assertFalse(source.contains("Neva01FStub"))
+        assertFalse(source.contains("Neva 01F SDK integration is required"))
     }
 }
