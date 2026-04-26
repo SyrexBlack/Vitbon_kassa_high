@@ -110,6 +110,23 @@ class SecurityRouteGuardIntegrationTest {
             .andExpect(status().isOk)
     }
 
+    @Test
+    fun `authorized request writes route access audit event`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-ACCESS-AUDIT")
+
+        mockMvc.perform(get("/api/v1/checks").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+
+        val access = auditEventRepository.findAll()
+            .lastOrNull { it.action == "security.route_access" && it.result == "ALLOW" }
+        assertNotNull(access)
+        val audited = access!!
+        assertEquals("/api/v1/checks", audited.target)
+        assertEquals("CASHIER", audited.actorRole)
+        assertEquals("DEVICE-ACCESS-AUDIT", audited.deviceId)
+        assertNotNull(audited.sessionId)
+    }
+
     private fun loginAndGetToken(deviceId: String): String {
         val loginBody = LoginRequestDto(pin = "1234", deviceId = deviceId)
         val loginResponse = mockMvc.perform(

@@ -92,6 +92,17 @@ class SessionAuthFilter(
             return
         }
 
+        auditService.write(
+            actorId = session.cashierId,
+            actorRole = role,
+            deviceId = session.deviceId,
+            sessionId = session.id,
+            action = "security.route_access",
+            target = request.requestURI,
+            result = "ALLOW",
+            reason = null
+        )
+
         chain.doFilter(request, response)
     }
 }
