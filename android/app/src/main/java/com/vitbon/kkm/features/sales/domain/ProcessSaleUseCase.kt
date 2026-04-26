@@ -7,6 +7,9 @@ import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,8 +24,13 @@ class ProcessSaleUseCase @Inject constructor(
         cart: Cart,
         cashierId: String,
         deviceId: String,
-        shiftId: String?
+        shiftId: String?,
+        cashierRole: CashierRole?,
+        emergencySessionActive: Boolean
     ): SaleResult {
+        if (emergencySessionActive || !RolePolicy.canPerform(cashierRole, RoleOperation.SALE)) {
+            return SaleResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+        }
         // 1. Построить FiscalCheck
         val fiscalCheck = FiscalCheck(
             id = UUID.randomUUID().toString(),

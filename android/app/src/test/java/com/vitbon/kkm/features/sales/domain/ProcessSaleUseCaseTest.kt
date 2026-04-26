@@ -7,6 +7,7 @@ import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
+import com.vitbon.kkm.features.auth.domain.CashierRole
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,6 +17,88 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProcessSaleUseCaseTest {
+
+    @Test
+    fun `process sale returns access denied when role is missing`() = runTest {
+        val orchestrator = mockk<FiscalOperationOrchestrator>()
+        val checkDao = mockk<CheckDao>(relaxed = true)
+        val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao)
+
+        val cart = Cart(
+            items = listOf(
+                CartItem(
+                    productId = "p1",
+                    barcode = "4600000000000",
+                    name = "Test item",
+                    quantity = 1.0,
+                    price = Money(1000),
+                    discount = Money.ZERO,
+                    vatRate = VatRate.VAT_22
+                )
+            ),
+            globalDiscount = Money.ZERO,
+            paymentType = PaymentType.CARD
+        )
+
+        val result = useCase.execute(
+            cart = cart,
+            cashierId = "cashier-1",
+            deviceId = "device-1",
+            shiftId = "shift-1",
+            cashierRole = null,
+            emergencySessionActive = false
+        )
+
+        assertTrue(result is SaleResult.FiscalError)
+        result as SaleResult.FiscalError
+        assertEquals(-1, result.code)
+        assertEquals("Операция запрещена для текущей роли", result.message)
+        coVerify(exactly = 0) { orchestrator.executeSale(any()) }
+        coVerify(exactly = 0) { checkDao.insert(any()) }
+        coVerify(exactly = 0) { checkItemDao.insertAll(any()) }
+    }
+
+    @Test
+    fun `process sale returns access denied during emergency session`() = runTest {
+        val orchestrator = mockk<FiscalOperationOrchestrator>()
+        val checkDao = mockk<CheckDao>(relaxed = true)
+        val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao)
+
+        val cart = Cart(
+            items = listOf(
+                CartItem(
+                    productId = "p1",
+                    barcode = "4600000000000",
+                    name = "Test item",
+                    quantity = 1.0,
+                    price = Money(1000),
+                    discount = Money.ZERO,
+                    vatRate = VatRate.VAT_22
+                )
+            ),
+            globalDiscount = Money.ZERO,
+            paymentType = PaymentType.CARD
+        )
+
+        val result = useCase.execute(
+            cart = cart,
+            cashierId = "cashier-1",
+            deviceId = "device-1",
+            shiftId = "shift-1",
+            cashierRole = CashierRole.ADMIN,
+            emergencySessionActive = true
+        )
+
+        assertTrue(result is SaleResult.FiscalError)
+        result as SaleResult.FiscalError
+        assertEquals(-1, result.code)
+        assertEquals("Операция запрещена для текущей роли", result.message)
+        coVerify(exactly = 0) { orchestrator.executeSale(any()) }
+        coVerify(exactly = 0) { checkDao.insert(any()) }
+        coVerify(exactly = 0) { checkItemDao.insertAll(any()) }
+    }
 
     @Test
     fun `process sale delegates to orchestrator and returns success`() = runTest {
@@ -51,7 +134,9 @@ class ProcessSaleUseCaseTest {
             cart = cart,
             cashierId = "cashier-1",
             deviceId = "device-1",
-            shiftId = "shift-1"
+            shiftId = "shift-1",
+            cashierRole = CashierRole.CASHIER,
+            emergencySessionActive = false
         )
 
         assertTrue(result is SaleResult.Success)

@@ -213,7 +213,7 @@ class ReturnViewModelTest {
         val st = vm.state.value
         assertFalse(st.isProcessing)
         assertEquals("Сначала выберите исходный чек продажи", st.error)
-        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any()) }
+        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { syncService.onCheckCreated() }
     }
 
@@ -243,7 +243,9 @@ class ReturnViewModelTest {
                         items[0].price == Money(129_00L) &&
                         items[0].discount == Money(9_00L)
                 },
-                "cashier-1"
+                "cashier-1",
+                CashierRole.CASHIER,
+                false
             )
         } returns ReturnResult.Success(checkId = "return-1", fiscalSign = "FS-RET-1")
 
@@ -275,7 +277,10 @@ class ReturnViewModelTest {
                 vatRate = VatRate.NO_VAT
             )
         )
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
         every { authUseCase.getCurrentCashierRole() } returns null
+        coEvery { returnUseCase.processReturn(any(), any(), any(), any(), any()) } returns
+            ReturnResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
         val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
         vm.onCheckInput("sale-role-deny")
@@ -286,8 +291,8 @@ class ReturnViewModelTest {
 
         val st = vm.state.value
         assertFalse(st.isProcessing)
-        assertEquals("Операция запрещена для текущей роли", st.error)
-        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any()) }
+        assertEquals("-1: Операция запрещена для текущей роли", st.error)
+        coVerify(exactly = 1) { returnUseCase.processReturn(any(), any(), "unknown", null, false) }
         verify(exactly = 0) { syncService.onCheckCreated() }
     }
 
@@ -306,8 +311,11 @@ class ReturnViewModelTest {
                 vatRate = VatRate.NO_VAT
             )
         )
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
         every { authUseCase.isEmergencySessionActive() } returns true
+        coEvery { returnUseCase.processReturn(any(), any(), any(), any(), any()) } returns
+            ReturnResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
         val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
         vm.onCheckInput("sale-role-emergency")
@@ -318,8 +326,8 @@ class ReturnViewModelTest {
 
         val st = vm.state.value
         assertFalse(st.isProcessing)
-        assertEquals("Операция запрещена для текущей роли", st.error)
-        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any()) }
+        assertEquals("-1: Операция запрещена для текущей роли", st.error)
+        coVerify(exactly = 1) { returnUseCase.processReturn(any(), any(), "unknown", CashierRole.ADMIN, true) }
         verify(exactly = 0) { syncService.onCheckCreated() }
     }
 

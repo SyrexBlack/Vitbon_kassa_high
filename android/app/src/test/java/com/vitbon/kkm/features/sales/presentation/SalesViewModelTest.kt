@@ -74,7 +74,7 @@ class SalesViewModelTest {
         every { authUseCase.getCurrentCashierId() } returns "cashier-1"
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         coEvery { shiftDao.findOpenShift() } returns openShift
-        coEvery { processSale.execute(any(), any(), any(), any()) } returns SaleResult.Success(
+        coEvery { processSale.execute(any(), any(), any(), any(), any(), any()) } returns SaleResult.Success(
             checkId = "check-1",
             fiscalSign = "fs-1",
             total = 129.0
@@ -89,7 +89,7 @@ class SalesViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            processSale.execute(any(), "cashier-1", any(), "shift-open-1")
+            processSale.execute(any(), "cashier-1", any(), "shift-open-1", CashierRole.CASHIER, false)
         }
     }
 
@@ -108,7 +108,7 @@ class SalesViewModelTest {
         every { authUseCase.getCurrentCashierId() } returns "cashier-1"
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         coEvery { shiftDao.findOpenShift() } returns null
-        coEvery { processSale.execute(any(), any(), any(), any()) } returns SaleResult.Success(
+        coEvery { processSale.execute(any(), any(), any(), any(), any(), any()) } returns SaleResult.Success(
             checkId = "check-2",
             fiscalSign = "fs-2",
             total = 129.0
@@ -123,7 +123,7 @@ class SalesViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            processSale.execute(any(), "cashier-1", any(), null)
+            processSale.execute(any(), "cashier-1", any(), null, CashierRole.CASHIER, false)
         }
     }
 
@@ -139,7 +139,12 @@ class SalesViewModelTest {
         )
 
         coEvery { scanBarcode.execute("4607001234567") } returns ScanResult.Found(item)
+        coEvery { shiftDao.findOpenShift() } returns null
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
         every { authUseCase.getCurrentCashierRole() } returns null
+        coEvery {
+            processSale.execute(any(), any(), any(), any(), any(), any())
+        } returns SaleResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
         val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
 
@@ -152,7 +157,9 @@ class SalesViewModelTest {
         assertEquals(false, state.isProcessing)
         assertEquals(true, state.saleResult is SaleResult.FiscalError)
         assertEquals("Операция запрещена для текущей роли", (state.saleResult as SaleResult.FiscalError).message)
-        coVerify(exactly = 0) { processSale.execute(any(), any(), any(), any()) }
+        coVerify(exactly = 1) {
+            processSale.execute(any(), "unknown", any(), null, null, false)
+        }
     }
 
     @Test
@@ -167,8 +174,13 @@ class SalesViewModelTest {
         )
 
         coEvery { scanBarcode.execute("4607001234567") } returns ScanResult.Found(item)
+        coEvery { shiftDao.findOpenShift() } returns null
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
         every { authUseCase.isEmergencySessionActive() } returns true
+        coEvery {
+            processSale.execute(any(), any(), any(), any(), any(), any())
+        } returns SaleResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
         val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
 
@@ -181,6 +193,8 @@ class SalesViewModelTest {
         assertEquals(false, state.isProcessing)
         assertEquals(true, state.saleResult is SaleResult.FiscalError)
         assertEquals("Операция запрещена для текущей роли", (state.saleResult as SaleResult.FiscalError).message)
-        coVerify(exactly = 0) { processSale.execute(any(), any(), any(), any()) }
+        coVerify(exactly = 1) {
+            processSale.execute(any(), "unknown", any(), null, CashierRole.ADMIN, true)
+        }
     }
 }
