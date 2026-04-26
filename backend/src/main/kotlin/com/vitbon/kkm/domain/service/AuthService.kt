@@ -12,8 +12,10 @@ import com.vitbon.kkm.domain.service.security.SessionTokenService
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class AuthService(
@@ -22,13 +24,25 @@ class AuthService(
     private val sessionTokenService: SessionTokenService,
     private val auditService: AuditService
 ) {
+    private data class FailedLoginState(
+        val attempts: Int,
+        val blockedUntil: OffsetDateTime?
+    )
+
+    private val failedLoginsByDevice = ConcurrentHashMap<String, FailedLoginState>()
+
     fun login(pin: String, deviceId: String): LoginResponseDto {
+        enforceRateLimit(deviceId)
+
         val pinHash = sessionTokenService.sha256(pin)
         val cashier = cashierRepository.findByPinHash(pinHash)
         if (cashier == null) {
+            registerFailedAttempt(deviceId)
             auditService.write(null, null, deviceId, null, "auth.login", "cashier", "FAIL", "INVALID_PIN")
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный ПИН")
         }
+
+        clearFailedAttempts(deviceId)
 
         val now = OffsetDateTime.now()
         val oldSessions = authSessionRepository.findAllByCashierIdAndRevokedAtIsNull(cashier.id)
@@ -99,5 +113,40 @@ class AuthService(
         )
         authSessionRepository.save(revokedSession)
         auditService.write(session.cashierId, null, session.deviceId, session.id, "auth.logout", "cashier", "SUCCESS", null)
+    }
+
+    private fun enforceRateLimit(deviceId: String) {
+        val now = OffsetDateTime.now()
+        val state = failedLoginsByDevice[deviceId] ?: return
+        val blockedUntil = state.blockedUntil
+        if (blockedUntil != null && blockedUntil.isAfter(now)) {
+            auditService.write(null, null, deviceId, null, "auth.login", "cashier", "DENY", "RATE_LIMITED")
+            throw ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Слишком много попыток входа. Повторите позже")
+        }
+        if (blockedUntil != null && !blockedUntil.isAfter(now)) {
+            failedLoginsByDevice.remove(deviceId)
+        }
+    }
+
+    private fun registerFailedAttempt(deviceId: String) {
+        val now = OffsetDateTime.now()
+        failedLoginsByDevice.compute(deviceId) { _, existing ->
+            val attempts = (existing?.attempts ?: 0) + 1
+            if (attempts >= 3) {
+                FailedLoginState(
+                    attempts = attempts,
+                    blockedUntil = now.plus(Duration.ofMinutes(5))
+                )
+            } else {
+                FailedLoginState(
+                    attempts = attempts,
+                    blockedUntil = null
+                )
+            }
+        }
+    }
+
+    private fun clearFailedAttempts(deviceId: String) {
+        failedLoginsByDevice.remove(deviceId)
     }
 }

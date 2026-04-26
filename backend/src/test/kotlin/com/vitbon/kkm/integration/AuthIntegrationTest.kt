@@ -4,6 +4,7 @@ import com.vitbon.kkm.api.dto.CashierDto
 import com.vitbon.kkm.api.dto.LoginFeaturesDto
 import com.vitbon.kkm.api.dto.LoginRequestDto
 import com.vitbon.kkm.api.dto.LoginResponseDto
+import com.vitbon.kkm.domain.persistence.AuditEventRepository
 import com.vitbon.kkm.domain.persistence.AuthSessionRepository
 import com.vitbon.kkm.domain.persistence.CashierEntity
 import com.vitbon.kkm.domain.persistence.CashierRepository
@@ -35,9 +36,13 @@ class AuthIntegrationTest {
     @Autowired
     lateinit var authSessionRepository: AuthSessionRepository
 
+    @Autowired
+    lateinit var auditEventRepository: AuditEventRepository
+
     @BeforeEach
     fun setUpCashiers() {
         authSessionRepository.deleteAll()
+        auditEventRepository.deleteAll()
         cashierRepository.deleteAll()
         cashierRepository.saveAll(
             listOf(
@@ -150,5 +155,25 @@ class AuthIntegrationTest {
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, exception.statusCode)
+    }
+
+    @Test
+    fun `AuthService blocks repeated invalid pin attempts per device`() {
+        repeat(3) {
+            val exception = assertThrows(ResponseStatusException::class.java) {
+                authService.login("9999", "DEVICE-BRUTEFORCE")
+            }
+            assertEquals(HttpStatus.UNAUTHORIZED, exception.statusCode)
+        }
+
+        val blocked = assertThrows(ResponseStatusException::class.java) {
+            authService.login("9999", "DEVICE-BRUTEFORCE")
+        }
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, blocked.statusCode)
+
+        val hasAudit = auditEventRepository.findAll().any {
+            it.action == "auth.login" && it.result == "DENY" && it.reason == "RATE_LIMITED"
+        }
+        assertTrue(hasAudit)
     }
 }
