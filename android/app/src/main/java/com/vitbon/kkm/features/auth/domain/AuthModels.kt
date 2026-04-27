@@ -37,8 +37,8 @@ object RolePolicy {
     fun canPerform(role: CashierRole?, operation: RoleOperation): Boolean {
         val currentRole = role ?: return false
         return when (operation) {
-            RoleOperation.SALE,
-            RoleOperation.RETURN -> true
+            RoleOperation.SALE -> true
+            RoleOperation.RETURN -> currentRole == CashierRole.SENIOR_CASHIER || currentRole == CashierRole.ADMIN
             RoleOperation.SHIFT_OPEN,
             RoleOperation.SHIFT_CLOSE,
             RoleOperation.SHIFT_X_REPORT,
