@@ -8,6 +8,7 @@ import com.vitbon.kkm.data.remote.dto.ProductDto
 import com.vitbon.kkm.data.remote.dto.ProductSyncResponseDto
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -60,8 +61,11 @@ class SyncManagerTest {
 
         assertEquals(1, result.received)
         assertEquals(2, result.deleted)
-        coVerify(exactly = 1) { productDao.insertAll(match { it.size == 1 && it[0].id == "p-1" }) }
-        coVerify(exactly = 1) { productDao.deleteByIds(listOf("p-old-1", "p-old-2")) }
+        // Verify deleteByIds is called BEFORE insertAll
+        coVerifyOrder {
+            productDao.deleteByIds(listOf("p-old-1", "p-old-2"))
+            productDao.insertAll(match { it.size == 1 && it[0].id == "p-1" })
+        }
     }
 
     @Test
