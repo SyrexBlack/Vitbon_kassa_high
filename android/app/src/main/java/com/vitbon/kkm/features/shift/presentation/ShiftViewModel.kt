@@ -3,6 +3,7 @@ package com.vitbon.kkm.features.shift.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import com.vitbon.kkm.features.shift.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,12 @@ class ShiftViewModel @Inject constructor(
     fun openShift() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive || !useCase.canOpenShift(role)) {
+                _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
             val result = useCase.openShift(
                 deviceId = android.os.Build.MODEL,
                 cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
@@ -52,6 +59,12 @@ class ShiftViewModel @Inject constructor(
     fun closeShift() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive || !useCase.canCloseShift(role)) {
+                _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
             val shiftId = useCase.findOpenShiftId()
             if (shiftId == null) {
                 _state.update { it.copy(isLoading = false, error = "Нет открытой смены для закрытия") }
@@ -83,7 +96,13 @@ class ShiftViewModel @Inject constructor(
 
     fun printXReport() {
         viewModelScope.launch {
-            val result = useCase.printXReport()
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive || !useCase.canPrintXReport(role)) {
+                _state.update { it.copy(error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
+            useCase.printXReport()
             _state.update { it.copy(error = null) }
         }
     }

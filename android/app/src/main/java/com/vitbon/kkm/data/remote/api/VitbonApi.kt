@@ -29,7 +29,7 @@ interface VitbonApi {
     suspend fun getProducts(@Query("since") since: Long?): Response<ProductSyncResponseDto>
 
     @POST("api/v1/products/sync")
-    suspend fun syncProducts(@Body products: List<ProductDto>): Response<Unit>
+    suspend fun syncProducts(@Body req: ProductSyncResponseDto): Response<ProductSyncResponseDto>
 
     // Documents
     @POST("api/v1/documents/acceptance")

@@ -112,8 +112,9 @@ class SyncManager @Inject constructor(
                     )
                 }
                 productDao.insertAll(entities)
+                val deletedCount = if (body.deletedIds.isEmpty()) 0 else productDao.deleteByIds(body.deletedIds)
                 syncPrefs.lastProductSyncTimestamp = body.serverTimestamp
-                ProductSyncResult(entities.size, body.deletedIds.size)
+                ProductSyncResult(entities.size, deletedCount)
             } else {
                 ProductSyncResult(0, 0)
             }

@@ -5,11 +5,15 @@ import android.content.SharedPreferences
 import androidx.room.Room
 import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.fiscal.*
+import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
+import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.data.local.VitbonDatabase
 import com.vitbon.kkm.data.local.dao.*
 import com.vitbon.kkm.data.remote.ApiClient
 import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.features.auth.domain.AuthTokenStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,6 +48,8 @@ object AppModule {
     fun provideCheckItemDao(db: VitbonDatabase): CheckItemDao = db.checkItemDao()
     @Provides
     fun provideProductDao(db: VitbonDatabase): ProductDao = db.productDao()
+    @Provides
+    fun provideAuditLogDao(db: VitbonDatabase): AuditLogDao = db.auditLogDao()
 
     @Provides
     @Singleton
@@ -57,8 +63,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideVitbonApi(prefs: SharedPreferences): VitbonApi {
-        return ApiClient.create(prefs)
+    fun provideVitbonApi(tokenStore: AuthTokenStore, prefs: SharedPreferences): VitbonApi {
+        return ApiClient.create(tokenStore) {
+            prefs.getString("device_id", null)
+        }
     }
 
     @Provides
@@ -84,6 +92,24 @@ object AppModule {
             runBlocking { provider.get() }
         }
     )
+
+    @Provides
+    @Singleton
+    fun provideFfdPolicyStore(prefs: SharedPreferences): FfdPolicyStore = FfdPolicyStore(prefs)
+
+    @Provides
+    @Singleton
+    fun provideFfdVersionResolver(
+        fiscalCore: FiscalCore,
+        ffdPolicyStore: FfdPolicyStore
+    ): FfdVersionResolver = FfdVersionResolver(fiscalCore, ffdPolicyStore)
+
+    @Provides
+    @Singleton
+    fun provideFiscalOperationOrchestrator(
+        fiscalCore: FiscalCore,
+        ffdVersionResolver: FfdVersionResolver
+    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver)
 }
 
 internal fun createFiscalCore(

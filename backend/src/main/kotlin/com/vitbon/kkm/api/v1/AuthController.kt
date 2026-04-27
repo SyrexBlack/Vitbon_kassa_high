@@ -10,7 +10,7 @@ class AuthController(private val authService: AuthService) {
 
     @PostMapping("login")
     fun login(@RequestBody req: LoginRequestDto): LoginResponseDto {
-        return authService.login(req.pin)
+        return authService.login(req.pin, req.deviceId)
     }
 
     @PostMapping("logout")

@@ -5,6 +5,7 @@ import android.util.Log
 import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.FiscalException
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.msposk.RealMSPOSKProtocol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -29,9 +30,7 @@ class Neva01FFiscalCore @Inject constructor(
     private var cachedStatus: FiscalStatus? = null
 
     private val sdk: Neva01FProtocol by lazy {
-        // Реальная реализация: Neva01FSDK.getInstance(context)
-        // Заглушка — заменить на Neva01F.aar после получения
-        Neva01FStub()
+        RealNeva01FProtocol(context)
     }
 
     override suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
@@ -55,105 +54,51 @@ class Neva01FFiscalCore @Inject constructor(
 
     override suspend fun openShift(): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: opening shift")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = "1",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.openShift()
     }
 
     override suspend fun printSale(check: FiscalCheck): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing SALE check ${check.id}")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_FISCAL_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = (check.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printSale(check)
     }
 
     override suspend fun printReturn(check: FiscalCheck): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing RETURN check ${check.id}")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_RETURN_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = (check.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printReturn(check)
     }
 
     override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing CORRECTION ${doc.id}")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_CORR_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = (doc.id.hashCode() and 0xFFFF).toString(),
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printCorrection(doc)
     }
 
     override suspend fun closeShift(): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: closing shift")
         cachedStatus = null
-        FiscalResult.Success(
-            fiscalSign = "NEVA_CLOSE_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.closeShift()
     }
 
     override suspend fun printXReport(): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: X-report")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_XREP_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.printXReport()
     }
 
     override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: cash in ${amount.rubles}₽")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_CASHIN_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.cashIn(amount, comment)
     }
 
     override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: cash out ${amount.rubles}₽")
-        FiscalResult.Success(
-            fiscalSign = "NEVA_CASHOUT_${System.currentTimeMillis()}",
-            fnNumber = "0000000000012345",
-            fdNumber = "0",
-            timestamp = System.currentTimeMillis()
-        )
+        sdk.cashOut(amount, comment)
     }
 
     override suspend fun getStatus(): FiscalStatus = withContext(Dispatchers.IO) {
-        cachedStatus ?: FiscalStatus(
-            fnRegistered = true,
-            fnNumber = "0000000000012345",
-            shiftOpen = true,
-            shiftAgeHours = 1L,
-            currentFdNumber = 100,
-            ofdConnected = true,
-            lastError = null
-        ).also { cachedStatus = it }
+        cachedStatus ?: sdk.getStatus().also { cachedStatus = it }
     }
 
     override suspend fun getFFDVersion(): FFDVersion = withContext(Dispatchers.IO) {
-        try {
-            // val v = sdk.getFFDVersion()
-            // FFDVersion.fromString(v)
-            FFDVersion.V1_05
-        } catch (e: Exception) {
-            FFDVersion.V1_05
-        }
+        sdk.getFFDVersion()
     }
 
     private suspend fun <T> executeFiscal(block: suspend () -> T): T {
@@ -170,11 +115,39 @@ class Neva01FFiscalCore @Inject constructor(
 }
 
 interface Neva01FProtocol {
-    fun initialize(context: Context)
-    fun shutdown()
+    suspend fun openShift(): FiscalResult
+    suspend fun printSale(check: FiscalCheck): FiscalResult
+    suspend fun printReturn(check: FiscalCheck): FiscalResult
+    suspend fun printCorrection(doc: CorrectionDoc): FiscalResult
+    suspend fun closeShift(): FiscalResult
+    suspend fun printXReport(): FiscalResult
+    suspend fun cashIn(amount: Money, comment: String?): FiscalResult
+    suspend fun cashOut(amount: Money, comment: String?): FiscalResult
+    suspend fun getStatus(): FiscalStatus
+    suspend fun getFFDVersion(): FFDVersion
 }
 
-class Neva01FStub : Neva01FProtocol {
-    override fun initialize(context: Context) {}
-    override fun shutdown() {}
+class RealNeva01FProtocol(private val context: Context) : Neva01FProtocol {
+    // До поставки отдельного Neva SDK-контракта используем runtime binder bridge фискального сервиса.
+    private val fallbackBridge by lazy { RealMSPOSKProtocol(context) }
+
+    override suspend fun openShift(): FiscalResult = fallbackBridge.openShift()
+
+    override suspend fun printSale(check: FiscalCheck): FiscalResult = fallbackBridge.printSale(check)
+
+    override suspend fun printReturn(check: FiscalCheck): FiscalResult = fallbackBridge.printReturn(check)
+
+    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = fallbackBridge.printCorrection(doc)
+
+    override suspend fun closeShift(): FiscalResult = fallbackBridge.closeShift()
+
+    override suspend fun printXReport(): FiscalResult = fallbackBridge.printXReport()
+
+    override suspend fun cashIn(amount: Money, comment: String?): FiscalResult = fallbackBridge.cashIn(amount, comment)
+
+    override suspend fun cashOut(amount: Money, comment: String?): FiscalResult = fallbackBridge.cashOut(amount, comment)
+
+    override suspend fun getStatus(): FiscalStatus = fallbackBridge.getStatus()
+
+    override suspend fun getFFDVersion(): FFDVersion = fallbackBridge.getFFDVersion()
 }

@@ -5,6 +5,7 @@ import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.CashierRole
 import com.vitbon.kkm.features.returns.domain.ReturnItem
 import com.vitbon.kkm.features.returns.domain.ReturnResult
 import com.vitbon.kkm.features.returns.domain.ReturnUseCase
@@ -38,6 +39,7 @@ class ReturnViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
+        every { authUseCase.isEmergencySessionActive() } returns false
     }
 
     @After
@@ -202,6 +204,7 @@ class ReturnViewModelTest {
 
     @Test
     fun `processReturn without source check does not stay in processing and sets user error`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
 
         vm.processReturn()
@@ -210,7 +213,7 @@ class ReturnViewModelTest {
         val st = vm.state.value
         assertFalse(st.isProcessing)
         assertEquals("Сначала выберите исходный чек продажи", st.error)
-        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any()) }
+        coVerify(exactly = 0) { returnUseCase.processReturn(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { syncService.onCheckCreated() }
     }
 
@@ -230,6 +233,7 @@ class ReturnViewModelTest {
             )
         )
         every { authUseCase.getCurrentCashierId() } returns "cashier-1"
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         coEvery {
             returnUseCase.processReturn(
                 sourceCheck,
@@ -239,7 +243,9 @@ class ReturnViewModelTest {
                         items[0].price == Money(129_00L) &&
                         items[0].discount == Money(9_00L)
                 },
-                "cashier-1"
+                "cashier-1",
+                CashierRole.CASHIER,
+                false
             )
         } returns ReturnResult.Success(checkId = "return-1", fiscalSign = "FS-RET-1")
 
@@ -254,6 +260,75 @@ class ReturnViewModelTest {
         assertFalse(st.isProcessing)
         assertTrue(st.error == null)
         verify(exactly = 1) { syncService.onCheckCreated() }
+    }
+
+    @Test
+    fun `processReturn denies when role is missing`() = runTest {
+        val sourceCheck = localSaleCheck(id = "sale-role-deny")
+        coEvery { returnUseCase.findCheckByNumber("sale-role-deny") } returns sourceCheck
+        coEvery { returnUseCase.loadCheckItems("sale-role-deny") } returns listOf(
+            ReturnItem(
+                productId = "prod-1",
+                barcode = "4607001234567",
+                name = "Вода",
+                quantity = 1.0,
+                price = Money(129_00L),
+                discount = Money.ZERO,
+                vatRate = VatRate.NO_VAT
+            )
+        )
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
+        every { authUseCase.getCurrentCashierRole() } returns null
+        coEvery { returnUseCase.processReturn(any(), any(), any(), any(), any()) } returns
+            ReturnResult.FiscalError(-1, "Операция запрещена для текущей роли")
+
+        val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
+        vm.onCheckInput("sale-role-deny")
+        advanceUntilIdle()
+
+        vm.processReturn()
+        advanceUntilIdle()
+
+        val st = vm.state.value
+        assertFalse(st.isProcessing)
+        assertEquals("-1: Операция запрещена для текущей роли", st.error)
+        coVerify(exactly = 1) { returnUseCase.processReturn(any(), any(), "unknown", null, false) }
+        verify(exactly = 0) { syncService.onCheckCreated() }
+    }
+
+    @Test
+    fun `processReturn denies during active emergency session`() = runTest {
+        val sourceCheck = localSaleCheck(id = "sale-role-emergency")
+        coEvery { returnUseCase.findCheckByNumber("sale-role-emergency") } returns sourceCheck
+        coEvery { returnUseCase.loadCheckItems("sale-role-emergency") } returns listOf(
+            ReturnItem(
+                productId = "prod-1",
+                barcode = "4607001234567",
+                name = "Вода",
+                quantity = 1.0,
+                price = Money(129_00L),
+                discount = Money.ZERO,
+                vatRate = VatRate.NO_VAT
+            )
+        )
+        every { authUseCase.getCurrentCashierId() } returns "unknown"
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
+        every { authUseCase.isEmergencySessionActive() } returns true
+        coEvery { returnUseCase.processReturn(any(), any(), any(), any(), any()) } returns
+            ReturnResult.FiscalError(-1, "Операция запрещена для текущей роли")
+
+        val vm = ReturnViewModel(returnUseCase, authUseCase, syncService)
+        vm.onCheckInput("sale-role-emergency")
+        advanceUntilIdle()
+
+        vm.processReturn()
+        advanceUntilIdle()
+
+        val st = vm.state.value
+        assertFalse(st.isProcessing)
+        assertEquals("-1: Операция запрещена для текущей роли", st.error)
+        coVerify(exactly = 1) { returnUseCase.processReturn(any(), any(), "unknown", CashierRole.ADMIN, true) }
+        verify(exactly = 0) { syncService.onCheckCreated() }
     }
 
     private fun localSaleCheck(id: String): LocalCheck = LocalCheck(

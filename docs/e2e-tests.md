@@ -117,3 +117,30 @@
 - [ ] ЧЗ: выбытие работает (test ЛМ)
 - [ ] Лицензия: блокировка при просрочке
 - [ ] Grace period: 7 дней при отсутствии сети
+
+---
+
+## Phase A verification log (2026-04-23)
+
+### Runtime-targeted unit tests
+
+Команда:
+`java -classpath android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain -p android :app:testDebugUnitTest --tests com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStoreTest --tests com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolverTest --tests com.vitbon.kkm.core.fiscal.runtime.FiscalErrorMapperTest --tests com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestratorTest --tests com.vitbon.kkm.core.fiscal.runtime.FiscalAdapterContractTest --no-daemon --console=plain`
+
+Результат: `BUILD SUCCESSFUL`
+
+### Full Android unit regression
+
+Команда:
+`java -classpath android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain -p android :app:testDebugUnitTest --no-daemon --console=plain`
+
+Результат: `BUILD SUCCESSFUL`
+
+### Debug build
+
+Команда:
+`java -classpath android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain -p android :app:assembleDebug --no-daemon --console=plain`
+
+Результат: `BUILD SUCCESSFUL`
+
+Примечание: в логах сборки присутствует предупреждение SDK XML version mismatch и предупреждение strip symbols для `libbarhopper_v3.so` / `libimage_processing_util_jni.so`; сборка и тесты завершены успешно.

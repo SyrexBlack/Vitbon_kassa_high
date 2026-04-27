@@ -1,11 +1,15 @@
 package com.vitbon.kkm.api.dto
 
-data class LoginRequestDto(val pin: String)
+data class LoginRequestDto(
+    val pin: String,
+    val deviceId: String
+)
 
 data class LoginResponseDto(
     val token: String,
     val cashier: CashierDto,
-    val features: LoginFeaturesDto = LoginFeaturesDto()
+    val features: LoginFeaturesDto = LoginFeaturesDto(),
+    val expiresAt: Long
 )
 
 data class LoginFeaturesDto(

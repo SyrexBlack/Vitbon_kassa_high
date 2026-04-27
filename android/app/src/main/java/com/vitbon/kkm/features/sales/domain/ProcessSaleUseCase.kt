@@ -1,18 +1,22 @@
 package com.vitbon.kkm.features.sales.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ProcessSaleUseCase @Inject constructor(
-    private val fiscalCore: FiscalCore,
+    private val fiscalOrchestrator: FiscalOperationOrchestrator,
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao
 ) {
@@ -20,8 +24,13 @@ class ProcessSaleUseCase @Inject constructor(
         cart: Cart,
         cashierId: String,
         deviceId: String,
-        shiftId: String?
+        shiftId: String?,
+        cashierRole: CashierRole?,
+        emergencySessionActive: Boolean
     ): SaleResult {
+        if (emergencySessionActive || !RolePolicy.canPerform(cashierRole, RoleOperation.SALE)) {
+            return SaleResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+        }
         // 1. Построить FiscalCheck
         val fiscalCheck = FiscalCheck(
             id = UUID.randomUUID().toString(),
@@ -86,14 +95,14 @@ class ProcessSaleUseCase @Inject constructor(
         }
         checkItemDao.insertAll(localItems)
 
-        // 3. Отправить в FiscalCore
-        val fiscalResult = fiscalCore.printSale(fiscalCheck)
+        // 3. Отправить в FiscalRuntime
+        val fiscalResult = fiscalOrchestrator.executeSale(fiscalCheck)
 
         return when (fiscalResult) {
-            is FiscalResult.Success -> {
+            is FiscalRuntimeResult.Success -> {
                 checkDao.updateSyncStatus(
                     id = fiscalCheck.id,
-                    status = "PENDING_SYNC",  // всё ещё ожидает sync up
+                    status = "PENDING_SYNC",
                     fiscalSign = fiscalResult.fiscalSign,
                     ofdResponse = null,
                     syncedAt = null
@@ -104,7 +113,7 @@ class ProcessSaleUseCase @Inject constructor(
                     total = cart.total.rubles
                 )
             }
-            is FiscalResult.Error -> {
+            is FiscalRuntimeResult.Error -> {
                 checkDao.updateSyncStatus(
                     id = fiscalCheck.id,
                     status = "FISCAL_ERROR",
@@ -112,7 +121,7 @@ class ProcessSaleUseCase @Inject constructor(
                     ofdResponse = null,
                     syncedAt = null
                 )
-                SaleResult.FiscalError(fiscalResult.code, fiscalResult.message)
+                SaleResult.FiscalError(-1, fiscalResult.message)
             }
         }
     }

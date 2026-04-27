@@ -42,17 +42,9 @@ class AuthViewModel @Inject constructor(
 
     private fun attemptLogin() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val pin = _state.value.pin
-            val result = authUseCase.authenticate(pin)
+            _state.update { it.copy(isLoading = true, backendWarning = null) }
+            val result = authUseCase.authenticate(_state.value.pin)
             _state.update { it.copy(isLoading = false, result = result) }
-
-            if (result is AuthResult.Success) {
-                val warning = authUseCase.validateWithBackendBestEffort(pin)
-                if (warning != null) {
-                    _state.update { it.copy(backendWarning = warning) }
-                }
-            }
         }
     }
 

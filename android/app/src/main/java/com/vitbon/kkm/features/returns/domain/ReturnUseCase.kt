@@ -1,18 +1,22 @@
 package com.vitbon.kkm.features.returns.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ReturnUseCase @Inject constructor(
-    private val fiscalCore: FiscalCore,
+    private val fiscalOrchestrator: FiscalOperationOrchestrator,
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao
 ) {
@@ -58,8 +62,13 @@ class ReturnUseCase @Inject constructor(
     suspend fun processReturn(
         originalCheck: LocalCheck,
         items: List<ReturnItem>,
-        cashierId: String
+        cashierId: String,
+        cashierRole: CashierRole?,
+        emergencySessionActive: Boolean
     ): ReturnResult {
+        if (emergencySessionActive || !RolePolicy.canPerform(cashierRole, RoleOperation.RETURN)) {
+            return ReturnResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+        }
         val fiscalItems = items.map { item ->
             val lineSubtotal = (item.price.kopecks * item.quantity).toLong()
             val lineTotal = lineSubtotal - item.discount.kopecks
@@ -127,9 +136,9 @@ class ReturnUseCase @Inject constructor(
         }
         checkItemDao.insertAll(localItems)
 
-        val fiscalResult = fiscalCore.printReturn(returnCheck)
+        val fiscalResult = fiscalOrchestrator.executeReturn(returnCheck)
         return when (fiscalResult) {
-            is FiscalResult.Success -> {
+            is FiscalRuntimeResult.Success -> {
                 checkDao.updateSyncStatus(
                     id = returnCheck.id,
                     status = "PENDING_SYNC",
@@ -139,7 +148,7 @@ class ReturnUseCase @Inject constructor(
                 )
                 ReturnResult.Success(returnCheck.id, fiscalResult.fiscalSign)
             }
-            is FiscalResult.Error -> {
+            is FiscalRuntimeResult.Error -> {
                 checkDao.updateSyncStatus(
                     id = returnCheck.id,
                     status = "FISCAL_ERROR",
@@ -147,7 +156,7 @@ class ReturnUseCase @Inject constructor(
                     ofdResponse = null,
                     syncedAt = null
                 )
-                ReturnResult.FiscalError(fiscalResult.code, fiscalResult.message)
+                ReturnResult.FiscalError(-1, fiscalResult.message)
             }
         }
     }

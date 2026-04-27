@@ -1,18 +1,16 @@
 package com.vitbon.kkm.features.returns.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.CheckType
-import com.vitbon.kkm.core.fiscal.model.FFDVersion
-import com.vitbon.kkm.core.fiscal.model.FiscalCheck
-import com.vitbon.kkm.core.fiscal.model.FiscalResult
-import com.vitbon.kkm.core.fiscal.model.FiscalStatus
 import com.vitbon.kkm.core.fiscal.model.Money
 import com.vitbon.kkm.core.fiscal.model.PaymentType
 import com.vitbon.kkm.core.fiscal.model.VatRate
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import com.vitbon.kkm.features.auth.domain.CashierRole
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -24,11 +22,11 @@ import org.junit.Test
 
 class ReturnUseCaseTest {
 
-    private val fiscalCore = mockk<FiscalCore>()
+    private val fiscalOrchestrator = mockk<FiscalOperationOrchestrator>()
     private val checkDao = mockk<CheckDao>(relaxed = true)
     private val checkItemDao = mockk<CheckItemDao>(relaxed = true)
 
-    private val useCase = ReturnUseCase(fiscalCore, checkDao, checkItemDao)
+    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao)
 
     @Test
     fun `findCheckByNumber trims identifier and delegates deterministic lookup`() = runBlocking {
@@ -108,6 +106,70 @@ class ReturnUseCaseTest {
     }
 
     @Test
+    fun `processReturn denies when role is missing`() = runBlocking {
+        val sourceCheck = localCheck(id = "sale-src", type = "sale")
+        val inputItems = listOf(
+            ReturnItem(
+                productId = "prod-1",
+                barcode = "4607001234567",
+                name = "Вода",
+                quantity = 1.0,
+                price = Money(129_00L),
+                discount = Money.ZERO,
+                vatRate = VatRate.NO_VAT
+            )
+        )
+
+        val result = useCase.processReturn(
+            sourceCheck,
+            inputItems,
+            cashierId = "cashier-1",
+            cashierRole = null,
+            emergencySessionActive = false
+        )
+
+        assertTrue(result is ReturnResult.FiscalError)
+        result as ReturnResult.FiscalError
+        assertEquals(-1, result.code)
+        assertEquals("Операция запрещена для текущей роли", result.message)
+        coVerify(exactly = 0) { fiscalOrchestrator.executeReturn(any()) }
+        coVerify(exactly = 0) { checkDao.insert(any()) }
+        coVerify(exactly = 0) { checkItemDao.insertAll(any()) }
+    }
+
+    @Test
+    fun `processReturn denies during emergency session`() = runBlocking {
+        val sourceCheck = localCheck(id = "sale-src", type = "sale")
+        val inputItems = listOf(
+            ReturnItem(
+                productId = "prod-1",
+                barcode = "4607001234567",
+                name = "Вода",
+                quantity = 1.0,
+                price = Money(129_00L),
+                discount = Money.ZERO,
+                vatRate = VatRate.NO_VAT
+            )
+        )
+
+        val result = useCase.processReturn(
+            sourceCheck,
+            inputItems,
+            cashierId = "cashier-1",
+            cashierRole = CashierRole.ADMIN,
+            emergencySessionActive = true
+        )
+
+        assertTrue(result is ReturnResult.FiscalError)
+        result as ReturnResult.FiscalError
+        assertEquals(-1, result.code)
+        assertEquals("Операция запрещена для текущей роли", result.message)
+        coVerify(exactly = 0) { fiscalOrchestrator.executeReturn(any()) }
+        coVerify(exactly = 0) { checkDao.insert(any()) }
+        coVerify(exactly = 0) { checkItemDao.insertAll(any()) }
+    }
+
+    @Test
     fun `processReturn on fiscal success saves return check items and pending sync status with fiscal sign`() = runBlocking {
         val sourceCheck = localCheck(id = "sale-src", type = "sale")
         val inputItems = listOf(
@@ -121,19 +183,26 @@ class ReturnUseCaseTest {
                 vatRate = VatRate.VAT_10
             )
         )
-        coEvery { fiscalCore.printReturn(any()) } returns FiscalResult.Success(
+        coEvery { fiscalOrchestrator.executeReturn(any()) } returns FiscalRuntimeResult.Success(
             fiscalSign = "FS-RET-1",
             fnNumber = "FN-1",
             fdNumber = "FD-1",
-            timestamp = 123L
+            ffdVersion = "1.2"
         )
 
-        val result = useCase.processReturn(sourceCheck, inputItems, cashierId = "cashier-1")
+        val result = useCase.processReturn(
+            sourceCheck,
+            inputItems,
+            cashierId = "cashier-1",
+            cashierRole = CashierRole.CASHIER,
+            emergencySessionActive = false
+        )
 
         assertTrue(result is ReturnResult.Success)
         val success = result as ReturnResult.Success
         assertEquals("FS-RET-1", success.fiscalSign)
 
+        coVerify(exactly = 1) { fiscalOrchestrator.executeReturn(any()) }
         coVerify(exactly = 1) { checkDao.insert(match { it.type == "return" && it.id == success.checkId }) }
         coVerify(exactly = 1) {
             checkItemDao.insertAll(match { localItems ->
@@ -171,19 +240,26 @@ class ReturnUseCaseTest {
                 vatRate = VatRate.NO_VAT
             )
         )
-        coEvery { fiscalCore.printReturn(any()) } returns FiscalResult.Error(
-            code = 54,
+        coEvery { fiscalOrchestrator.executeReturn(any()) } returns FiscalRuntimeResult.Error(
+            code = "FISCAL_ERROR",
             message = "Ошибка ФН",
             recoverable = false
         )
 
-        val result = useCase.processReturn(sourceCheck, inputItems, cashierId = "cashier-1")
+        val result = useCase.processReturn(
+            sourceCheck,
+            inputItems,
+            cashierId = "cashier-1",
+            cashierRole = CashierRole.CASHIER,
+            emergencySessionActive = false
+        )
 
         assertTrue(result is ReturnResult.FiscalError)
         val err = result as ReturnResult.FiscalError
-        assertEquals(54, err.code)
+        assertEquals(-1, err.code)
         assertEquals("Ошибка ФН", err.message)
 
+        coVerify(exactly = 1) { fiscalOrchestrator.executeReturn(any()) }
         coVerify(exactly = 1) {
             checkDao.updateSyncStatus(
                 id = any(),

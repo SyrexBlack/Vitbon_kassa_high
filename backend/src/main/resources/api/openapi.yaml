@@ -21,12 +21,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [pin]
+              required: [pin, deviceId]
               properties:
                 pin:
                   type: string
                   minLength: 4
                   maxLength: 6
+                deviceId:
+                  type: string
       responses:
         '200':
           description: Успешная авторизация
@@ -45,6 +47,20 @@ paths:
         '401':
           description: Неверный ПИН
 
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выход кассира
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Сессия отозвана
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
   /checks:
     post:
       tags: [Checks]
@@ -57,6 +73,10 @@ paths:
             schema:
               $ref: '#/components/schemas/CheckDto'
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Созданный чек
           content:
@@ -81,6 +101,10 @@ paths:
             type: integer
             format: int64
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Список чеков
           content:
@@ -102,6 +126,10 @@ paths:
           required: true
           schema: { type: string }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Чек
           content:
@@ -128,6 +156,10 @@ paths:
                   items:
                     $ref: '#/components/schemas/CheckDto'
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Результат обработки
           content:
@@ -158,6 +190,10 @@ paths:
             format: int64
           description: Только товары обновлённые после этого timestamp (ms)
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Delta-обновление каталога
           content:
@@ -185,6 +221,10 @@ paths:
                 deletedIds: { type: array, items: { type: string } }
                 serverTimestamp: { type: integer, format: int64 }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Echo payload
           content:
@@ -208,6 +248,10 @@ paths:
           required: true
           schema: { type: string }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Список смен
           content:
@@ -224,6 +268,10 @@ paths:
       security:
         - BearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Текущие статусы
           content:
@@ -279,6 +327,10 @@ paths:
             type: integer
             format: int64
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Отчёт по продажам
           content:
@@ -306,6 +358,10 @@ paths:
             type: integer
             format: int64
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Отчёт по продажам
           content:
@@ -330,6 +386,10 @@ paths:
             type: integer
             format: int64
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Отчёт по движению товаров
           content:
@@ -353,6 +413,10 @@ paths:
                 items: { type: array, items: { $ref: '#/components/schemas/DocumentItemDto' } }
                 timestamp: { type: integer, format: int64 }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200': { description: Принято }
 
   /documents/writeoff:
@@ -367,6 +431,10 @@ paths:
             schema:
               type: object
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200': { description: Принято }
 
   /documents/inventory:
@@ -376,6 +444,10 @@ paths:
       security:
         - BearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200': { description: Принято }
 
   /egais/incoming:
@@ -391,6 +463,10 @@ paths:
               type: string
               example: '<EgaisRequest>...</EgaisRequest>'
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Ответ ЕГАИС
           content:
@@ -405,6 +481,10 @@ paths:
       security:
         - BearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200': { description: Принято }
 
   /chaseznak/sell:
@@ -422,6 +502,10 @@ paths:
                 code: { type: string }
                 checkId: { type: string }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200': { description: Выбытие зарегистрировано }
         '400': { description: Ошибка валидации кода }
 
@@ -439,6 +523,10 @@ paths:
               properties:
                 qrData: { type: string }
       responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '200':
           description: Результат верификации
           content:
@@ -454,9 +542,45 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: opaque-token
+      description: Opaque bearer token issued by /auth/login and validated against server-side session state.
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized — missing bearer token or invalid/expired/revoked session.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingToken:
+              value:
+                code: UNAUTHORIZED
+                message: Missing bearer token
+            invalidSession:
+              value:
+                code: UNAUTHORIZED
+                message: Invalid session
+    ForbiddenError:
+      description: Forbidden — authenticated session exists, but role is not allowed for operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            roleForbidden:
+              value:
+                code: FORBIDDEN
+                message: Forbidden
 
   schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, enum: [UNAUTHORIZED, FORBIDDEN] }
+        message: { type: string }
+
     CheckDto:
       type: object
       required: [id, type, total, createdAt]

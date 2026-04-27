@@ -3,13 +3,15 @@ package com.vitbon.kkm.data.remote.dto
 import com.google.gson.annotations.SerializedName
 
 data class LoginRequestDto(
-    val pin: String
+    val pin: String,
+    val deviceId: String
 )
 
 data class LoginResponseDto(
     val token: String,
     val cashier: CashierDto,
-    val features: LoginFeaturesDto = LoginFeaturesDto()
+    val features: LoginFeaturesDto = LoginFeaturesDto(),
+    val expiresAt: Long
 )
 
 data class LoginFeaturesDto(
