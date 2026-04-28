@@ -194,7 +194,7 @@ class ReturnUseCaseTest {
             sourceCheck,
             inputItems,
             cashierId = "cashier-1",
-            cashierRole = CashierRole.CASHIER,
+            cashierRole = CashierRole.SENIOR_CASHIER,
             emergencySessionActive = false
         )
 
@@ -250,7 +250,7 @@ class ReturnUseCaseTest {
             sourceCheck,
             inputItems,
             cashierId = "cashier-1",
-            cashierRole = CashierRole.CASHIER,
+            cashierRole = CashierRole.SENIOR_CASHIER,
             emergencySessionActive = false
         )
 
