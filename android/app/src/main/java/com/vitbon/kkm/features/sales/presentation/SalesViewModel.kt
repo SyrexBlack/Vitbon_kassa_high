@@ -102,6 +102,9 @@ class SalesViewModel @Inject constructor(
     fun processSale() {
         viewModelScope.launch {
             _state.update { it.copy(isProcessing = true, saleResult = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+
             val cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
             val openShiftId = shiftDao.findOpenShift()?.id
             val deviceId = android.os.Build.MODEL ?: "unknown-device"
@@ -109,7 +112,9 @@ class SalesViewModel @Inject constructor(
                 cart = _state.value.cart,
                 cashierId = cashierId,
                 deviceId = deviceId,
-                shiftId = openShiftId
+                shiftId = openShiftId,
+                cashierRole = role,
+                emergencySessionActive = emergencyActive
             )
 
             if (result is SaleResult.Success) {

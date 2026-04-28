@@ -13,6 +13,7 @@ class FiscalAdapterContractTest {
 
         assertFalse(source.contains("MSP_"))
         assertFalse(source.contains("MSPOSKStub"))
+        assertFalse(source.contains("MSPOS-K SDK integration is required"))
     }
 
     @Test
@@ -22,5 +23,6 @@ class FiscalAdapterContractTest {
 
         assertFalse(source.contains("NEVA_"))
         assertFalse(source.contains("Neva01FStub"))
+        assertFalse(source.contains("Neva 01F SDK integration is required"))
     }
 }

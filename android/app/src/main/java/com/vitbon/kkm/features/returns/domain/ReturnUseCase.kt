@@ -7,6 +7,9 @@ import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RoleOperation
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,8 +62,13 @@ class ReturnUseCase @Inject constructor(
     suspend fun processReturn(
         originalCheck: LocalCheck,
         items: List<ReturnItem>,
-        cashierId: String
+        cashierId: String,
+        cashierRole: CashierRole?,
+        emergencySessionActive: Boolean
     ): ReturnResult {
+        if (emergencySessionActive || !RolePolicy.canPerform(cashierRole, RoleOperation.RETURN)) {
+            return ReturnResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+        }
         val fiscalItems = items.map { item ->
             val lineSubtotal = (item.price.kopecks * item.quantity).toLong()
             val lineTotal = lineSubtotal - item.discount.kopecks
