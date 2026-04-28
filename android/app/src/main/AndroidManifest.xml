@@ -27,6 +27,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <queries>
+        <package android:name="com.multisoft.drivers.fiscalcore" />
+    </queries>
+
     <application
         android:name=".VitbonApp"
         android:allowBackup="false"

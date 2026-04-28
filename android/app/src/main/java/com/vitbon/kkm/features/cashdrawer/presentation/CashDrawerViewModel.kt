@@ -3,6 +3,8 @@ package com.vitbon.kkm.features.cashdrawer.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.core.fiscal.model.Money
+import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import com.vitbon.kkm.features.cashdrawer.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,10 @@ data class CashDrawerState(
 )
 
 @HiltViewModel
-class CashDrawerViewModel @Inject constructor(private val useCase: CashDrawerUseCase) : ViewModel() {
+class CashDrawerViewModel @Inject constructor(
+    private val useCase: CashDrawerUseCase,
+    private val authUseCase: AuthUseCase
+) : ViewModel() {
     private val _state = MutableStateFlow(CashDrawerState())
     val state: StateFlow<CashDrawerState> = _state.asStateFlow()
 
@@ -33,9 +38,23 @@ class CashDrawerViewModel @Inject constructor(private val useCase: CashDrawerUse
     fun submit() {
         viewModelScope.launch {
             _state.update { it.copy(isSubmitting = true, error = null, success = null) }
+            val role = authUseCase.getCurrentCashierRole()
+            val emergencyActive = authUseCase.isEmergencySessionActive()
+            val isCashIn = _state.value.type == "in"
+            val allowed = if (isCashIn) useCase.canCashIn(role) else useCase.canCashOut(role)
+            if (emergencyActive || !allowed) {
+                _state.update {
+                    it.copy(
+                        isSubmitting = false,
+                        error = RolePolicy.ACCESS_DENIED_MESSAGE
+                    )
+                }
+                return@launch
+            }
+
             val amount = Money.fromRubles(_state.value.amount.toDoubleOrNull() ?: 0.0)
             val comment = _state.value.comment.ifBlank { null }
-            val result = if (_state.value.type == "in")
+            val result = if (isCashIn)
                 useCase.cashIn(amount, comment)
             else
                 useCase.cashOut(amount, comment)

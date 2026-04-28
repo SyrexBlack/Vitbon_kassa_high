@@ -1,13 +1,20 @@
 package com.vitbon.kkm.features.correction.domain
 
-import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
+import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.auth.domain.RolePolicy
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CorrectionUseCase @Inject constructor(private val fiscalCore: FiscalCore) {
+class CorrectionUseCase @Inject constructor(
+    private val fiscalOrchestrator: FiscalOperationOrchestrator,
+    private val authUseCase: AuthUseCase
+) {
     suspend fun process(
         type: CheckType,  // CORRECTION_INCOME or CORRECTION_EXPENSE
         reason: String,
@@ -17,6 +24,11 @@ class CorrectionUseCase @Inject constructor(private val fiscalCore: FiscalCore) 
         vatRate: VatRate,
         cashierId: String
     ): CorrectionResult {
+        val role = authUseCase.getCurrentCashierRole()
+        if (role != CashierRole.ADMIN) {
+            return CorrectionResult.Error(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
+        }
+
         require(type == CheckType.CORRECTION_INCOME || type == CheckType.CORRECTION_EXPENSE) {
             "Invalid correction type"
         }
@@ -31,9 +43,9 @@ class CorrectionUseCase @Inject constructor(private val fiscalCore: FiscalCore) 
             correctionDate = System.currentTimeMillis(),
             vatRate = vatRate
         )
-        return when (val result = fiscalCore.printCorrection(doc)) {
-            is FiscalResult.Success -> CorrectionResult.Success(result.fiscalSign)
-            is FiscalResult.Error -> CorrectionResult.Error(result.code, result.message)
+        return when (val result = fiscalOrchestrator.executeCorrection(doc)) {
+            is FiscalRuntimeResult.Success -> CorrectionResult.Success(result.fiscalSign)
+            is FiscalRuntimeResult.Error -> CorrectionResult.Error(-1, result.message)
         }
     }
 }
