@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
+import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
@@ -19,6 +20,7 @@ class AuthUseCase @Inject constructor(
     private val cashierDao: CashierDao,
     private val api: VitbonApi,
     private val prefs: SharedPreferences,
+    private val syncPrefs: SyncPrefs,
     @ApplicationContext private val context: Context,
     private val featureManager: FeatureManager,
     private val tokenStore: AuthTokenStore,
@@ -36,7 +38,7 @@ class AuthUseCase @Inject constructor(
             return AuthResult.Error("Требуется подключение к серверу для входа")
         }
 
-        val deviceId = prefs.getString("device_id", null) ?: "UNKNOWN_DEVICE"
+        val deviceId = syncPrefs.deviceId ?: "UNKNOWN_DEVICE"
         val response = try {
             api.login(LoginRequestDto(pin = pin, deviceId = deviceId))
         } catch (e: Exception) {
@@ -163,7 +165,7 @@ class AuthUseCase @Inject constructor(
 
     private fun enqueueAudit(action: String, details: String?) {
         val cashierId = prefs.getString("current_cashier_id", null)
-        val deviceId = prefs.getString("device_id", null)
+        val deviceId = syncPrefs.deviceId
         kotlinx.coroutines.runBlocking {
             localAuditBufferRepository.enqueue(
                 cashierId = cashierId,

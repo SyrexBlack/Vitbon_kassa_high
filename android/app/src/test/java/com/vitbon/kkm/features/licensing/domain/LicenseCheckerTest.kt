@@ -4,12 +4,15 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.data.security.PrefsMigration
+import com.vitbon.kkm.testutil.InMemorySharedPreferences
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -17,7 +20,8 @@ import org.junit.Test
 class LicenseCheckerTest {
     private val context = mockk<Context>(relaxed = true)
     private val api = mockk<VitbonApi>(relaxed = true)
-    private val prefs = mockk<SharedPreferences>(relaxed = true)
+    private val plainPrefs = mockk<SharedPreferences>(relaxed = true)
+    private val securePrefs = mockk<SharedPreferences>(relaxed = true)
     private val editor = mockk<SharedPreferences.Editor>(relaxed = true)
 
     private lateinit var checker: LicenseChecker
@@ -28,12 +32,15 @@ class LicenseCheckerTest {
         every { Log.d(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
 
-        every { prefs.edit() } returns editor
+        every { plainPrefs.contains(any()) } returns false
+        every { securePrefs.contains(any()) } returns false
+        every { plainPrefs.edit() } returns editor
+        every { securePrefs.edit() } returns editor
         every { editor.putLong(any(), any()) } returns editor
         every { editor.putString(any(), any()) } returns editor
         every { editor.remove(any()) } returns editor
 
-        checker = LicenseChecker(context, api, prefs)
+        checker = LicenseChecker(context, api, plainPrefs, securePrefs)
     }
 
     @After
@@ -102,6 +109,26 @@ class LicenseCheckerTest {
         assertTrue(unblocked is AppBlockingState.Unblocked)
         assertTrue(blocked is AppBlockingState.Blocked)
         assertEquals("Просрочка", (blocked as AppBlockingState.Blocked).reason)
+    }
+
+    @Test
+    fun `constructor migrates legacy license values into secure prefs`() {
+        val inMemoryPlainPrefs = InMemorySharedPreferences()
+        val inMemorySecurePrefs = InMemorySharedPreferences()
+        inMemoryPlainPrefs.edit()
+            .putString(PrefsMigration.KEY_LICENSE_STATUS, "GRACE_PERIOD")
+            .putLong(PrefsMigration.KEY_LAST_CHECK, 100L)
+            .putLong(PrefsMigration.KEY_GRACE_UNTIL, 200L)
+            .apply()
+
+        LicenseChecker(context, api, inMemoryPlainPrefs, inMemorySecurePrefs)
+
+        assertEquals("GRACE_PERIOD", inMemorySecurePrefs.getString(PrefsMigration.KEY_LICENSE_STATUS, null))
+        assertEquals(100L, inMemorySecurePrefs.getLong(PrefsMigration.KEY_LAST_CHECK, 0L))
+        assertEquals(200L, inMemorySecurePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L))
+        assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_LICENSE_STATUS))
+        assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_LAST_CHECK))
+        assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_GRACE_UNTIL))
     }
 
     private fun invokePrivateGraceMethod(methodName: String, now: Long, graceUntil: Long?): LicenseStatus {

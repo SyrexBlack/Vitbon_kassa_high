@@ -24,6 +24,7 @@ object RootDetectionModule {
     fun provideRootRiskGuard(
         @ApplicationContext context: Context,
         detector: RootDetector,
-        prefs: android.content.SharedPreferences
-    ): RootRiskGuard = RootRiskGuard(context, detector, prefs)
+        prefs: android.content.SharedPreferences,
+        @SecurePrefs securePrefs: android.content.SharedPreferences
+    ): RootRiskGuard = RootRiskGuard(context, detector, prefs, securePrefs)
 }

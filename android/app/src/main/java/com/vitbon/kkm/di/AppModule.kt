@@ -2,6 +2,7 @@ package com.vitbon.kkm.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import androidx.room.Room
 import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.fiscal.*
@@ -60,13 +61,22 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSyncPrefs(prefs: SharedPreferences): SyncPrefs = SyncPrefs(prefs)
+    fun provideSyncPrefs(
+        @ApplicationContext context: Context,
+        prefs: SharedPreferences,
+        @SecurePrefs securePrefs: SharedPreferences
+    ): SyncPrefs = SyncPrefs(
+        prefs,
+        securePrefs
+    ) {
+        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+    }
 
     @Provides
     @Singleton
-    fun provideVitbonApi(tokenStore: AuthTokenStore, prefs: SharedPreferences): VitbonApi {
+    fun provideVitbonApi(tokenStore: AuthTokenStore, syncPrefs: SyncPrefs): VitbonApi {
         return ApiClient.create(tokenStore) {
-            prefs.getString("device_id", null)
+            syncPrefs.deviceId
         }
     }
 

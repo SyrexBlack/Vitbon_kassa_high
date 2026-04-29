@@ -2,6 +2,8 @@ package com.vitbon.kkm.features.rootdetection
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.vitbon.kkm.data.security.PrefsMigration
+import com.vitbon.kkm.di.SecurePrefs
 import com.vitbon.kkm.features.licensing.domain.AppBlockingState
 import com.vitbon.kkm.features.rootdetection.domain.RootCheckResult
 import com.vitbon.kkm.features.rootdetection.domain.RootDetector
@@ -17,14 +19,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val KEY_CACHED_RESULT = "root_risk_cached"
-private const val KEY_CACHED_TS = "root_risk_ts"
-
 @Singleton
 class RootRiskGuard @Inject constructor(
     private val context: Context,
     private val detector: RootDetector,
-    private val prefs: SharedPreferences
+    private val plainPrefs: SharedPreferences,
+    @SecurePrefs private val securePrefs: SharedPreferences,
+    private val asyncCheckEnabled: Boolean = true
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -32,18 +33,26 @@ class RootRiskGuard @Inject constructor(
     val blockingState: StateFlow<AppBlockingState> = _blockingState.asStateFlow()
 
     init {
+        PrefsMigration.migrateRootRiskData(securePrefs, plainPrefs)
         loadCachedState()
-        triggerAsyncCheck()
+        if (asyncCheckEnabled) {
+            triggerAsyncCheck()
+        }
     }
 
     private fun loadCachedState() {
-        val cachedResult = prefs.getString(KEY_CACHED_RESULT, null)
+        val cachedResult = securePrefs.getString(PrefsMigration.KEY_ROOT_CACHED_RESULT, null)
         if (cachedResult != null) {
             val checkResult = when (cachedResult) {
                 "CLEAN" -> RootCheckResult.Clean
                 "DETECTED" -> {
                     RootCheckResult.Detected(
-                        listOf(RootIndicator("cached", "root detected at ${prefs.getLong(KEY_CACHED_TS, 0L)}"))
+                        listOf(
+                            RootIndicator(
+                                "cached",
+                                "root detected at ${securePrefs.getLong(PrefsMigration.KEY_ROOT_CACHED_TS, 0L)}"
+                            )
+                        )
                     )
                 }
                 else -> null
@@ -67,9 +76,9 @@ class RootRiskGuard @Inject constructor(
             is RootCheckResult.Clean -> "CLEAN"
             is RootCheckResult.Detected -> "DETECTED"
         }
-        prefs.edit()
-            .putString(KEY_CACHED_RESULT, resultStr)
-            .putLong(KEY_CACHED_TS, System.currentTimeMillis())
+        securePrefs.edit()
+            .putString(PrefsMigration.KEY_ROOT_CACHED_RESULT, resultStr)
+            .putLong(PrefsMigration.KEY_ROOT_CACHED_TS, System.currentTimeMillis())
             .apply()
     }
 

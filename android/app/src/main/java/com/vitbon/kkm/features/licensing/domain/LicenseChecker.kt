@@ -6,6 +6,8 @@ import android.provider.Settings
 import android.util.Log
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.LicenseCheckRequestDto
+import com.vitbon.kkm.data.security.PrefsMigration
+import com.vitbon.kkm.di.SecurePrefs
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,10 +16,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "LicenseChecker"
-private const val PREFS_NAME = "license_prefs"
-private const val KEY_LAST_CHECK = "last_check_ts"
-private const val KEY_GRACE_UNTIL = "grace_until_ts"
-private const val KEY_LICENSE_STATUS = "license_status"
 private const val GRACE_PERIOD_DAYS = 7L
 private const val DAY_MS = 24 * 60 * 60 * 1000L
 private const val CHECK_INTERVAL_MS = DAY_MS  // 24 hours
@@ -26,13 +24,18 @@ private const val CHECK_INTERVAL_MS = DAY_MS  // 24 hours
 class LicenseChecker @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: VitbonApi,
-    private val prefs: SharedPreferences
+    private val plainPrefs: SharedPreferences,
+    @SecurePrefs private val securePrefs: SharedPreferences
 ) {
     private val _status = MutableStateFlow<LicenseStatus>(LicenseStatus.Active)
     val status: StateFlow<LicenseStatus> = _status.asStateFlow()
 
     private val _blockingState = MutableStateFlow<AppBlockingState>(AppBlockingState.Unblocked)
     val blockingState: StateFlow<AppBlockingState> = _blockingState.asStateFlow()
+
+    init {
+        PrefsMigration.migrateLicenseData(securePrefs, plainPrefs)
+    }
 
     private val _deviceId: String by lazy {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
@@ -55,10 +58,10 @@ class LicenseChecker @Inject constructor(
 
                 when (body.status) {
                     "ACTIVE" -> {
-                        prefs.edit()
-                            .putLong(KEY_LAST_CHECK, now)
-                            .putString(KEY_LICENSE_STATUS, "ACTIVE")
-                            .remove(KEY_GRACE_UNTIL)
+                        securePrefs.edit()
+                            .putLong(PrefsMigration.KEY_LAST_CHECK, now)
+                            .putString(PrefsMigration.KEY_LICENSE_STATUS, "ACTIVE")
+                            .remove(PrefsMigration.KEY_GRACE_UNTIL)
                             .apply()
                         _status.value = LicenseStatus.Active
                         _blockingState.value = AppBlockingState.Unblocked
@@ -94,10 +97,10 @@ class LicenseChecker @Inject constructor(
         val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
         val daysLeft = calculateDaysLeft(graceTs, now)
 
-        prefs.edit()
-            .putLong(KEY_LAST_CHECK, now)
-            .putLong(KEY_GRACE_UNTIL, graceTs)
-            .putString(KEY_LICENSE_STATUS, "GRACE_PERIOD")
+        securePrefs.edit()
+            .putLong(PrefsMigration.KEY_LAST_CHECK, now)
+            .putLong(PrefsMigration.KEY_GRACE_UNTIL, graceTs)
+            .putString(PrefsMigration.KEY_LICENSE_STATUS, "GRACE_PERIOD")
             .apply()
 
         if (daysLeft > 0) {
@@ -117,10 +120,10 @@ class LicenseChecker @Inject constructor(
         val graceTs = graceUntil ?: (now + GRACE_PERIOD_DAYS * DAY_MS)
         val daysLeft = calculateDaysLeft(graceTs, now)
 
-        prefs.edit()
-            .putLong(KEY_LAST_CHECK, now)
-            .putLong(KEY_GRACE_UNTIL, graceTs)
-            .putString(KEY_LICENSE_STATUS, "GRACE_PERIOD")
+        securePrefs.edit()
+            .putLong(PrefsMigration.KEY_LAST_CHECK, now)
+            .putLong(PrefsMigration.KEY_GRACE_UNTIL, graceTs)
+            .putString(PrefsMigration.KEY_LICENSE_STATUS, "GRACE_PERIOD")
             .apply()
 
         if (daysLeft > 0) {
@@ -135,14 +138,14 @@ class LicenseChecker @Inject constructor(
     }
 
     private fun checkGraceExpired(): LicenseStatus {
-        val graceUntil = prefs.getLong(KEY_GRACE_UNTIL, 0L)
+        val graceUntil = securePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L)
         val now = System.currentTimeMillis()
         val daysLeft = calculateDaysLeft(graceUntil, now)
 
         return if (graceUntil == 0L) {
             // Никогда не проверяли — запустить grace period
             val newGrace = now + GRACE_PERIOD_DAYS * DAY_MS
-            prefs.edit().putLong(KEY_GRACE_UNTIL, newGrace).apply()
+            securePrefs.edit().putLong(PrefsMigration.KEY_GRACE_UNTIL, newGrace).apply()
             _status.value = LicenseStatus.GracePeriod(7)
             _blockingState.value = AppBlockingState.Unblocked
             LicenseStatus.GracePeriod(7)
@@ -168,7 +171,7 @@ class LicenseChecker @Inject constructor(
 
     /** Проверка по расписанию (24ч) */
     fun shouldCheck(): Boolean {
-        val lastCheck = prefs.getLong(KEY_LAST_CHECK, 0L)
+        val lastCheck = securePrefs.getLong(PrefsMigration.KEY_LAST_CHECK, 0L)
         return System.currentTimeMillis() - lastCheck > CHECK_INTERVAL_MS
     }
 }

@@ -126,13 +126,3 @@ class SyncManager @Inject constructor(
 
 data class SyncResult(val synced: Int, val failed: Int)
 data class ProductSyncResult(val received: Int, val deleted: Int)
-
-class SyncPrefs(private val prefs: android.content.SharedPreferences) {
-    var lastSyncTimestamp: Long
-        get() = prefs.getLong("lastSyncTimestamp", 0L)
-        set(v) { prefs.edit().putLong("lastSyncTimestamp", v).apply() }
-
-    var lastProductSyncTimestamp: Long
-        get() = prefs.getLong("lastProductSyncTimestamp", 0L)
-        set(v) { prefs.edit().putLong("lastProductSyncTimestamp", v).apply() }
-}
