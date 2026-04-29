@@ -6,6 +6,8 @@ import com.vitbon.kkm.core.fiscal.FiscalCore
 import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
 import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
+import com.vitbon.kkm.features.licensing.domain.AppBlockingState
+import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertFalse
@@ -67,7 +69,9 @@ class AppModuleFiscalCoreSelectionTest {
 
         val store = AppModule.provideFfdPolicyStore(prefs)
         val resolver = AppModule.provideFfdVersionResolver(core, store)
-        val orchestrator = AppModule.provideFiscalOperationOrchestrator(core, resolver)
+        val rootRiskGuard = mockk<RootRiskGuard>()
+        every { rootRiskGuard.getCurrentBlockingState() } returns AppBlockingState.Unblocked
+        val orchestrator = AppModule.provideFiscalOperationOrchestrator(core, resolver, rootRiskGuard)
 
         assertNotNull(store)
         assertNotNull(resolver)

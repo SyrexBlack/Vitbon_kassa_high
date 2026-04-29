@@ -6,57 +6,81 @@ import com.vitbon.kkm.core.fiscal.model.FiscalCheck
 import com.vitbon.kkm.core.fiscal.model.FiscalResult
 import com.vitbon.kkm.core.fiscal.model.FiscalStatus
 import com.vitbon.kkm.core.fiscal.model.Money
+import com.vitbon.kkm.features.licensing.domain.AppBlockingState
+import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class FiscalOperationOrchestrator @Inject constructor(
     private val fiscalCore: FiscalCore,
-    private val ffdResolver: FfdVersionResolver
+    private val ffdResolver: FfdVersionResolver,
+    private val rootRiskGuard: RootRiskGuard
 ) {
+
+    private fun checkSecurity(): FiscalRuntimeResult? {
+        val blockState = rootRiskGuard.getCurrentBlockingState()
+        if (blockState is AppBlockingState.Blocked) {
+            return FiscalRuntimeResult.Error(
+                code = "SECURITY_BLOCKED",
+                message = blockState.reason,
+                recoverable = false
+            )
+        }
+        return null
+    }
+
     suspend fun executeSale(check: FiscalCheck): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.printSale(check) }
         )
     }
 
     suspend fun executeReturn(check: FiscalCheck): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.printReturn(check) }
         )
     }
 
     suspend fun executeCorrection(doc: CorrectionDoc): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.printCorrection(doc) }
         )
     }
 
     suspend fun executeCashIn(amount: Money, comment: String?): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.cashIn(amount, comment) }
         )
     }
 
     suspend fun executeCashOut(amount: Money, comment: String?): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.cashOut(amount, comment) }
         )
     }
 
     suspend fun executeOpenShift(): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.openShift() }
         )
     }
 
     suspend fun executeCloseShift(): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.closeShift() }
         )
     }
 
     suspend fun executeXReport(): FiscalRuntimeResult {
+        checkSecurity()?.let { return it }
         return executeWithFormatRetry(
             primary = { fiscalCore.printXReport() }
         )

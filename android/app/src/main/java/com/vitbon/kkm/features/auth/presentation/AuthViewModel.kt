@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.features.auth.domain.AuthResult
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.licensing.domain.AppBlockingState
+import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,11 +23,14 @@ data class AuthState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authUseCase: AuthUseCase
+    private val authUseCase: AuthUseCase,
+    private val rootRiskGuard: RootRiskGuard
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthState())
     val state: StateFlow<AuthState> = _state.asStateFlow()
+
+    val rootBlockingState: StateFlow<AppBlockingState> = rootRiskGuard.blockingState
 
     fun appendDigit(digit: String) {
         if (_state.value.pin.length >= 6) return

@@ -14,6 +14,7 @@ import com.vitbon.kkm.data.local.dao.*
 import com.vitbon.kkm.data.remote.ApiClient
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.features.auth.domain.AuthTokenStore
+import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -108,8 +109,9 @@ object AppModule {
     @Singleton
     fun provideFiscalOperationOrchestrator(
         fiscalCore: FiscalCore,
-        ffdVersionResolver: FfdVersionResolver
-    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver)
+        ffdVersionResolver: FfdVersionResolver,
+        rootRiskGuard: RootRiskGuard
+    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard)
 }
 
 internal fun createFiscalCore(

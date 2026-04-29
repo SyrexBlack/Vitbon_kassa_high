@@ -28,7 +28,8 @@ enum class RoleOperation {
     SHIFT_CLOSE,
     SHIFT_X_REPORT,
     CASH_IN,
-    CASH_OUT
+    CASH_OUT,
+    CORRECTION
 }
 
 object RolePolicy {
@@ -44,6 +45,7 @@ object RolePolicy {
             RoleOperation.SHIFT_X_REPORT,
             RoleOperation.CASH_IN,
             RoleOperation.CASH_OUT -> currentRole == CashierRole.ADMIN || currentRole == CashierRole.SENIOR_CASHIER
+            RoleOperation.CORRECTION -> currentRole == CashierRole.ADMIN
         }
     }
 }
