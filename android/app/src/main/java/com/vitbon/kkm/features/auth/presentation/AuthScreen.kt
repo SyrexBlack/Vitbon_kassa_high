@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vitbon.kkm.core.features.FeatureFlag
 import com.vitbon.kkm.features.auth.domain.AuthResult
+import com.vitbon.kkm.features.licensing.domain.AppBlockingState
 
 @Composable
 fun AuthScreen(
@@ -29,7 +31,15 @@ fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val rootBlockingState by viewModel.rootBlockingState.collectAsState()
     val context = LocalContext.current
+
+    // Block on root detected
+    val rootBlock = rootBlockingState
+    if (rootBlock is AppBlockingState.Blocked) {
+        RootBlockedScreen(reason = rootBlock.reason)
+        return
+    }
 
     LaunchedEffect(state.result) {
         when (val result = state.result) {
@@ -177,6 +187,42 @@ private fun NumberKey(
                 text = key,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun RootBlockedScreen(reason: String) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.errorContainer
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "Устройство скомпрометировано",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = reason,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
             )
         }
     }

@@ -2,10 +2,15 @@ package com.vitbon.kkm.features.auth.presentation
 
 import com.vitbon.kkm.features.auth.domain.AuthResult
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.licensing.domain.AppBlockingState
+import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -23,6 +28,13 @@ class AuthViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val authUseCase = mockk<AuthUseCase>()
+
+    private fun mockRootRiskGuard(): RootRiskGuard {
+        val guard = mockk<RootRiskGuard>()
+        val unblockedFlow = kotlinx.coroutines.flow.MutableStateFlow(AppBlockingState.Unblocked)
+        every { guard.blockingState } returns unblockedFlow
+        return guard
+    }
 
     @Before
     fun setUp() {
@@ -45,7 +57,7 @@ class AuthViewModelTest {
         )
         coEvery { authUseCase.authenticate("1111") } returns success
 
-        val vm = AuthViewModel(authUseCase)
+        val vm = AuthViewModel(authUseCase, mockRootRiskGuard())
 
         vm.appendDigit("1")
         vm.appendDigit("1")
