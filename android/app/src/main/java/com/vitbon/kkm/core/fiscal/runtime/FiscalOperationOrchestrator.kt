@@ -32,57 +32,70 @@ class FiscalOperationOrchestrator @Inject constructor(
 
     suspend fun executeSale(check: FiscalCheck): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
+        val warnings = buildShiftAgeWarnings()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printSale(check) }
+            primary = { fiscalCore.printSale(check) },
+            warnings = warnings
         )
     }
 
     suspend fun executeReturn(check: FiscalCheck): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
+        val warnings = buildShiftAgeWarnings()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printReturn(check) }
+            primary = { fiscalCore.printReturn(check) },
+            warnings = warnings
         )
     }
 
     suspend fun executeCorrection(doc: CorrectionDoc): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
+        val warnings = buildShiftAgeWarnings()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printCorrection(doc) }
+            primary = { fiscalCore.printCorrection(doc) },
+            warnings = warnings
         )
     }
 
     suspend fun executeCashIn(amount: Money, comment: String?): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
+        val warnings = buildShiftAgeWarnings()
         return executeWithFormatRetry(
-            primary = { fiscalCore.cashIn(amount, comment) }
+            primary = { fiscalCore.cashIn(amount, comment) },
+            warnings = warnings
         )
     }
 
     suspend fun executeCashOut(amount: Money, comment: String?): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
+        val warnings = buildShiftAgeWarnings()
         return executeWithFormatRetry(
-            primary = { fiscalCore.cashOut(amount, comment) }
+            primary = { fiscalCore.cashOut(amount, comment) },
+            warnings = warnings
         )
     }
 
     suspend fun executeOpenShift(): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         return executeWithFormatRetry(
-            primary = { fiscalCore.openShift() }
+            primary = { fiscalCore.openShift() },
+            warnings = emptyList()
         )
     }
 
     suspend fun executeCloseShift(): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         return executeWithFormatRetry(
-            primary = { fiscalCore.closeShift() }
+            primary = { fiscalCore.closeShift() },
+            warnings = emptyList()
         )
     }
 
     suspend fun executeXReport(): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         return executeWithFormatRetry(
-            primary = { fiscalCore.printXReport() }
+            primary = { fiscalCore.printXReport() },
+            warnings = emptyList()
         )
     }
 
@@ -91,31 +104,33 @@ class FiscalOperationOrchestrator @Inject constructor(
     }
 
     private suspend fun executeWithFormatRetry(
-        primary: suspend () -> FiscalResult
+        primary: suspend () -> FiscalResult,
+        warnings: List<String> = emptyList()
     ): FiscalRuntimeResult {
         return try {
             ffdResolver.resolve(forceRefresh = false)
-            primary().toRuntimeSuccess(ffdResolver.resolve(forceRefresh = false))
+            primary().toRuntimeSuccess(ffdResolver.resolve(forceRefresh = false), warnings)
         } catch (t: Throwable) {
             val mapped = FiscalErrorMapper.map(t)
             if (mapped.code != "FORMAT_INVALID") return mapped
 
             try {
                 val reResolved = ffdResolver.resolve(forceRefresh = true)
-                primary().toRuntimeSuccess(reResolved)
+                primary().toRuntimeSuccess(reResolved, warnings)
             } catch (retryThrowable: Throwable) {
                 FiscalErrorMapper.map(retryThrowable)
             }
         }
     }
 
-    private fun FiscalResult.toRuntimeSuccess(ffdVersion: String): FiscalRuntimeResult {
+    private fun FiscalResult.toRuntimeSuccess(ffdVersion: String, warnings: List<String> = emptyList()): FiscalRuntimeResult {
         return when (this) {
             is FiscalResult.Success -> FiscalRuntimeResult.Success(
                 fiscalSign = fiscalSign,
                 fnNumber = fnNumber,
                 fdNumber = fdNumber,
-                ffdVersion = ffdVersion
+                ffdVersion = ffdVersion,
+                warnings = warnings
             )
             is FiscalResult.Error -> FiscalRuntimeResult.Error(
                 code = "FISCAL_ERROR",
@@ -123,5 +138,18 @@ class FiscalOperationOrchestrator @Inject constructor(
                 recoverable = recoverable
             )
         }
+    }
+
+    private suspend fun buildShiftAgeWarnings(): List<String> {
+        val warnings = mutableListOf<String>()
+        try {
+            val status = fiscalCore.getStatus()
+            if (status.shiftAgeHours != null && status.shiftAgeHours > 24) {
+                warnings.add("Смена открыта более ${status.shiftAgeHours}ч. Закройте смену.")
+            }
+        } catch (_: Throwable) {
+            // ignore status errors — fiscal operation proceeds regardless
+        }
+        return warnings
     }
 }

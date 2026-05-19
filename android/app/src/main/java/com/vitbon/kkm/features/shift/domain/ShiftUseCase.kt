@@ -54,7 +54,7 @@ class ShiftUseCase @Inject constructor(
                     totalCard = 0L
                 )
                 shiftDao.insert(shift)
-                ShiftResult.Success(shift.id)
+                ShiftResult.Success(shift.id, r.warnings)
             }
             is FiscalRuntimeResult.Error -> ShiftResult.Error(-1, r.message)
         }
@@ -72,7 +72,7 @@ class ShiftUseCase @Inject constructor(
                     .filter { it.paymentType.equals("card", ignoreCase = true) }
                     .sumOf { it.total }
                 shiftDao.closeShift(shiftId, System.currentTimeMillis(), totalCash, totalCard)
-                ShiftResult.Success(shiftId)
+                ShiftResult.Success(shiftId, r.warnings)
             }
             is FiscalRuntimeResult.Error -> ShiftResult.Error(-1, r.message)
         }
@@ -100,6 +100,6 @@ class ShiftUseCase @Inject constructor(
 enum class ShiftStatus { OPEN, CLOSED, EXPIRED }
 
 sealed class ShiftResult {
-    data class Success(val shiftId: String) : ShiftResult()
+    data class Success(val shiftId: String, val warnings: List<String> = emptyList()) : ShiftResult()
     data class Error(val code: Int, val message: String) : ShiftResult()
 }

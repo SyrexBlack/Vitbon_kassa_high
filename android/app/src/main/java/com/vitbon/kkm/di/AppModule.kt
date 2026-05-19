@@ -6,6 +6,7 @@ import android.provider.Settings
 import androidx.room.Room
 import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.fiscal.*
+import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
 import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
@@ -82,7 +83,14 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFiscalConfig(): FiscalConfig = FiscalConfig()
+    fun provideFiscalConfig(prefs: SharedPreferences): FiscalConfig {
+        val taxSystemTag = prefs.getString("tax_system", "1") ?: "1"
+        val orgInn = prefs.getString("org_inn", null)
+        return FiscalConfig(
+            taxSystem = TaxSystem.fromString(taxSystemTag),
+            orgInn = orgInn
+        )
+    }
 
     @Provides
     @Singleton

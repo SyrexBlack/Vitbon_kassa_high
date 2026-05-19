@@ -1,6 +1,8 @@
 package com.vitbon.kkm.features.sales.domain
 
+import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.Money
+import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.model.PaymentType
 import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
@@ -26,7 +28,8 @@ class ProcessSaleUseCaseTest {
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
         val shiftDao = mockk<ShiftDao>(relaxed = true)
         coEvery { shiftDao.findOpenShift() } returns null
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
+        val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
 
         val cart = Cart(
             items = listOf(
@@ -69,7 +72,8 @@ class ProcessSaleUseCaseTest {
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
         val shiftDao = mockk<ShiftDao>(relaxed = true)
         coEvery { shiftDao.findOpenShift() } returns null
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
+        val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
 
         val cart = Cart(
             items = listOf(
@@ -120,7 +124,8 @@ class ProcessSaleUseCaseTest {
             ffdVersion = "1.2"
         )
 
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
+        val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
         val cart = Cart(
             items = listOf(
                 CartItem(

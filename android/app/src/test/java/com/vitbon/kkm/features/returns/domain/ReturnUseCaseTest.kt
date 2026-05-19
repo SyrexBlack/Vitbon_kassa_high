@@ -1,5 +1,6 @@
 package com.vitbon.kkm.features.returns.domain
 
+import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.CheckType
 import com.vitbon.kkm.core.fiscal.model.Money
 import com.vitbon.kkm.core.fiscal.model.PaymentType
@@ -27,8 +28,9 @@ class ReturnUseCaseTest {
     private val checkDao = mockk<CheckDao>(relaxed = true)
     private val checkItemDao = mockk<CheckItemDao>(relaxed = true)
     private val shiftDao = mockk<ShiftDao>(relaxed = true)
+    private val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
 
-    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao, shiftDao)
+    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
 
     @Test
     fun `findCheckByNumber trims identifier and delegates deterministic lookup`() = runBlocking {

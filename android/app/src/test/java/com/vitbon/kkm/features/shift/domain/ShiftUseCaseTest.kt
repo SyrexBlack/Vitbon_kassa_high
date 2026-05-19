@@ -11,6 +11,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ShiftUseCaseTest {
@@ -87,6 +88,66 @@ class ShiftUseCaseTest {
 
         assertEquals(ShiftStatus.OPEN, status)
         coVerify(exactly = 1) { orchestrator.executeStatusCheck() }
+    }
+
+    @Test
+    fun `openShift returns shift age warning when shift older than 24 hours`() = runBlocking {
+        coEvery { orchestrator.executeOpenShift() } returns FiscalRuntimeResult.Success(
+            fiscalSign = "fs-open-1",
+            fnNumber = "fn-1",
+            fdNumber = "fd-1",
+            ffdVersion = "1.2",
+            warnings = listOf("Смена открыта более 25ч. Закройте смену.")
+        )
+
+        val result = useCase.openShift("device-1", "cashier-1")
+
+        assertTrue(result is ShiftResult.Success)
+        val success = result as ShiftResult.Success
+        assertEquals(1, success.warnings.size)
+        assertTrue(success.warnings[0].contains("25ч"))
+        coVerify(exactly = 1) { orchestrator.executeOpenShift() }
+        coVerify(exactly = 1) { shiftDao.insert(any()) }
+    }
+
+    @Test
+    fun `openShift returns no warnings when shift age under 24 hours`() = runBlocking {
+        coEvery { orchestrator.executeOpenShift() } returns FiscalRuntimeResult.Success(
+            fiscalSign = "fs-open-2",
+            fnNumber = "fn-1",
+            fdNumber = "fd-2",
+            ffdVersion = "1.2",
+            warnings = emptyList()
+        )
+
+        val result = useCase.openShift("device-1", "cashier-1")
+
+        assertTrue(result is ShiftResult.Success)
+        val success = result as ShiftResult.Success
+        assertTrue(success.warnings.isEmpty())
+    }
+
+    @Test
+    fun `closeShift propagates shift age warning from orchestrator`() = runBlocking {
+        val shiftId = "shift-open-warning"
+
+        coEvery { orchestrator.executeCloseShift() } returns FiscalRuntimeResult.Success(
+            fiscalSign = "fs-close-warn",
+            fnNumber = "fn-1",
+            fdNumber = "fd-warn",
+            ffdVersion = "1.2",
+            warnings = listOf("Смена открыта более 30ч. Закройте смену.")
+        )
+        coEvery { checkDao.findByShiftId(shiftId) } returns emptyList()
+
+        val result = useCase.closeShift(shiftId)
+
+        assertTrue(result is ShiftResult.Success)
+        val success = result as ShiftResult.Success
+        assertEquals(1, success.warnings.size)
+        assertTrue(success.warnings[0].contains("30ч"))
+        coVerify(exactly = 1) { orchestrator.executeCloseShift() }
+        coVerify(exactly = 1) { shiftDao.closeShift(shiftId, any(), any(), any()) }
     }
 
     private fun check(

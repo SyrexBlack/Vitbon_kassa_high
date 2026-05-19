@@ -1,6 +1,7 @@
 package com.vitbon.kkm.core.fiscal
 
 import android.content.Context
+import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.msposk.MSPOSKFiscalCore
 import com.vitbon.kkm.core.fiscal.neva.Neva01FFiscalCore
 import javax.inject.Inject
@@ -40,5 +41,7 @@ enum class FiscalDeviceModel {
 data class FiscalConfig(
     val model: FiscalDeviceModel = FiscalDeviceModel.MSPOS_K,
     val host: String = "localhost",
-    val port: Int = 8443
+    val port: Int = 8443,
+    val taxSystem: TaxSystem = TaxSystem.OSN,
+    val orgInn: String? = null
 )

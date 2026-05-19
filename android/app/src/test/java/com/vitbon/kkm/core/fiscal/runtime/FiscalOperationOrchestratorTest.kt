@@ -5,6 +5,7 @@ import com.vitbon.kkm.core.fiscal.FiscalException
 import com.vitbon.kkm.core.fiscal.model.CheckType
 import com.vitbon.kkm.core.fiscal.model.FiscalCheck
 import com.vitbon.kkm.core.fiscal.model.FiscalResult
+import com.vitbon.kkm.core.fiscal.model.FiscalStatus
 import com.vitbon.kkm.features.licensing.domain.AppBlockingState
 import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import io.mockk.coEvery
@@ -28,12 +29,23 @@ class FiscalOperationOrchestratorTest {
         return guard
     }
 
+    private fun mockFiscalStatus(shiftAgeHours: Long? = null): FiscalStatus = FiscalStatus(
+        fnRegistered = true,
+        fnNumber = "fn-1",
+        shiftOpen = true,
+        shiftAgeHours = shiftAgeHours,
+        currentFdNumber = 100,
+        ofdConnected = true,
+        lastError = null
+    )
+
     @Test
     fun `sale retries once on format error and then succeeds`() = runTest {
         val core = mockk<FiscalCore>()
         val resolver = mockk<FfdVersionResolver>()
         coEvery { resolver.resolve(false) } returns "1.05"
         coEvery { resolver.resolve(true) } returns "1.2"
+        coEvery { core.getStatus() } returns mockFiscalStatus()
 
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
 
@@ -65,5 +77,58 @@ class FiscalOperationOrchestratorTest {
         assertEquals("SECURITY_BLOCKED", error.code)
         assertTrue(error.message.contains("скомпрометировано"))
         coVerify(exactly = 0) { core.printSale(any()) }
+    }
+
+    @Test
+    fun `executeSale includes shift age warning when shift is older than 24 hours`() = runTest {
+        val core = mockk<FiscalCore>()
+        val resolver = mockk<FfdVersionResolver>()
+        coEvery { resolver.resolve(false) } returns "1.05"
+        coEvery { core.getStatus() } returns mockFiscalStatus(shiftAgeHours = 25)
+        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+
+        val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val result = orchestrator.executeSale(check)
+
+        assertTrue(result is FiscalRuntimeResult.Success)
+        val success = result as FiscalRuntimeResult.Success
+        assertEquals(1, success.warnings.size)
+        assertTrue(success.warnings[0].contains("25ч"))
+        assertTrue(success.warnings[0].contains("Закройте смену"))
+    }
+
+    @Test
+    fun `executeSale has no warnings when shift age is under 24 hours`() = runTest {
+        val core = mockk<FiscalCore>()
+        val resolver = mockk<FfdVersionResolver>()
+        coEvery { resolver.resolve(false) } returns "1.05"
+        coEvery { core.getStatus() } returns mockFiscalStatus(shiftAgeHours = 8)
+        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+
+        val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val result = orchestrator.executeSale(check)
+
+        assertTrue(result is FiscalRuntimeResult.Success)
+        val success = result as FiscalRuntimeResult.Success
+        assertTrue(success.warnings.isEmpty())
+    }
+
+    @Test
+    fun `executeSale ignores getStatus errors and proceeds without warnings`() = runTest {
+        val core = mockk<FiscalCore>()
+        val resolver = mockk<FfdVersionResolver>()
+        coEvery { resolver.resolve(false) } returns "1.05"
+        coEvery { core.getStatus() } throws RuntimeException("status unavailable")
+        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+
+        val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val result = orchestrator.executeSale(check)
+
+        assertTrue(result is FiscalRuntimeResult.Success)
+        val success = result as FiscalRuntimeResult.Success
+        assertTrue(success.warnings.isEmpty())
     }
 }

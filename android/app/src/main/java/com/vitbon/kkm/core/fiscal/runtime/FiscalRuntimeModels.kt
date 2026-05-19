@@ -5,7 +5,8 @@ sealed class FiscalRuntimeResult {
         val fiscalSign: String,
         val fnNumber: String,
         val fdNumber: String,
-        val ffdVersion: String
+        val ffdVersion: String,
+        val warnings: List<String> = emptyList()
     ) : FiscalRuntimeResult()
 
     data class Error(
