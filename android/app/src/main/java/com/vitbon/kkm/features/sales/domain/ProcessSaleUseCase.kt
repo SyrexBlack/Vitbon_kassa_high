@@ -1,5 +1,6 @@
 package com.vitbon.kkm.features.sales.domain
 
+import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
@@ -20,7 +21,8 @@ class ProcessSaleUseCase @Inject constructor(
     private val fiscalOrchestrator: FiscalOperationOrchestrator,
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao,
-    private val shiftDao: ShiftDao
+    private val shiftDao: ShiftDao,
+    private val fiscalConfig: FiscalConfig
 ) {
     private suspend fun buildAdditionalInfo(): Map<String, String> {
         val shift = shiftDao.findOpenShift() ?: return emptyMap()
@@ -29,7 +31,8 @@ class ProcessSaleUseCase @Inject constructor(
             buildMap {
                 put("shiftNumber", shift.id.toString())
                 put("receiptNumberInShift", (status.currentFdNumber + 1).toString())
-                put("taxSystem", "1")
+                put("taxSystem", fiscalConfig.taxSystem.tag)
+                put("orgInn", fiscalConfig.orgInn ?: "")
             }
         } catch (_: Throwable) {
             emptyMap()
