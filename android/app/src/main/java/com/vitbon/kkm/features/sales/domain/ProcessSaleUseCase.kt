@@ -5,6 +5,7 @@ import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
+import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import com.vitbon.kkm.features.auth.domain.CashierRole
@@ -18,8 +19,23 @@ import javax.inject.Singleton
 class ProcessSaleUseCase @Inject constructor(
     private val fiscalOrchestrator: FiscalOperationOrchestrator,
     private val checkDao: CheckDao,
-    private val checkItemDao: CheckItemDao
+    private val checkItemDao: CheckItemDao,
+    private val shiftDao: ShiftDao
 ) {
+    private suspend fun buildAdditionalInfo(): Map<String, String> {
+        val shift = shiftDao.findOpenShift() ?: return emptyMap()
+        return try {
+            val status = fiscalOrchestrator.executeStatusCheck()
+            buildMap {
+                put("shiftNumber", shift.id.toString())
+                put("receiptNumberInShift", (status.currentFdNumber + 1).toString())
+                put("taxSystem", "1")
+            }
+        } catch (_: Throwable) {
+            emptyMap()
+        }
+    }
+
     suspend fun execute(
         cart: Cart,
         cashierId: String,
@@ -32,6 +48,7 @@ class ProcessSaleUseCase @Inject constructor(
             return SaleResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
         }
         // 1. Построить FiscalCheck
+        val additionalInfo = buildAdditionalInfo()
         val fiscalCheck = FiscalCheck(
             id = UUID.randomUUID().toString(),
             type = CheckType.SALE,
@@ -54,7 +71,8 @@ class ProcessSaleUseCase @Inject constructor(
                     amount = cart.total,
                     label = cart.paymentType.name
                 )
-            )
+            ),
+            additionalInfo = additionalInfo
         )
 
         // 2. Сохранить в Room (черновик — PENDING_SYNC)

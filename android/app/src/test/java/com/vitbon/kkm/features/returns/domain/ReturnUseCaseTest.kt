@@ -8,6 +8,7 @@ import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
+import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import com.vitbon.kkm.features.auth.domain.CashierRole
@@ -25,8 +26,9 @@ class ReturnUseCaseTest {
     private val fiscalOrchestrator = mockk<FiscalOperationOrchestrator>()
     private val checkDao = mockk<CheckDao>(relaxed = true)
     private val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+    private val shiftDao = mockk<ShiftDao>(relaxed = true)
 
-    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao)
+    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao, shiftDao)
 
     @Test
     fun `findCheckByNumber trims identifier and delegates deterministic lookup`() = runBlocking {

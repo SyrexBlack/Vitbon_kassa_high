@@ -7,6 +7,7 @@ import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
+import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.features.auth.domain.CashierRole
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -23,7 +24,9 @@ class ProcessSaleUseCaseTest {
         val orchestrator = mockk<FiscalOperationOrchestrator>()
         val checkDao = mockk<CheckDao>(relaxed = true)
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao)
+        val shiftDao = mockk<ShiftDao>(relaxed = true)
+        coEvery { shiftDao.findOpenShift() } returns null
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
 
         val cart = Cart(
             items = listOf(
@@ -64,7 +67,9 @@ class ProcessSaleUseCaseTest {
         val orchestrator = mockk<FiscalOperationOrchestrator>()
         val checkDao = mockk<CheckDao>(relaxed = true)
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao)
+        val shiftDao = mockk<ShiftDao>(relaxed = true)
+        coEvery { shiftDao.findOpenShift() } returns null
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
 
         val cart = Cart(
             items = listOf(
@@ -105,6 +110,8 @@ class ProcessSaleUseCaseTest {
         val orchestrator = mockk<FiscalOperationOrchestrator>()
         val checkDao = mockk<CheckDao>(relaxed = true)
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val shiftDao = mockk<ShiftDao>(relaxed = true)
+        coEvery { shiftDao.findOpenShift() } returns null
 
         coEvery { orchestrator.executeSale(any()) } returns FiscalRuntimeResult.Success(
             fiscalSign = "fs",
@@ -113,7 +120,7 @@ class ProcessSaleUseCaseTest {
             ffdVersion = "1.2"
         )
 
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao)
         val cart = Cart(
             items = listOf(
                 CartItem(
