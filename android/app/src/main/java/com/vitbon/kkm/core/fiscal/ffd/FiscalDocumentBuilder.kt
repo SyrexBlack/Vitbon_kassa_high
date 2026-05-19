@@ -91,6 +91,13 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         // НДС (тег 1203)
         fields[1203] = doc.vatRate.tag
 
+        // Система налогообложения (тег 1005) — определяется по ставке НДС
+        fields[1005] = when (doc.vatRate) {
+            VatRate.VAT_22, VatRate.VAT_10, VatRate.VAT_0 -> "1"
+            VatRate.VAT_5, VatRate.VAT_7 -> "5"
+            VatRate.NO_VAT -> "6"
+        }
+
         // ФФД 1.2 расширение
         if (version == FFDVersion.V1_2) {
             fields[1187] = "vitbon.ru"  // адрес сайта ФНС
@@ -184,8 +191,20 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
             fields[baseTag + 3] = item.total.kopecks.toString()  // стоимость
         }
 
-        // 1140 — признак способа расчёта (1=полная, 2=частичная и т.д.)
-        fields[1140] = "1"
+        // 1140 — признак способа расчёта
+        // 4 = полный расчёт (стандарт для розницы)
+        // 5 = частичный расчёт (если сумма оплат < суммы расчёта)
+        val totalPayments = check.payments.sumOf { it.amount.kopecks }
+        fields[1140] = if (totalPayments >= check.total.kopecks) "4" else "5"
+
+        // 1005 — система налогообложения
+        check.additionalInfo["taxSystem"]?.let { fields[1005] = it }
+        // 1034 — номер смены
+        check.additionalInfo["shiftNumber"]?.let { fields[1034] = it }
+        // 1191 — номер чека в смене
+        check.additionalInfo["receiptNumberInShift"]?.let { fields[1191] = it }
+        // 1026 — ИНН организации (ОФД)
+        check.additionalInfo["orgInn"]?.let { fields[1026] = it }
 
         return fields
     }
