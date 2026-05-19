@@ -25,7 +25,7 @@ enum class VatRate(val tag: String, val displayName: String) {
     VAT_0("1030", "0%"),
     VAT_5("1050", "5%"),
     VAT_7("1070", "7%"),
-    NO_VAT("no_vat", "БЕЗ НДС")
+    NO_VAT("6", "БЕЗ НДС")
 }
 
 /** Версия формата фискальных документов */
@@ -59,6 +59,26 @@ enum class PaymentType(val value: String) {
     SBP("sbp"),
     BONUS("bonus"),
     MIXED("mixed")
+}
+
+/** Система налогообложения (тег 1005 ФФД) */
+enum class TaxSystem(val tag: String) {
+    OSN("1"),                    // Общая
+    USN_INCOME("2"),             // УСН доход
+    ESN("4"),                    // ЕСХН
+    USN_INCOME_OUTCOME("5"),     // УСН доход-расход
+    PSN("6");                    // ПСН
+
+    companion object {
+        fun fromString(s: String?): TaxSystem = when (s) {
+            "1" -> OSN
+            "2" -> USN_INCOME
+            "4" -> ESN
+            "5" -> USN_INCOME_OUTCOME
+            "6" -> PSN
+            else -> OSN
+        }
+    }
 }
 
 /** Статус фискальной операции */
