@@ -35,4 +35,11 @@ class VatRateTest {
         assertEquals("5", TaxSystem.USN_INCOME_OUTCOME.tag)
         assertEquals("6", TaxSystem.PSN.tag)
     }
+
+    @Test
+    fun `TaxSystem fromString returns OSN for null or unknown input`() {
+        assertEquals(TaxSystem.OSN, TaxSystem.fromString(null))
+        assertEquals(TaxSystem.OSN, TaxSystem.fromString(""))
+        assertEquals(TaxSystem.OSN, TaxSystem.fromString("unknown"))
+    }
 }
