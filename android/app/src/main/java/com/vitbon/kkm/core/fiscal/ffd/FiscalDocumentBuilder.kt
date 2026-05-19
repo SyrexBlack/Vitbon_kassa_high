@@ -166,7 +166,7 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         fields[1031] = if (version == FFDVersion.V1_2) "2" else "1"  // версия ФФД
         fields[1055] = cashierName
         if (inn != null) fields[1018] = inn
-        fields[1036] = formatDateTime(check.items.firstOrNull()?.let { System.currentTimeMillis() } ?: System.currentTimeMillis())
+        fields[1036] = formatDateTime(System.currentTimeMillis())
 
         // Оплата (теги 1030 нет, это в 1214)
         fields[1214] = check.total.kopecks.toString()  // сумма расчёта
@@ -194,7 +194,12 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         // 1140 — признак способа расчёта
         // 4 = полный расчёт (стандарт для розницы)
         // 5 = частичный расчёт (если сумма оплат < суммы расчёта)
-        val totalPayments = check.payments.sumOf { it.amount.kopecks }
+        // Если оплата не передана — считаем полным расчётом (тег 4)
+        val totalPayments = if (check.payments.isEmpty()) {
+            check.total.kopecks
+        } else {
+            check.payments.sumOf { it.amount.kopecks }
+        }
         fields[1140] = if (totalPayments >= check.total.kopecks) "4" else "5"
 
         // 1005 — система налогообложения
