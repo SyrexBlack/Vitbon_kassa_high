@@ -19,6 +19,10 @@ import org.junit.Test
 
 class FiscalOperationOrchestratorTest {
 
+    private val defaultCashierProvider = object : CashierNameProvider {
+        override fun getCashierNameAndInn() = Pair("Кассир", null)
+    }
+
     private fun mockRootRiskGuard(unblocked: Boolean = true): RootRiskGuard {
         val guard = mockk<RootRiskGuard>()
         every { guard.getCurrentBlockingState() } returns if (unblocked) {
@@ -49,14 +53,14 @@ class FiscalOperationOrchestratorTest {
 
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
 
-        coEvery { core.printSale(check) } throws FiscalException(1001, "invalid format", true) andThen
+        coEvery { core.printSale(check, any(), any()) } throws FiscalException(1001, "invalid format", true) andThen
             FiscalResult.Success("fs", "fn", "fd", 1L)
 
-        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard(), defaultCashierProvider)
         val result = orchestrator.executeSale(check)
 
         assertEquals(FiscalRuntimeResult.Success::class, result::class)
-        coVerify(exactly = 2) { core.printSale(check) }
+        coVerify(exactly = 2) { core.printSale(check, "Кассир", null) }
         coVerify { resolver.resolve(true) }
     }
 
@@ -69,14 +73,14 @@ class FiscalOperationOrchestratorTest {
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
         val guard = mockRootRiskGuard(unblocked = false)
 
-        val orchestrator = FiscalOperationOrchestrator(core, resolver, guard)
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, guard, defaultCashierProvider)
         val result = orchestrator.executeSale(check)
 
         assertTrue(result is FiscalRuntimeResult.Error)
         val error = result as FiscalRuntimeResult.Error
         assertEquals("SECURITY_BLOCKED", error.code)
         assertTrue(error.message.contains("скомпрометировано"))
-        coVerify(exactly = 0) { core.printSale(any()) }
+        coVerify(exactly = 0) { core.printSale(any(), any(), any()) }
     }
 
     @Test
@@ -85,10 +89,10 @@ class FiscalOperationOrchestratorTest {
         val resolver = mockk<FfdVersionResolver>()
         coEvery { resolver.resolve(false) } returns "1.05"
         coEvery { core.getStatus() } returns mockFiscalStatus(shiftAgeHours = 25)
-        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+        coEvery { core.printSale(any(), any(), any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
 
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
-        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard(), defaultCashierProvider)
         val result = orchestrator.executeSale(check)
 
         assertTrue(result is FiscalRuntimeResult.Success)
@@ -104,10 +108,10 @@ class FiscalOperationOrchestratorTest {
         val resolver = mockk<FfdVersionResolver>()
         coEvery { resolver.resolve(false) } returns "1.05"
         coEvery { core.getStatus() } returns mockFiscalStatus(shiftAgeHours = 8)
-        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+        coEvery { core.printSale(any(), any(), any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
 
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
-        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard(), defaultCashierProvider)
         val result = orchestrator.executeSale(check)
 
         assertTrue(result is FiscalRuntimeResult.Success)
@@ -121,10 +125,10 @@ class FiscalOperationOrchestratorTest {
         val resolver = mockk<FfdVersionResolver>()
         coEvery { resolver.resolve(false) } returns "1.05"
         coEvery { core.getStatus() } throws RuntimeException("status unavailable")
-        coEvery { core.printSale(any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
+        coEvery { core.printSale(any(), any(), any()) } returns FiscalResult.Success("fs", "fn", "fd", 1L)
 
         val check = FiscalCheck("1", CheckType.SALE, emptyList(), emptyList())
-        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard())
+        val orchestrator = FiscalOperationOrchestrator(core, resolver, mockRootRiskGuard(), defaultCashierProvider)
         val result = orchestrator.executeSale(check)
 
         assertTrue(result is FiscalRuntimeResult.Success)

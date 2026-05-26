@@ -30,9 +30,9 @@ class FakeFiscalCore(private val context: Context) : FiscalCore {
         return successResult()
     }
 
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = successResult()
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = successResult()
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = successResult()
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = successResult()
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = successResult()
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult = successResult()
 
     override suspend fun closeShift(): FiscalResult {
         shiftOpen = false

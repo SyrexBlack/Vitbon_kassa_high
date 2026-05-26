@@ -17,20 +17,26 @@ interface FiscalCore {
     /**
      * Напечатать чек продажи.
      * @param check подготовленный фискальный документ
+     * @param cashierName ФИО кассира (тег 1055 ФФД)
+     * @param cashierInn ИНН кассира (тег 1018 ФФД)
      */
-    suspend fun printSale(check: FiscalCheck): FiscalResult
+    suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
 
     /**
      * Напечатать чек возврата.
      * @param check чек с типом RETURN; должен содержать ссылку на оригинальный fiscalSign
+     * @param cashierName ФИО кассира (тег 1055 ФФД)
+     * @param cashierInn ИНН кассира (тег 1018 ФФД)
      */
-    suspend fun printReturn(check: FiscalCheck): FiscalResult
+    suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
 
     /**
      * Напечатать чек коррекции.
      * @param doc документ коррекции
+     * @param cashierName ФИО кассира (тег 1055 ФФД)
+     * @param cashierInn ИНН кассира (тег 1018 ФФД)
      */
-    suspend fun printCorrection(doc: CorrectionDoc): FiscalResult
+    suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult
 
     /**
      * Закрыть смену (Z-отчёт).

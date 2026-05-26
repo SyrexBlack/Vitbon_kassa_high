@@ -3,6 +3,7 @@ package com.vitbon.kkm.di
 import android.content.Context
 import android.content.SharedPreferences
 import com.vitbon.kkm.core.fiscal.FiscalCore
+import com.vitbon.kkm.core.fiscal.runtime.CashierNameProvider
 import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
 import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
@@ -71,7 +72,9 @@ class AppModuleFiscalCoreSelectionTest {
         val resolver = AppModule.provideFfdVersionResolver(core, store)
         val rootRiskGuard = mockk<RootRiskGuard>()
         every { rootRiskGuard.getCurrentBlockingState() } returns AppBlockingState.Unblocked
-        val orchestrator = AppModule.provideFiscalOperationOrchestrator(core, resolver, rootRiskGuard)
+        val cashierProvider = mockk<CashierNameProvider>()
+        every { cashierProvider.getCashierNameAndInn() } returns Pair("Кассир", null)
+        val orchestrator = AppModule.provideFiscalOperationOrchestrator(core, resolver, rootRiskGuard, cashierProvider)
 
         assertNotNull(store)
         assertNotNull(resolver)

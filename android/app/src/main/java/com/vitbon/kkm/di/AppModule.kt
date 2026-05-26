@@ -9,6 +9,7 @@ import com.vitbon.kkm.core.fiscal.*
 import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.runtime.FfdPolicyStore
 import com.vitbon.kkm.core.fiscal.runtime.FfdVersionResolver
+import com.vitbon.kkm.core.fiscal.runtime.CashierNameProvider
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.data.local.VitbonDatabase
@@ -16,6 +17,7 @@ import com.vitbon.kkm.data.local.dao.*
 import com.vitbon.kkm.data.remote.ApiClient
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.features.auth.domain.AuthTokenStore
+import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import dagger.Module
 import dagger.Provides
@@ -125,11 +127,26 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideCashierNameProvider(
+        authUseCase: AuthUseCase,
+        prefs: SharedPreferences
+    ): CashierNameProvider = object : CashierNameProvider {
+        override fun getCashierNameAndInn(): Pair<String, String?> {
+            return Pair(
+                authUseCase.getCurrentCashierName() ?: "Кассир",
+                prefs.getString("cashier_inn", null)
+            )
+        }
+    }
+
+    @Provides
+    @Singleton
     fun provideFiscalOperationOrchestrator(
         fiscalCore: FiscalCore,
         ffdVersionResolver: FfdVersionResolver,
-        rootRiskGuard: RootRiskGuard
-    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard)
+        rootRiskGuard: RootRiskGuard,
+        cashierNameProvider: CashierNameProvider
+    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard, cashierNameProvider)
 }
 
 internal fun createFiscalCore(

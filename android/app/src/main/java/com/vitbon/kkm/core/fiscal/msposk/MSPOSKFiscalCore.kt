@@ -77,21 +77,21 @@ class MSPOSKFiscalCore @Inject constructor(
         sdk.openShift()
     }
 
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = executeFiscal {
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing SALE check ${check.id}")
         require(check.type == CheckType.SALE) { "Expected SALE, got ${check.type}" }
-        sdk.printSale(check)
+        sdk.printSale(check, cashierName, cashierInn)
     }
 
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = executeFiscal {
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing RETURN check ${check.id}")
         require(check.type == CheckType.RETURN) { "Expected RETURN, got ${check.type}" }
-        sdk.printReturn(check)
+        sdk.printReturn(check, cashierName, cashierInn)
     }
 
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = executeFiscal {
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Printing CORRECTION ${doc.id}")
-        sdk.printCorrection(doc)
+        sdk.printCorrection(doc, cashierName, cashierInn)
     }
 
     override suspend fun closeShift(): FiscalResult = executeFiscal {
@@ -149,9 +149,9 @@ class MSPOSKFiscalCore @Inject constructor(
 
 interface MSPOSKProtocol {
     suspend fun openShift(): FiscalResult
-    suspend fun printSale(check: FiscalCheck): FiscalResult
-    suspend fun printReturn(check: FiscalCheck): FiscalResult
-    suspend fun printCorrection(doc: CorrectionDoc): FiscalResult
+    suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
+    suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
+    suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult
     suspend fun closeShift(): FiscalResult
     suspend fun printXReport(): FiscalResult
     suspend fun cashIn(amount: Money, comment: String?): FiscalResult
@@ -172,12 +172,12 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
     override suspend fun openShift(): FiscalResult = withService("openShift") { svc ->
         val ready = withServiceCall("IsReady") { svc.isReady() }
         if (!ready) throw FiscalException(-1, "MSPOS-K fiscal service is not ready", recoverable = true)
-        withServiceCall("OpenDay") { svc.openDay() }
+        withServiceCall("OpenDay") { svc.openDay("Кассир") }
         svc.mapLastError("OpenDay")
     }
 
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = withService("printSale") { svc ->
-        val opened = withServiceCall("OpenRec") { svc.openReceipt(ReceiptType.SALE, check.id) }
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = withService("printSale") { svc ->
+        val opened = withServiceCall("OpenRec") { svc.openReceipt(ReceiptType.SALE, check.id, cashierName) }
         if (!opened) throw FiscalException(-1, "MSPOS-K failed to open SALE receipt")
         check.items.forEach { item ->
             withServiceCall("PrintRecItem") {
@@ -202,8 +202,8 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
         svc.mapLastError("CloseRec")
     }
 
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = withService("printReturn") { svc ->
-        val opened = withServiceCall("OpenRec") { svc.openReceipt(ReceiptType.RETURN, check.id) }
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = withService("printReturn") { svc ->
+        val opened = withServiceCall("OpenRec") { svc.openReceipt(ReceiptType.RETURN, check.id, cashierName) }
         if (!opened) throw FiscalException(-1, "MSPOS-K failed to open RETURN receipt")
         check.items.forEach { item ->
             withServiceCall("PrintRecItem") {
@@ -228,7 +228,7 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
         svc.mapLastError("CloseRec")
     }
 
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = withService("printCorrection") { svc ->
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult = withService("printCorrection") { svc ->
         withServiceCall("FNMakeCorrectionRec") {
             svc.makeCorrectionReceipt(
                 docType = doc.type,
@@ -238,14 +238,15 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
                 reason = doc.reason,
                 correctionNumber = doc.correctionNumber,
                 correctionDateMs = doc.correctionDate,
-                vatRate = doc.vatRate
+                vatRate = doc.vatRate,
+                cashierName = cashierName
             )
         }
         svc.mapLastError("FNMakeCorrectionRec")
     }
 
     override suspend fun closeShift(): FiscalResult = withService("closeShift") { svc ->
-        withServiceCall("CloseDay") { svc.closeDay() }
+        withServiceCall("CloseDay") { svc.closeDay("Кассир") }
         svc.mapLastError("CloseDay")
     }
 
@@ -355,8 +356,8 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
 
     private interface MSPOSKServiceClient {
         suspend fun isReady(): Boolean
-        suspend fun openDay()
-        suspend fun openReceipt(type: ReceiptType, documentId: String): Boolean
+        suspend fun openDay(cashierName: String)
+        suspend fun openReceipt(type: ReceiptType, documentId: String, cashierName: String): Boolean
         suspend fun printReceiptItem(name: String, quantity: Double, priceKopecks: Long, vatRate: VatRate)
         suspend fun printPayment(type: PaymentType, amountKopecks: Long, label: String)
         suspend fun closeReceipt()
@@ -368,9 +369,10 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
             reason: String,
             correctionNumber: String,
             correctionDateMs: Long,
-            vatRate: VatRate
+            vatRate: VatRate,
+            cashierName: String
         )
-        suspend fun closeDay()
+        suspend fun closeDay(cashierName: String)
         suspend fun printXReport()
         suspend fun cashIn(amountKopecks: Long, comment: String?)
         suspend fun cashOut(amountKopecks: Long, comment: String?)
@@ -414,12 +416,12 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
             return (tryInvoke("IsReady") as? Boolean) ?: false
         }
 
-        override suspend fun openDay() {
-            invokeVoidWithCallback("OpenDay", defaultCashierName())
+        override suspend fun openDay(cashierName: String) {
+            invokeVoidWithCallback("OpenDay", cashierName)
         }
 
-        override suspend fun openReceipt(type: ReceiptType, documentId: String): Boolean {
-            invokeVoidWithCallback("OpenRec", type.code)
+        override suspend fun openReceipt(type: ReceiptType, documentId: String, cashierName: String): Boolean {
+            invokeVoidWithCallback("OpenRec", type.code, cashierName)
             return true
         }
 
@@ -455,7 +457,8 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
             reason: String,
             correctionNumber: String,
             correctionDateMs: Long,
-            vatRate: VatRate
+            vatRate: VatRate,
+            cashierName: String
         ) {
             val recType = docType.toCorrectionRecTypeCode()
             val taxNum = vatRate.toTaxNumCode()
@@ -480,12 +483,13 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
                 0,
                 reason,
                 docDateIso,
-                correctionNumber
+                correctionNumber,
+                cashierName
             )
         }
 
-        override suspend fun closeDay() {
-            invokeVoidWithCallback("CloseDay", defaultCashierName())
+        override suspend fun closeDay(cashierName: String) {
+            invokeVoidWithCallback("CloseDay", cashierName)
         }
 
         override suspend fun printXReport() {
@@ -759,8 +763,6 @@ class RealMSPOSKProtocol(private val context: Context) : MSPOSKProtocol {
             returnType == java.lang.Character.TYPE -> 0.toChar()
             else -> null
         }
-
-        private fun defaultCashierName(): String = "Кассир"
 
         private fun Double.toPlainDecimal(scale: Int): String {
             return BigDecimal.valueOf(this).setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()

@@ -22,21 +22,21 @@ class FakeFiscalCore : FiscalCore {
         timestamp = System.currentTimeMillis()
     ).also { shiftOpen = true }
 
-    override suspend fun printSale(check: FiscalCheck) = FiscalResult.Success(
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult.Success(
         fiscalSign = "FAKE_SALE_${System.currentTimeMillis()}",
         fnNumber = "0000000000FAKE1",
         fdNumber = (check.id.hashCode() and 0xFFFF).toString(),
         timestamp = System.currentTimeMillis()
     )
 
-    override suspend fun printReturn(check: FiscalCheck) = FiscalResult.Success(
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult.Success(
         fiscalSign = "FAKE_RET_${System.currentTimeMillis()}",
         fnNumber = "0000000000FAKE1",
         fdNumber = "0",
         timestamp = System.currentTimeMillis()
     )
 
-    override suspend fun printCorrection(doc: CorrectionDoc) = FiscalResult.Success(
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult.Success(
         fiscalSign = "FAKE_CORR_${System.currentTimeMillis()}",
         fnNumber = "0000000000FAKE1",
         fdNumber = "0",

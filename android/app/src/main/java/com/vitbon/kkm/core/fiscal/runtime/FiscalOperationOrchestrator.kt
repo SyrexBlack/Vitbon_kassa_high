@@ -11,11 +11,17 @@ import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Поставщик данных кассира для фискальных документов (теги 1055 и 1018 ФФД). */
+interface CashierNameProvider {
+    fun getCashierNameAndInn(): Pair<String, String?> // name, inn
+}
+
 @Singleton
 class FiscalOperationOrchestrator @Inject constructor(
     private val fiscalCore: FiscalCore,
     private val ffdResolver: FfdVersionResolver,
-    private val rootRiskGuard: RootRiskGuard
+    private val rootRiskGuard: RootRiskGuard,
+    private val cashierNameProvider: CashierNameProvider
 ) {
 
     private fun checkSecurity(): FiscalRuntimeResult? {
@@ -33,8 +39,9 @@ class FiscalOperationOrchestrator @Inject constructor(
     suspend fun executeSale(check: FiscalCheck): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         val warnings = buildShiftAgeWarnings()
+        val (name, inn) = cashierNameProvider.getCashierNameAndInn()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printSale(check) },
+            primary = { fiscalCore.printSale(check, name, inn) },
             warnings = warnings
         )
     }
@@ -42,8 +49,9 @@ class FiscalOperationOrchestrator @Inject constructor(
     suspend fun executeReturn(check: FiscalCheck): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         val warnings = buildShiftAgeWarnings()
+        val (name, inn) = cashierNameProvider.getCashierNameAndInn()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printReturn(check) },
+            primary = { fiscalCore.printReturn(check, name, inn) },
             warnings = warnings
         )
     }
@@ -51,8 +59,9 @@ class FiscalOperationOrchestrator @Inject constructor(
     suspend fun executeCorrection(doc: CorrectionDoc): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         val warnings = buildShiftAgeWarnings()
+        val (name, inn) = cashierNameProvider.getCashierNameAndInn()
         return executeWithFormatRetry(
-            primary = { fiscalCore.printCorrection(doc) },
+            primary = { fiscalCore.printCorrection(doc, name, inn) },
             warnings = warnings
         )
     }

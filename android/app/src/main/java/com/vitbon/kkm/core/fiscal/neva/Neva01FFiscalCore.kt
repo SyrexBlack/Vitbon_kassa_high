@@ -57,19 +57,19 @@ class Neva01FFiscalCore @Inject constructor(
         sdk.openShift()
     }
 
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = executeFiscal {
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing SALE check ${check.id}")
-        sdk.printSale(check)
+        sdk.printSale(check, cashierName, cashierInn)
     }
 
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = executeFiscal {
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing RETURN check ${check.id}")
-        sdk.printReturn(check)
+        sdk.printReturn(check, cashierName, cashierInn)
     }
 
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = executeFiscal {
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult = executeFiscal {
         Log.d(TAG, "Нева: printing CORRECTION ${doc.id}")
-        sdk.printCorrection(doc)
+        sdk.printCorrection(doc, cashierName, cashierInn)
     }
 
     override suspend fun closeShift(): FiscalResult = executeFiscal {
@@ -116,9 +116,9 @@ class Neva01FFiscalCore @Inject constructor(
 
 interface Neva01FProtocol {
     suspend fun openShift(): FiscalResult
-    suspend fun printSale(check: FiscalCheck): FiscalResult
-    suspend fun printReturn(check: FiscalCheck): FiscalResult
-    suspend fun printCorrection(doc: CorrectionDoc): FiscalResult
+    suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
+    suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult
+    suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult
     suspend fun closeShift(): FiscalResult
     suspend fun printXReport(): FiscalResult
     suspend fun cashIn(amount: Money, comment: String?): FiscalResult
@@ -133,11 +133,11 @@ class RealNeva01FProtocol(private val context: Context) : Neva01FProtocol {
 
     override suspend fun openShift(): FiscalResult = fallbackBridge.openShift()
 
-    override suspend fun printSale(check: FiscalCheck): FiscalResult = fallbackBridge.printSale(check)
+    override suspend fun printSale(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = fallbackBridge.printSale(check, cashierName, cashierInn)
 
-    override suspend fun printReturn(check: FiscalCheck): FiscalResult = fallbackBridge.printReturn(check)
+    override suspend fun printReturn(check: FiscalCheck, cashierName: String, cashierInn: String?): FiscalResult = fallbackBridge.printReturn(check, cashierName, cashierInn)
 
-    override suspend fun printCorrection(doc: CorrectionDoc): FiscalResult = fallbackBridge.printCorrection(doc)
+    override suspend fun printCorrection(doc: CorrectionDoc, cashierName: String, cashierInn: String?): FiscalResult = fallbackBridge.printCorrection(doc, cashierName, cashierInn)
 
     override suspend fun closeShift(): FiscalResult = fallbackBridge.closeShift()
 
