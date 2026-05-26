@@ -315,4 +315,128 @@ class FiscalDocumentBuilderTest {
         // При marked goods: тег 1192 = "4" (признак предмета расчёта — маркированный товар)
         assertEquals("4", doc.fields[1192])
     }
+
+    @Test
+    fun `sale — item includes VAT rate tag 1199`() {
+        val check = makeTestCheck().copy(
+            items = listOf(
+                CheckItem(
+                    id = "i1", productId = "p1", barcode = "4601234567890",
+                    name = "Водка 0.5", quantity = 2.0,
+                    price = Money(9900), vatRate = VatRate.VAT_22,
+                    total = Money(19800)
+                ),
+                CheckItem(
+                    id = "i2", productId = "p2", barcode = "4600000000000",
+                    name = "Молоко", quantity = 1.0,
+                    price = Money(11000), vatRate = VatRate.VAT_10,
+                    total = Money(11000)
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(31000), "Наличные"))
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_05)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // Tag 1199: per-item VAT rate. Items start at tag 1059, VAT at 1199.
+        // Item 1 (VAT_22="1220") at 1059-1062 → tag 1199 should be "1220"
+        // Item 2 (VAT_10="1100") at 1063-1066 → tag 1200 should be "1100"
+        assertEquals("1220", doc.fields[1199])
+        assertEquals("1100", doc.fields[1200])
+    }
+
+    @Test
+    fun `sale — SBP payment accumulates correctly in tag 1216`() {
+        // Bug: (fields[1216]?.toLongOrNull() ?: 0L + payment.amount) doesn't accumulate properly.
+        // When ?: 0L kicks in, it ignores any previous value in fields[1216]
+        val check = makeTestCheck().copy(
+            items = listOf(
+                CheckItem(
+                    id = "i1", productId = "p1", barcode = "4601234567890",
+                    name = "Товар", quantity = 1.0,
+                    price = Money(50000), vatRate = VatRate.VAT_22,
+                    total = Money(50000)
+                )
+            ),
+            payments = listOf(
+                PaymentLine(PaymentType.SBP, Money(30000), "СБП"),
+                PaymentLine(PaymentType.SBP, Money(20000), "СБП")
+            )
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_05)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // Should be sum: 30000 + 20000 = 50000 kopecks
+        assertEquals("50000", doc.fields[1216])
+    }
+
+    @Test
+    fun `sale — tag 1218 change when cash tendered exceeds total`() {
+        val check = makeTestCheck().copy(
+            items = listOf(
+                CheckItem(
+                    id = "i1", productId = "p1", barcode = "4601234567890",
+                    name = "Товар", quantity = 1.0,
+                    price = Money(5000), vatRate = VatRate.VAT_22,
+                    total = Money(5000)
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(5000), "Наличные")),
+            cashTendered = Money(10000)
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_05)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // change = cashTendered - total = 10000 - 5000 = 5000
+        assertEquals("5000", doc.fields[1218])
+    }
+
+    @Test
+    fun `sale — tag 1218 absent when no cash tendered`() {
+        val check = makeTestCheck().copy(
+            items = listOf(
+                CheckItem(
+                    id = "i1", productId = "p1", barcode = "4601234567890",
+                    name = "Товар", quantity = 1.0,
+                    price = Money(5000), vatRate = VatRate.VAT_22,
+                    total = Money(5000)
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(5000), "Наличные")),
+            cashTendered = null
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_05)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        assertNull(doc.fields[1218])
+    }
+
+    @Test
+    fun `FFD 12 — split payments accumulate correctly in tags 1234-1238`() {
+        // When there are multiple payments of the same type (e.g., 2x CASH, 2x SBP)
+        // each type's tag should hold the sum of all payments of that type
+        val check = makeTestCheck().copy(
+            items = listOf(
+                CheckItem(
+                    id = "i1", productId = "p1", barcode = "4601234567890",
+                    name = "Товар", quantity = 1.0,
+                    price = Money(100000), vatRate = VatRate.VAT_22,
+                    total = Money(100000)
+                )
+            ),
+            payments = listOf(
+                PaymentLine(PaymentType.CASH, Money(40000), "Наличные 1"),
+                PaymentLine(PaymentType.CASH, Money(10000), "Наличные 2"),
+                PaymentLine(PaymentType.SBP, Money(30000), "СБП 1"),
+                PaymentLine(PaymentType.SBP, Money(20000), "СБП 2")
+            )
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_2)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // 1234 = CASH total = 40000 + 10000 = 50000
+        assertEquals("50000", doc.fields[1234])
+        // 1236 = SBP total = 30000 + 20000 = 50000
+        assertEquals("50000", doc.fields[1236])
+    }
 }

@@ -1,7 +1,10 @@
 package com.vitbon.kkm.features.correction.domain
 
+import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.CheckType
+import com.vitbon.kkm.core.fiscal.model.CorrectionDoc
 import com.vitbon.kkm.core.fiscal.model.Money
+import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
@@ -11,6 +14,7 @@ import com.vitbon.kkm.features.auth.domain.RolePolicy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,7 +24,8 @@ class CorrectionUseCaseTest {
 
     private val orchestrator = mockk<FiscalOperationOrchestrator>()
     private val authUseCase = mockk<AuthUseCase>()
-    private val useCase = CorrectionUseCase(orchestrator, authUseCase)
+    private val fiscalConfig = FiscalConfig(taxSystem = TaxSystem.OSN, orgInn = null)
+    private val useCase = CorrectionUseCase(orchestrator, authUseCase, fiscalConfig)
 
     @Test
     fun `process delegates correction to orchestrator and maps success`() = runTest {
@@ -156,5 +161,30 @@ class CorrectionUseCaseTest {
 
         assertTrue(result is CorrectionResult.Success)
         coVerify(exactly = 1) { orchestrator.executeCorrection(any()) }
+    }
+
+    @Test
+    fun `process — CorrectionDoc receives taxSystem from FiscalConfig`() = runTest {
+        coEvery { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
+        coEvery { orchestrator.executeCorrection(any()) } returns FiscalRuntimeResult.Success(
+            fiscalSign = "FS-TAX", fnNumber = "FN", fdNumber = "FD", ffdVersion = "1.2"
+        )
+
+        val cfg = FiscalConfig(taxSystem = TaxSystem.USN_INCOME_OUTCOME, orgInn = "770000000000")
+        val uc = CorrectionUseCase(orchestrator, authUseCase, cfg)
+
+        uc.process(
+            type = CheckType.CORRECTION_INCOME,
+            reason = "test",
+            correctionNumber = "99",
+            cashAmount = Money(1000),
+            cardAmount = Money.ZERO,
+            vatRate = VatRate.VAT_22,
+            cashierId = "admin"
+        )
+
+        val captured = slot<CorrectionDoc>()
+        coVerify { orchestrator.executeCorrection(capture(captured)) }
+        assertEquals(TaxSystem.USN_INCOME_OUTCOME, captured.captured.taxSystem)
     }
 }

@@ -145,7 +145,8 @@ data class FiscalCheck(
     val agentPhone: String? = null,
     val senderPhone: String? = null,
     val inn: String? = null,
-    val additionalInfo: Map<String, String> = emptyMap()
+    val additionalInfo: Map<String, String> = emptyMap(),
+    val cashTendered: Money? = null  // сумма внесения наличных для тега 1218 (сдача)
 ) {
     val total: Money get() = items.fold(Money.ZERO) { acc, item -> acc + item.total }
     val totalDiscount: Money get() = items.fold(Money.ZERO) { acc, item -> acc + item.discount }
@@ -161,7 +162,8 @@ data class CorrectionDoc(
     val reason: String,  // текстовое описание ошибки
     val correctionNumber: String,
     val correctionDate: Long,  // дата документа основания (timestamp)
-    val vatRate: VatRate
+    val vatRate: VatRate,
+    val taxSystem: TaxSystem? = null  // если null — определяется по vatRate
 )
 
 /** Результат верификации возраста (Цифровой ID Max) */

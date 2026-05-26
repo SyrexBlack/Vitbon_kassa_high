@@ -3,21 +3,21 @@ package com.vitbon.kkm.features.sales.domain
 import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.FiscalCheck
 import com.vitbon.kkm.core.fiscal.model.FiscalStatus
-import com.vitbon.kkm.data.local.entity.LocalShift
 import com.vitbon.kkm.core.fiscal.model.Money
-import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.model.PaymentType
+import com.vitbon.kkm.core.fiscal.model.TaxSystem
 import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.dao.ShiftDao
+import com.vitbon.kkm.data.local.entity.LocalShift
 import com.vitbon.kkm.features.auth.domain.CashierRole
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.slot
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -163,46 +163,42 @@ class ProcessSaleUseCaseTest {
     }
 
     @Test
-    fun `process sale populates additionalInfo with taxSystem and orgInn`() = runTest {
+    fun `process sale — FiscalCheck additionalInfo contains taxSystem shiftNumber receiptNumberInShift orgInn`() = runTest {
         val orchestrator = mockk<FiscalOperationOrchestrator>()
         val checkDao = mockk<CheckDao>(relaxed = true)
         val checkItemDao = mockk<CheckItemDao>(relaxed = true)
         val shiftDao = mockk<ShiftDao>(relaxed = true)
         val mockShift = LocalShift(
-            id = "shift-5",
+            id = "shift-42",
             cashierId = "cashier-1",
             deviceId = "device-1",
             openedAt = System.currentTimeMillis(),
             closedAt = null,
-            totalCash = 0,
-            totalCard = 0
+            totalCash = 0L,
+            totalCard = 0L
         )
         coEvery { shiftDao.findOpenShift() } returns mockShift
 
         coEvery { orchestrator.executeStatusCheck() } returns FiscalStatus(
             fnRegistered = true,
-            fnNumber = "fn-1",
+            fnNumber = "fn",
             shiftOpen = true,
-            shiftAgeHours = 1,
-            currentFdNumber = 99,
+            shiftAgeHours = 2L,
+            currentFdNumber = 7,
             ofdConnected = true,
             lastError = null
         )
 
         val fiscalConfig = FiscalConfig(
             taxSystem = TaxSystem.USN_INCOME,
-            orgInn = "1234567890"
+            orgInn = "770123456789"
         )
         val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
         val cart = Cart(
             items = listOf(
                 CartItem(
-                    productId = "p1",
-                    barcode = "4600000000000",
-                    name = "Test item",
-                    quantity = 1.0,
-                    price = Money(1000),
-                    discount = Money.ZERO,
+                    productId = "p1", barcode = null, name = "Test",
+                    quantity = 1.0, price = Money(1000), discount = Money.ZERO,
                     vatRate = VatRate.VAT_22
                 )
             ),
@@ -214,7 +210,7 @@ class ProcessSaleUseCaseTest {
         coEvery { orchestrator.executeSale(capture(checkSlot)) } returns FiscalRuntimeResult.Success(
             fiscalSign = "fs",
             fnNumber = "fn",
-            fdNumber = "fd",
+            fdNumber = "8",
             ffdVersion = "1.2"
         )
 
@@ -222,13 +218,15 @@ class ProcessSaleUseCaseTest {
             cart = cart,
             cashierId = "cashier-1",
             deviceId = "device-1",
-            shiftId = "shift-5",
+            shiftId = "shift-1",
             cashierRole = CashierRole.CASHIER,
             emergencySessionActive = false
         )
 
         val captured = checkSlot.captured
         assertEquals("2", captured.additionalInfo["taxSystem"])
-        assertEquals("1234567890", captured.additionalInfo["orgInn"])
+        assertEquals("shift-42", captured.additionalInfo["shiftNumber"])
+        assertEquals("8", captured.additionalInfo["receiptNumberInShift"])
+        assertEquals("770123456789", captured.additionalInfo["orgInn"])
     }
 }

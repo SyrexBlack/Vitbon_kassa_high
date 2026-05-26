@@ -91,8 +91,8 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         // НДС (тег 1203)
         fields[1203] = doc.vatRate.tag
 
-        // Система налогообложения (тег 1005) — определяется по ставке НДС
-        fields[1005] = when (doc.vatRate) {
+        // Система налогообложения (тег 1005) — приоритет: явно переданная, иначе по ставке НДС
+        fields[1005] = doc.taxSystem?.tag ?: when (doc.vatRate) {
             VatRate.VAT_22, VatRate.VAT_10, VatRate.VAT_0 -> "1"
             VatRate.VAT_5, VatRate.VAT_7 -> "5"
             VatRate.NO_VAT -> "6"
@@ -176,8 +176,10 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
             when (payment.type) {
                 PaymentType.CASH -> fields[1215] = payment.amount.kopecks.toString()
                 PaymentType.CARD -> fields[1216] = payment.amount.kopecks.toString()
-                PaymentType.SBP -> fields[1216] = (fields[1216]?.toLongOrNull() ?: 0L + payment.amount.kopecks).toString()
-                PaymentType.BONUS -> fields[1216] = (fields[1216]?.toLongOrNull() ?: 0L + payment.amount.kopecks).toString()
+                PaymentType.SBP, PaymentType.BONUS -> {
+                    val prev = fields[1216]?.toLongOrNull() ?: 0L
+                    fields[1216] = (prev + payment.amount.kopecks).toString()
+                }
                 PaymentType.MIXED -> {} // уже разбито в payments
             }
         }
@@ -189,6 +191,8 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
             fields[baseTag + 1] = item.quantity.toString()  // кол-во
             fields[baseTag + 2] = item.price.kopecks.toString()  // цена за единицу
             fields[baseTag + 3] = item.total.kopecks.toString()  // стоимость
+            // 1199+ — тег ставки НДС для каждой позиции (ФФД 1.2)
+            fields[1199 + index] = item.vatRate.tag
         }
 
         // 1140 — признак способа расчёта
@@ -211,6 +215,12 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         // 1026 — ИНН организации (ОФД)
         check.additionalInfo["orgInn"]?.let { fields[1026] = it }
 
+        // 1218 — сдача (сумма внесённых наличных минус итог чека)
+        check.cashTendered?.let { ct ->
+            val change = ct.kopecks - check.total.kopecks
+            if (change > 0) fields[1218] = change.toString()
+        }
+
         return fields
     }
 
@@ -226,10 +236,22 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
         // 1234-1238 — разбивка платежей при split payment
         check.payments.forEach { payment ->
             when (payment.type) {
-                PaymentType.CASH -> fields[1234] = payment.amount.kopecks.toString()
-                PaymentType.CARD -> fields[1235] = payment.amount.kopecks.toString()
-                PaymentType.SBP -> fields[1236] = payment.amount.kopecks.toString()
-                PaymentType.BONUS -> fields[1237] = payment.amount.kopecks.toString()
+                PaymentType.CASH -> {
+                    val prev = fields[1234]?.toLongOrNull() ?: 0L
+                    fields[1234] = (prev + payment.amount.kopecks).toString()
+                }
+                PaymentType.CARD -> {
+                    val prev = fields[1235]?.toLongOrNull() ?: 0L
+                    fields[1235] = (prev + payment.amount.kopecks).toString()
+                }
+                PaymentType.SBP -> {
+                    val prev = fields[1236]?.toLongOrNull() ?: 0L
+                    fields[1236] = (prev + payment.amount.kopecks).toString()
+                }
+                PaymentType.BONUS -> {
+                    val prev = fields[1237]?.toLongOrNull() ?: 0L
+                    fields[1237] = (prev + payment.amount.kopecks).toString()
+                }
                 PaymentType.MIXED -> {} // handle individually
             }
         }

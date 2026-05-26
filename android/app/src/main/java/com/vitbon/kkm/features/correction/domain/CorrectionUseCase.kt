@@ -1,5 +1,6 @@
 package com.vitbon.kkm.features.correction.domain
 
+import com.vitbon.kkm.core.fiscal.FiscalConfig
 import com.vitbon.kkm.core.fiscal.model.*
 import com.vitbon.kkm.core.fiscal.runtime.FiscalOperationOrchestrator
 import com.vitbon.kkm.core.fiscal.runtime.FiscalRuntimeResult
@@ -13,7 +14,8 @@ import javax.inject.Singleton
 @Singleton
 class CorrectionUseCase @Inject constructor(
     private val fiscalOrchestrator: FiscalOperationOrchestrator,
-    private val authUseCase: AuthUseCase
+    private val authUseCase: AuthUseCase,
+    private val fiscalConfig: FiscalConfig
 ) {
     suspend fun process(
         type: CheckType,  // CORRECTION_INCOME or CORRECTION_EXPENSE
@@ -41,7 +43,8 @@ class CorrectionUseCase @Inject constructor(
             reason = reason,
             correctionNumber = correctionNumber,
             correctionDate = System.currentTimeMillis(),
-            vatRate = vatRate
+            vatRate = vatRate,
+            taxSystem = fiscalConfig.taxSystem
         )
         return when (val result = fiscalOrchestrator.executeCorrection(doc)) {
             is FiscalRuntimeResult.Success -> CorrectionResult.Success(result.fiscalSign)
