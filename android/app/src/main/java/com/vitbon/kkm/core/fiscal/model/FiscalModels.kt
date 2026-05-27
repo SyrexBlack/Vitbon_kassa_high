@@ -118,7 +118,8 @@ data class CheckItem(
     val price: Money,
     val discount: Money = Money.ZERO,
     val vatRate: VatRate,
-    val total: Money = Money.ZERO
+    val total: Money = Money.ZERO,
+    val markedProductCode: String? = null
 ) {
     init {
         require(quantity > 0) { "quantity must be > 0" }

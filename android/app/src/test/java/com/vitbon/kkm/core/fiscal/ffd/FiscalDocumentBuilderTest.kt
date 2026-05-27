@@ -243,4 +243,76 @@ class FiscalDocumentBuilderTest {
         // tag 1203 for VAT_22 should be "1220"
         assertEquals("1220", doc.fields[1203])
     }
+
+    @Test
+    fun `FFD 12 sale with marked goods — emits tags 1162 and 1163 for marked item`() {
+        val check = FiscalCheck(
+            id = "m1",
+            type = CheckType.SALE,
+            items = listOf(
+                CheckItem(
+                    id = "m-i1", productId = "p1", barcode = "4600000000000",
+                    name = "Сигареты", quantity = 1.0,
+                    price = Money(12000), vatRate = VatRate.VAT_22,
+                    total = Money(12000),
+                    markedProductCode = "01NNC3R1234567890NNC3R1234567"
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(12000), "Наличные"))
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_2)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // Тег 1162 — код товара (DataMatrix маркированного товара)
+        assertNotNull(doc.fields[1162])
+        assertEquals("01NNC3R1234567890NNC3R1234567", doc.fields[1162])
+        // Тег 1163 — код товара в формате-base_tag (base tag = item position × 1000 + 1000)
+        assertNotNull(doc.fields[1163])
+    }
+
+    @Test
+    fun `FFD 12 sale — non-marked item emits no marking tags`() {
+        val check = FiscalCheck(
+            id = "nm1",
+            type = CheckType.SALE,
+            items = listOf(
+                CheckItem(
+                    id = "nm-i1", productId = "p2", barcode = "4601234567890",
+                    name = "Водка", quantity = 1.0,
+                    price = Money(10000), vatRate = VatRate.VAT_22,
+                    total = Money(10000)
+                    // no markedProductCode
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(10000), "Наличные"))
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_2)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        assertNull(doc.fields[1162])
+        assertNull(doc.fields[1163])
+    }
+
+    @Test
+    fun `FFD 12 sale with marked goods — tag 1192 признак 4 for marked item`() {
+        val check = FiscalCheck(
+            id = "m2",
+            type = CheckType.SALE,
+            items = listOf(
+                CheckItem(
+                    id = "m-i2", productId = "p3", barcode = "4600000000000",
+                    name = "Табак", quantity = 2.0,
+                    price = Money(5000), vatRate = VatRate.VAT_22,
+                    total = Money(10000),
+                    markedProductCode = "01GTINPARTNERSERIAL12345NNC3R"
+                )
+            ),
+            payments = listOf(PaymentLine(PaymentType.CASH, Money(10000), "Наличные"))
+        )
+        val builder = FiscalDocumentBuilder(FFDVersion.V1_2)
+        val doc = builder.buildSale(check, "Кассир", null)
+
+        // При marked goods: тег 1192 = "4" (признак предмета расчёта — маркированный товар)
+        assertEquals("4", doc.fields[1192])
+    }
 }

@@ -233,6 +233,22 @@ class FiscalDocumentBuilder(private val version: FFDVersion) {
                 PaymentType.MIXED -> {} // handle individually
             }
         }
+
+        // 1162 / 1163 — маркированные товары (тег 1162 — код товара, 1163 — base tag)
+        check.items.forEachIndexed { index, item ->
+            if (item.markedProductCode != null) {
+                val baseTag = 1000 + (index + 1) * 1000  // 2000, 3000, ...
+                fields[1162] = item.markedProductCode
+                fields[1163] = baseTag.toString()
+            }
+        }
+
+        // 1192 — признак предмета расчёта для всего чека
+        // Если хотя бы один товар маркирован — признак = 4 (маркированный товар)
+        if (check.items.any { it.markedProductCode != null }) {
+            fields[1192] = "4"
+        }
+
         return fields
     }
 
