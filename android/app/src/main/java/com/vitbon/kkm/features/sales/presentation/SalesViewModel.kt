@@ -1,8 +1,10 @@
 package com.vitbon.kkm.features.sales.presentation
 
+import com.vitbon.kkm.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitbon.kkm.core.fiscal.model.*
+import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
@@ -26,10 +28,11 @@ data class SalesState(
 @HiltViewModel
 class SalesViewModel @Inject constructor(
     private val scanBarcode: ScanBarcodeUseCase,
-    private val processSale: ProcessSaleUseCase,
+    private val processSale: MarkedGoodsSaleUseCase,
     private val authUseCase: AuthUseCase,
     private val syncService: SyncService,
-    private val shiftDao: ShiftDao
+    private val shiftDao: ShiftDao,
+    private val syncPrefs: SyncPrefs
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SalesState())
@@ -37,7 +40,7 @@ class SalesViewModel @Inject constructor(
 
     fun search(query: String) {
         _state.update { it.copy(searchQuery = query, scanError = null) }
-        if (query.length < 8) return  // минимальная длина ШК
+        if (query.length < 4) return  // минимальная длина ШК
 
         viewModelScope.launch {
             when (val result = scanBarcode.execute(query)) {
@@ -50,6 +53,25 @@ class SalesViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** Добавить тестовый товар напрямую в корзину (для отладки) */
+    fun addTestProduct() {
+        if (!BuildConfig.DEBUG) {
+            return
+        }
+
+        val testItem = CartItem(
+            productId = "product-demo-water-05",
+            barcode = "4607001234567",
+            name = "Вода 0.5л",
+            quantity = 1.0,
+            price = Money(12900),
+            discount = Money.ZERO,
+            vatRate = VatRate.NO_VAT
+        )
+        addItem(testItem)
+        _state.update { it.copy(scanError = null) }
     }
 
     private fun addItem(item: CartItem) {
@@ -104,10 +126,13 @@ class SalesViewModel @Inject constructor(
             _state.update { it.copy(isProcessing = true, saleResult = null) }
             val role = authUseCase.getCurrentCashierRole()
             val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied("SALE")
+            }
 
             val cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
             val openShiftId = shiftDao.findOpenShift()?.id
-            val deviceId = android.os.Build.MODEL ?: "unknown-device"
+            val deviceId = syncPrefs.deviceId ?: "unknown-device"
             val result = processSale.execute(
                 cart = _state.value.cart,
                 cashierId = cashierId,

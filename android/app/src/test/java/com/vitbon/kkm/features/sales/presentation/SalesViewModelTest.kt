@@ -1,5 +1,7 @@
 package com.vitbon.kkm.features.sales.presentation
 
+
+import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.core.fiscal.model.Money
 import com.vitbon.kkm.core.fiscal.model.PaymentType
 import com.vitbon.kkm.core.fiscal.model.VatRate
@@ -8,8 +10,11 @@ import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalShift
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.chaseznak.domain.ChaseznakResult
+import com.vitbon.kkm.features.chaseznak.domain.ChaseznakStatus
+import com.vitbon.kkm.features.chaseznak.domain.ChaseznakValidation
 import com.vitbon.kkm.features.sales.domain.CartItem
-import com.vitbon.kkm.features.sales.domain.ProcessSaleUseCase
+import com.vitbon.kkm.features.sales.domain.MarkedGoodsSaleUseCase
 import com.vitbon.kkm.features.sales.domain.SaleResult
 import com.vitbon.kkm.features.sales.domain.ScanBarcodeUseCase
 import com.vitbon.kkm.features.sales.domain.ScanResult
@@ -17,6 +22,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -34,15 +40,18 @@ class SalesViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val scanBarcode = mockk<ScanBarcodeUseCase>()
-    private val processSale = mockk<ProcessSaleUseCase>()
+    private val processSale = mockk<MarkedGoodsSaleUseCase>()
     private val authUseCase = mockk<AuthUseCase>()
     private val syncService = mockk<SyncService>(relaxed = true)
     private val shiftDao = mockk<ShiftDao>()
+    private val syncPrefs = mockk<SyncPrefs>()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { authUseCase.isEmergencySessionActive() } returns false
+        every { authUseCase.auditEmergencyOperationDenied(any()) } returns Unit
+        every { syncPrefs.deviceId } returns "secure-device-1"
     }
 
     @After
@@ -80,7 +89,7 @@ class SalesViewModelTest {
             total = 129.0
         )
 
-        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
 
         vm.search("4607001234567")
         advanceUntilIdle()
@@ -89,7 +98,7 @@ class SalesViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            processSale.execute(any(), "cashier-1", any(), "shift-open-1", CashierRole.CASHIER, false)
+            processSale.execute(any(), "cashier-1", "secure-device-1", "shift-open-1", CashierRole.CASHIER, false)
         }
     }
 
@@ -114,7 +123,7 @@ class SalesViewModelTest {
             total = 129.0
         )
 
-        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
 
         vm.search("4607001234567")
         advanceUntilIdle()
@@ -123,7 +132,7 @@ class SalesViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            processSale.execute(any(), "cashier-1", any(), null, CashierRole.CASHIER, false)
+            processSale.execute(any(), "cashier-1", "secure-device-1", null, CashierRole.CASHIER, false)
         }
     }
 
@@ -146,7 +155,7 @@ class SalesViewModelTest {
             processSale.execute(any(), any(), any(), any(), any(), any())
         } returns SaleResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
-        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
 
         vm.search("4607001234567")
         advanceUntilIdle()
@@ -158,7 +167,7 @@ class SalesViewModelTest {
         assertEquals(true, state.saleResult is SaleResult.FiscalError)
         assertEquals("Операция запрещена для текущей роли", (state.saleResult as SaleResult.FiscalError).message)
         coVerify(exactly = 1) {
-            processSale.execute(any(), "unknown", any(), null, null, false)
+            processSale.execute(any(), "unknown", "secure-device-1", null, null, false)
         }
     }
 
@@ -182,7 +191,7 @@ class SalesViewModelTest {
             processSale.execute(any(), any(), any(), any(), any(), any())
         } returns SaleResult.FiscalError(-1, "Операция запрещена для текущей роли")
 
-        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao)
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
 
         vm.search("4607001234567")
         advanceUntilIdle()
@@ -193,8 +202,41 @@ class SalesViewModelTest {
         assertEquals(false, state.isProcessing)
         assertEquals(true, state.saleResult is SaleResult.FiscalError)
         assertEquals("Операция запрещена для текущей роли", (state.saleResult as SaleResult.FiscalError).message)
+        verify(exactly = 1) { authUseCase.auditEmergencyOperationDenied("SALE") }
         coVerify(exactly = 1) {
-            processSale.execute(any(), "unknown", any(), null, CashierRole.ADMIN, true)
+            processSale.execute(any(), "unknown", "secure-device-1", null, CashierRole.ADMIN, true)
         }
+    }
+
+    @Test
+    fun `processSale blocks when marked code is already sold`() = runTest {
+        val item = CartItem(
+            productId = "p1",
+            barcode = "4607001234567",
+            name = "Сигареты",
+            quantity = 1.0,
+            price = Money(20_000L),
+            vatRate = VatRate.VAT_22,
+            markedProductCode = "01046123456789052FnS+EqV1XNAmLqT"
+        )
+
+        coEvery { scanBarcode.execute("4607001234567") } returns ScanResult.Found(item)
+        every { authUseCase.getCurrentCashierId() } returns "cashier-1"
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
+        coEvery { shiftDao.findOpenShift() } returns null
+        coEvery { processSale.execute(any(), any(), any(), any(), any(), any()) } returns
+            SaleResult.FiscalError(-1, "CHASENAK_BLOCK: ALREADY_SOLD — код невозможно продать")
+
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
+
+        vm.search("4607001234567")
+        advanceUntilIdle()
+        vm.processSale()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertEquals(false, state.isProcessing)
+        assertEquals(true, state.saleResult is SaleResult.FiscalError)
+        assertEquals(true, (state.saleResult as SaleResult.FiscalError).message.startsWith("CHASENAK_BLOCK"))
     }
 }
