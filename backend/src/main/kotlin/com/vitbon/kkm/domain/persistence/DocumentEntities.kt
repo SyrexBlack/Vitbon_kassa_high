@@ -22,6 +22,12 @@ class DocumentEntity(
     @Column(name = "type", nullable = false)
     val type: String,
 
+    @Column(name = "cashier_id", nullable = false)
+    val cashierId: UUID,
+
+    @Column(name = "device_id", nullable = false)
+    val deviceId: String,
+
     @Column(name = "timestamp", nullable = false)
     val timestamp: OffsetDateTime,
 

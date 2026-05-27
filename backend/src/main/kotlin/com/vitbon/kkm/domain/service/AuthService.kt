@@ -10,6 +10,7 @@ import com.vitbon.kkm.domain.persistence.CashierRepository
 import com.vitbon.kkm.domain.service.security.AuditService
 import com.vitbon.kkm.domain.service.security.PinHashService
 import com.vitbon.kkm.domain.service.security.SessionTokenService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -24,7 +25,15 @@ class AuthService(
     private val cashierRepository: CashierRepository,
     private val sessionTokenService: SessionTokenService,
     private val pinHashService: PinHashService,
-    private val auditService: AuditService
+    private val auditService: AuditService,
+    @Value("\${features.egais-enabled:false}")
+    private val egaisEnabled: Boolean,
+    @Value("\${features.chaseznak-enabled:false}")
+    private val chaseznakEnabled: Boolean,
+    @Value("\${features.acquiring-enabled:true}")
+    private val acquiringEnabled: Boolean,
+    @Value("\${features.sbp-enabled:true}")
+    private val sbpEnabled: Boolean
 ) {
     private data class FailedLoginState(
         val attempts: Int,
@@ -100,10 +109,10 @@ class AuthService(
                 role = cashier.role
             ),
             features = LoginFeaturesDto(
-                egaisEnabled = false,
-                chaseznakEnabled = false,
-                acquiringEnabled = true,
-                sbpEnabled = true
+                egaisEnabled = egaisEnabled,
+                chaseznakEnabled = chaseznakEnabled,
+                acquiringEnabled = acquiringEnabled,
+                sbpEnabled = sbpEnabled
             ),
             expiresAt = expiresAt.toInstant().toEpochMilli()
         )

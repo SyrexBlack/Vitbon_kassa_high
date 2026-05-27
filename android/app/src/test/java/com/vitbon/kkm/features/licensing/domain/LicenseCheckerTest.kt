@@ -2,20 +2,26 @@ package com.vitbon.kkm.features.licensing.domain
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import android.util.Log
+import com.vitbon.kkm.data.remote.dto.LicenseCheckResponseDto
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.security.PrefsMigration
 import com.vitbon.kkm.testutil.InMemorySharedPreferences
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Response
 
 class LicenseCheckerTest {
     private val context = mockk<Context>(relaxed = true)
@@ -29,8 +35,10 @@ class LicenseCheckerTest {
     @Before
     fun setUp() {
         mockkStatic(Log::class)
+        mockkStatic(Settings.Secure::class)
         every { Log.d(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
+        every { Settings.Secure.getString(any(), Settings.Secure.ANDROID_ID) } returns "device-1"
 
         every { plainPrefs.contains(any()) } returns false
         every { securePrefs.contains(any()) } returns false
@@ -46,6 +54,7 @@ class LicenseCheckerTest {
     @After
     fun tearDown() {
         unmockkStatic(Log::class)
+        unmockkStatic(Settings.Secure::class)
     }
 
     @Test
@@ -129,6 +138,65 @@ class LicenseCheckerTest {
         assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_LICENSE_STATUS))
         assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_LAST_CHECK))
         assertFalse(inMemoryPlainPrefs.contains(PrefsMigration.KEY_GRACE_UNTIL))
+    }
+
+    @Test
+    fun `check blocks app when backend returns UNLICENSED`() {
+        coEvery { api.checkLicense(any()) } returns Response.success(
+            LicenseCheckResponseDto(
+                status = "UNLICENSED",
+                expiryDate = null,
+                graceUntil = null
+            )
+        )
+
+        val result = kotlinx.coroutines.runBlocking { checker.check() }
+
+        assertTrue(result is LicenseStatus.Expired)
+        assertTrue(checker.blockingState.value is AppBlockingState.Blocked)
+        assertEquals(
+            "Устройство не лицензировано. Обратитесь в поддержку.",
+            (checker.blockingState.value as AppBlockingState.Blocked).reason
+        )
+    }
+
+    @Test
+    fun `check blocks app on first failed verification without prior active license`() {
+        val offlineApi = mockk<VitbonApi>()
+        val inMemoryPlainPrefs = InMemorySharedPreferences()
+        val inMemorySecurePrefs = InMemorySharedPreferences()
+        val localChecker = LicenseChecker(context, offlineApi, inMemoryPlainPrefs, inMemorySecurePrefs)
+        coEvery { offlineApi.checkLicense(any()) } throws RuntimeException("timeout")
+
+        val result = kotlinx.coroutines.runBlocking { localChecker.check() }
+
+        assertTrue(result is LicenseStatus.Error)
+        assertTrue(localChecker.blockingState.value is AppBlockingState.Blocked)
+        assertEquals(0L, inMemorySecurePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L))
+    }
+
+    @Test
+    fun `check starts grace after failed verification when device was previously active`() {
+        val offlineApi = mockk<VitbonApi>()
+        val inMemoryPlainPrefs = InMemorySharedPreferences()
+        val inMemorySecurePrefs = InMemorySharedPreferences().apply {
+            edit()
+                .putString(PrefsMigration.KEY_LICENSE_STATUS, "ACTIVE")
+                .putLong(PrefsMigration.KEY_LAST_CHECK, 1L)
+                .apply()
+        }
+        val localChecker = LicenseChecker(context, offlineApi, inMemoryPlainPrefs, inMemorySecurePrefs)
+        coEvery { offlineApi.checkLicense(any()) } returns Response.error(
+            503,
+            "unavailable".toResponseBody("text/plain".toMediaType())
+        )
+
+        val result = kotlinx.coroutines.runBlocking { localChecker.check() }
+
+        assertTrue(result is LicenseStatus.GracePeriod)
+        assertEquals(7, (result as LicenseStatus.GracePeriod).daysLeft)
+        assertTrue(localChecker.blockingState.value is AppBlockingState.Unblocked)
+        assertTrue(inMemorySecurePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L) > 0L)
     }
 
     private fun invokePrivateGraceMethod(methodName: String, now: Long, graceUntil: Long?): LicenseStatus {

@@ -3,8 +3,10 @@ package com.vitbon.kkm.domain.service
 import com.vitbon.kkm.api.dto.ShiftDto
 import com.vitbon.kkm.domain.persistence.ShiftEntity
 import com.vitbon.kkm.domain.persistence.ShiftRepository
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -20,16 +22,22 @@ class ShiftService(
     }
 
     @Transactional
-    fun open(shift: ShiftDto): ShiftDto {
-        val entity = shift.toEntity()
+    fun open(shift: ShiftDto, cashierId: String, deviceId: String): ShiftDto {
+        val entity = shift.toEntity(
+            cashierId = cashierId,
+            deviceId = deviceId
+        )
         shiftRepository.save(entity)
         return entity.toDto()
     }
 
     @Transactional
-    fun close(id: String): Unit {
+    fun close(id: String, cashierId: String, deviceId: String): Unit {
         val current = shiftRepository.findById(id.toUUID()).orElse(null) ?: return
         if (current.closedAt != null) return
+        if (current.cashierId != cashierId.toUUID() || current.deviceId != deviceId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden")
+        }
 
         val closed = ShiftEntity(
             id = current.id,
@@ -43,7 +51,7 @@ class ShiftService(
         shiftRepository.save(closed)
     }
 
-    private fun ShiftDto.toEntity(): ShiftEntity {
+    private fun ShiftDto.toEntity(cashierId: String, deviceId: String): ShiftEntity {
         return ShiftEntity(
             id = id.toUUID(),
             cashierId = cashierId.toUUID(),

@@ -61,6 +61,53 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
 
+  /audit/sync:
+    post:
+      tags: [Audit]
+      summary: Загрузить buffered audit events с Android
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, action, timestamp]
+                    properties:
+                      id: { type: string, format: uuid }
+                      cashierId: { type: string, format: uuid, nullable: true }
+                      deviceId: { type: string, nullable: true }
+                      action: { type: string }
+                      details: { type: string, nullable: true }
+                      timestamp: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Buffered audit events ingested into backend audit trail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  processed: { type: integer }
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        error: { type: string }
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
   /checks:
     post:
       tags: [Checks]
@@ -280,9 +327,9 @@ paths:
                 type: object
                 properties:
                   ofdQueueLength: { type: integer }
-                  lastSyncTimestamp: { type: integer, format: int64 }
+                  lastSyncTimestamp: { type: integer, format: int64, description: 0 when the backend has no device-scoped history yet }
                   cloudServerOk: { type: boolean }
-                  licenseStatus: { type: string }
+                  licenseStatus: { type: string, enum: [ACTIVE, EXPIRED, GRACE_PERIOD, UNLICENSED] }
 
   /license/check:
     post:
@@ -303,7 +350,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  status: { type: string, enum: [ACTIVE, EXPIRED, GRACE_PERIOD] }
+                  status: { type: string, enum: [ACTIVE, EXPIRED, GRACE_PERIOD, UNLICENSED] }
                   expiryDate: { type: integer, format: int64, nullable: true }
                   graceUntil: { type: integer, format: int64, nullable: true }
 
@@ -463,16 +510,40 @@ paths:
               type: string
               example: '<EgaisRequest>...</EgaisRequest>'
       responses:
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
         '200':
-          description: Ответ ЕГАИС
+          description: XML-ответ upstream ЕГАИС, проксированный без преобразования.
           content:
             application/xml:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+
+  /egais/status:
+    get:
+      tags: [ЕГАИС]
+      summary: Безопасная проверка доступности маршрута ЕГАИС
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Backend-side reachability required for EGAIS routes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
 
   /egais/tara:
     post:
@@ -480,12 +551,55 @@ paths:
       summary: Акт вскрытия тары
       security:
         - BearerAuth: []
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              type: string
+              example: '<ActChargeOnWrite>...</ActChargeOnWrite>'
       responses:
+        '200':
+          description: XML-ответ upstream ЕГАИС, проксированный без преобразования.
+          content:
+            application/xml:
+              schema:
+                type: string
+        '409':
+          description: Upstream ЕГАИС отклонил акт вскрытия тары.
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
-        '200': { description: Принято }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+
+  /chaseznak/validate:
+    post:
+      tags: [Честный ЗНАК]
+      summary: Валидация DataMatrix-кода в системе маркировки
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '200':
+          description: Нормализованный результат проверки кода маркировки.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChaseznakValidationResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /chaseznak/sell:
     post:
@@ -502,12 +616,21 @@ paths:
                 code: { type: string }
                 checkId: { type: string }
       responses:
+        '200':
+          description: Upstream-ответ на выбытие, проксированный без преобразования.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '202':
+          description: Upstream принял выбытие в асинхронную обработку.
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
-        '200': { description: Выбытие зарегистрировано }
-        '400': { description: Ошибка валидации кода }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /chaseznak/verify-age:
     post:
@@ -523,19 +646,18 @@ paths:
               properties:
                 qrData: { type: string }
       responses:
+        '200':
+          description: Результат верификации возраста.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgeVerificationResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
-        '200':
-          description: Результат верификации
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  verified: { type: boolean }
-                  verificationId: { type: string }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
 components:
   securitySchemes:
@@ -572,6 +694,10 @@ components:
               value:
                 code: FORBIDDEN
                 message: Forbidden
+    ServiceUnavailableError:
+      description: Service unavailable — integration endpoint is not configured or upstream integration is unavailable.
+    NotImplementedError:
+      description: Not implemented — endpoint is intentionally fail-closed until the production integration is configured.
 
   schemas:
     ErrorResponse:
@@ -580,6 +706,26 @@ components:
       properties:
         code: { type: string, enum: [UNAUTHORIZED, FORBIDDEN] }
         message: { type: string }
+
+    ChaseznakValidationResponse:
+      type: object
+      required: [barcode, status]
+      properties:
+        barcode: { type: string }
+        status:
+          type: string
+          enum: [OK, NOT_IN_CIRCULATION, ALREADY_SOLD, EXPIRED, ERROR]
+        productName: { type: string, nullable: true }
+        expiryDate: { type: integer, format: int64, nullable: true }
+        message: { type: string, nullable: true }
+
+    AgeVerificationResponse:
+      type: object
+      required: [verified]
+      properties:
+        verified: { type: boolean }
+        verificationId: { type: string, nullable: true }
+        message: { type: string, nullable: true }
 
     CheckDto:
       type: object

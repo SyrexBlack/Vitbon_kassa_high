@@ -2,6 +2,13 @@ package com.vitbon.kkm.features.sales.presentation
 
 import android.content.SharedPreferences
 import com.vitbon.kkm.core.features.FeatureFlag
+import com.vitbon.kkm.features.statuses.domain.ConnectionStatus
+import com.vitbon.kkm.features.statuses.domain.LicenseStatus
+import com.vitbon.kkm.features.statuses.domain.ModuleStatus
+import com.vitbon.kkm.features.statuses.domain.OfdStatus
+import com.vitbon.kkm.features.statuses.domain.ServiceStatus
+import com.vitbon.kkm.features.statuses.domain.StatusOperation
+import com.vitbon.kkm.features.statuses.domain.SystemStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -133,7 +140,47 @@ class SalesWarningBridgeTest {
         assertTrue(shouldShowChaseznakAction(enabledFlags))
     }
 
+    @Test
+    fun `resolveOptionalModuleActionMessage returns policy denial reason`() {
+        val status = baseStatus.copy(egaisModule = ModuleStatus.UNAVAILABLE)
+
+        val message = resolveOptionalModuleActionMessage(status, StatusOperation.EGAIS)
+
+        assertEquals("ЕГАИС временно недоступен. Проверьте интернет и облачный сервис.", message)
+    }
+
+    @Test
+    fun `resolveOptionalModuleActionMessage returns null for available module`() {
+        val message = resolveOptionalModuleActionMessage(baseStatus, StatusOperation.CHASEZNAK)
+
+        assertNull(message)
+    }
+
+    @Test
+    fun `resolveStatusWarningMessage exposes degraded sale warning`() {
+        val degradedStatus = baseStatus.copy(
+            ofd = OfdStatus(pendingChecks = 2, connected = false)
+        )
+
+        val warning = resolveStatusWarningMessage(degradedStatus)
+
+        assertEquals(
+            "ОФД недоступен, в очереди 2 чеков. Продажи разрешены локально, но требуется восстановить отправку.",
+            warning
+        )
+    }
+
 }
+
+private val baseStatus = SystemStatus(
+    internet = ConnectionStatus.AVAILABLE,
+    cloudServer = ServiceStatus.OK,
+    cloudLastSyncMs = 1_000L,
+    ofd = OfdStatus(pendingChecks = 0, connected = true),
+    chaseznakModule = ModuleStatus.ACTIVE,
+    egaisModule = ModuleStatus.ACTIVE,
+    license = LicenseStatus.ACTIVE
+)
 
 private class InMemorySharedPreferences : SharedPreferences {
     private val data = linkedMapOf<String, Any?>()

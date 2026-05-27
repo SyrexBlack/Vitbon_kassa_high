@@ -7,6 +7,8 @@ import com.vitbon.kkm.data.remote.api.VitbonApi
 import javax.inject.Inject
 import javax.inject.Singleton
 
+class ReportLoadException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
 @Singleton
 class ReportsUseCase @Inject constructor(
     private val checkDao: CheckDao,
@@ -15,11 +17,13 @@ class ReportsUseCase @Inject constructor(
     private val api: VitbonApi
 ) {
     suspend fun getMovementReport(period: String, since: Long): MovementReportData {
-        val remoteResponse = runCatching {
+        val remoteResponse = try {
             api.getMovementReport(period = period, since = since)
-        }.getOrNull()
+        } catch (error: Exception) {
+            throw ReportLoadException("Не удалось загрузить отчёт движения", error)
+        }
 
-        if (remoteResponse?.isSuccessful == true) {
+        if (remoteResponse.isSuccessful) {
             val body = remoteResponse.body()
             if (body != null) {
                 return MovementReportData(
@@ -41,24 +45,18 @@ class ReportsUseCase @Inject constructor(
             }
         }
 
-        return MovementReportData(
-            openingStock = 0.0,
-            income = 0.0,
-            sales = 0.0,
-            returns = 0.0,
-            writeoff = 0.0,
-            closingStock = 0.0,
-            items = emptyList()
-        )
+        throw ReportLoadException("Не удалось загрузить отчёт движения")
     }
 
     suspend fun getSalesReport(period: String, fromTs: Long, toTs: Long): SalesReport {
         val shiftId = if (period == "shift") shiftDao.findOpenShift()?.id else null
-        val remoteResponse = runCatching {
+        val remoteResponse = try {
             api.getSalesReport(period = period, shiftId = shiftId, since = fromTs)
-        }.getOrNull()
+        } catch (error: Exception) {
+            throw ReportLoadException("Не удалось загрузить отчёт", error)
+        }
 
-        if (remoteResponse?.isSuccessful == true) {
+        if (remoteResponse.isSuccessful) {
             val body = remoteResponse.body()
             if (body != null) {
                 return SalesReport(
@@ -82,37 +80,7 @@ class ReportsUseCase @Inject constructor(
             }
         }
 
-        val checksInRange = checkDao.findByDateRange(fromTs, toTs)
-        val checks = checksInRange.filter { it.type.equals("sale", ignoreCase = true) }
-        val returns = checksInRange.filter { it.type.equals("return", ignoreCase = true) }
-        val cashTotal = checks.filter { it.paymentType.equals("cash", ignoreCase = true) }.sumOf { it.total }
-        val cardTotal = checks.filter { it.paymentType.equals("card", ignoreCase = true) }.sumOf { it.total }
-        val sbpTotal = checks.filter { it.paymentType.equals("sbp", ignoreCase = true) }.sumOf { it.total }
-
-        val topProducts = checks
-            .flatMap { check -> checkItemDao.findByCheckId(check.id) }
-            .groupBy { it.name }
-            .map { (name, items) ->
-                ProductSales(
-                    name = name,
-                    quantity = items.sumOf { it.quantity },
-                    total = items.sumOf { it.total }
-                )
-            }
-            .sortedByDescending { it.total }
-
-        return SalesReport(
-            totalSales = checks.sumOf { it.total },
-            totalReturns = returns.sumOf { it.total },
-            cashTotal = cashTotal,
-            cardTotal = cardTotal,
-            sbpTotal = sbpTotal,
-            checkCount = checks.size,
-            returnCount = returns.size,
-            averageCheck = if (checks.isNotEmpty()) checks.sumOf { it.total } / checks.size else 0L,
-            topProducts = topProducts,
-            source = ReportDataSource.LOCAL
-        )
+        throw ReportLoadException("Не удалось загрузить отчёт")
     }
 }
 

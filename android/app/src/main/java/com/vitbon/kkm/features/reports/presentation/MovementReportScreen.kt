@@ -54,6 +54,22 @@ fun MovementReportScreen(
                 )
             }
 
+            state.error?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Text(
+                        text = error,
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             if (state.report != null) {
                 val r = state.report!!
                 LazyColumn(
@@ -112,7 +128,7 @@ fun MovementReportScreen(
                         }
                     }
                 }
-            } else {
+            } else if (state.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

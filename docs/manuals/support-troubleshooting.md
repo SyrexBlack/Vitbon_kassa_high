@@ -82,6 +82,7 @@
 - доступны ли интеграционные endpoint-ы:
   - `/api/v1/egais/incoming`
   - `/api/v1/egais/tara`
+   - `/api/v1/chaseznak/validate`
   - `/api/v1/chaseznak/sell`
   - `/api/v1/chaseznak/verify-age`
 

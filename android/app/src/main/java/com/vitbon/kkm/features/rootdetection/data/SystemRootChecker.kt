@@ -62,23 +62,28 @@ class SystemRootChecker : RootDetector {
 
     private fun detectDangerousProps(): Boolean {
         return try {
-            val debuggable = isSystemPropertyTrue("ro.debuggable")
-            val secure = isSystemPropertyTrue("ro.secure")
-            debuggable || secure
+            hasDangerousPropertyValues(
+                debuggable = readSystemProperty("ro.debuggable"),
+                secure = readSystemProperty("ro.secure")
+            )
         } catch (e: Exception) {
             false
         }
     }
 
-    private fun isSystemPropertyTrue(prop: String): Boolean {
+    internal fun hasDangerousPropertyValues(debuggable: String?, secure: String?): Boolean {
+        return debuggable?.trim() == "1" || secure?.trim() == "0"
+    }
+
+    private fun readSystemProperty(prop: String): String? {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("getprop", prop))
             val reader = process.inputStream.bufferedReader()
             val value = reader.readLine()?.trim()
             reader.close()
-            value == "1"
+            value
         } catch (e: Exception) {
-            false
+            null
         }
     }
 

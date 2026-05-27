@@ -35,6 +35,29 @@ data class CheckSyncRequestDto(
     val checks: List<CheckDto>
 )
 
+data class AuditSyncRequestDto(
+    val events: List<AuditSyncEntryDto>
+)
+
+data class AuditSyncEntryDto(
+    val id: String,
+    val cashierId: String?,
+    val deviceId: String?,
+    val action: String,
+    val details: String?,
+    val timestamp: Long
+)
+
+data class AuditSyncResponseDto(
+    val processed: Int,
+    val failed: List<FailedAuditSyncDto>
+)
+
+data class FailedAuditSyncDto(
+    val id: String,
+    val error: String
+)
+
 data class CheckDto(
     val id: String,
     val localUuid: String,
@@ -124,7 +147,7 @@ data class LicenseCheckRequestDto(
 )
 
 data class LicenseCheckResponseDto(
-    val status: String,  // ACTIVE, EXPIRED, GRACE_PERIOD
+    val status: String,  // ACTIVE, EXPIRED, GRACE_PERIOD, UNLICENSED
     val expiryDate: Long?,
     val graceUntil: Long?
 )
@@ -134,6 +157,18 @@ data class StatusResponseDto(
     val lastSyncTimestamp: Long,
     val cloudServerOk: Boolean,
     val licenseStatus: String
+)
+
+data class EgaisStatusDto(
+    val available: Boolean
+)
+
+data class ChaseznakValidationDto(
+    val barcode: String,
+    val status: String,
+    val productName: String?,
+    val expiryDate: Long?,
+    val message: String?
 )
 
 data class ProductSalesDto(

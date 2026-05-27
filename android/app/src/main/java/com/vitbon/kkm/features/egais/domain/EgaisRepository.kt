@@ -18,10 +18,8 @@ class EgaisRepository @Inject constructor(
      */
     suspend fun checkUtmAvailable(): Boolean {
         return try {
-            // Проксируем через бэкенд — он обращается к УТМ
-            // Вместо реального ping — простой запрос
-            val response = api.egaisIncoming("{}")
-            response.isSuccessful
+            val response = api.getEgaisStatus()
+            response.isSuccessful && response.body()?.available == true
         } catch (e: Exception) {
             Log.w(TAG, "УТМ недоступен: ${e.message}")
             false

@@ -2,6 +2,7 @@ package com.vitbon.kkm.features.reports.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitbon.kkm.features.reports.domain.ReportLoadException
 import com.vitbon.kkm.features.reports.domain.ReportsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 data class MovementState(
     val period: String = "day",
     val report: MovementReport? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 data class MovementReport(
@@ -53,27 +55,31 @@ class MovementReportViewModel @Inject constructor(
 
     private fun load() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             val period = _state.value.period
             val since = resolveSince(period)
-            val reportData = reportsUseCase.getMovementReport(period = period, since = since)
-            val report = MovementReport(
-                openingStock = reportData.openingStock,
-                income = reportData.income,
-                sales = reportData.sales,
-                returns = reportData.returns,
-                writeoff = reportData.writeoff,
-                closingStock = reportData.closingStock,
-                items = reportData.items.map {
-                    MovementItem(
-                        name = it.name,
-                        income = it.income,
-                        sales = it.sales,
-                        balance = it.balance
-                    )
-                }
-            )
-            _state.update { it.copy(isLoading = false, report = report) }
+            try {
+                val reportData = reportsUseCase.getMovementReport(period = period, since = since)
+                val report = MovementReport(
+                    openingStock = reportData.openingStock,
+                    income = reportData.income,
+                    sales = reportData.sales,
+                    returns = reportData.returns,
+                    writeoff = reportData.writeoff,
+                    closingStock = reportData.closingStock,
+                    items = reportData.items.map {
+                        MovementItem(
+                            name = it.name,
+                            income = it.income,
+                            sales = it.sales,
+                            balance = it.balance
+                        )
+                    }
+                )
+                _state.update { it.copy(isLoading = false, report = report, error = null) }
+            } catch (error: ReportLoadException) {
+                _state.update { it.copy(isLoading = false, report = null, error = error.message) }
+            }
         }
     }
 

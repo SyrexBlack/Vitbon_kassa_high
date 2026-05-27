@@ -1,6 +1,7 @@
 package com.vitbon.kkm.di
 
 import android.content.Context
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import com.vitbon.kkm.features.rootdetection.data.SystemRootChecker
 import com.vitbon.kkm.features.rootdetection.domain.RootDetector
@@ -26,5 +27,6 @@ object RootDetectionModule {
         detector: RootDetector,
         prefs: android.content.SharedPreferences,
         @SecurePrefs securePrefs: android.content.SharedPreferences
-    ): RootRiskGuard = RootRiskGuard(context, detector, prefs, securePrefs)
+    ): RootRiskGuard = RootRiskGuard(context, detector, prefs, securePrefs,
+        debugBypass = BuildConfig.DEBUG)
 }

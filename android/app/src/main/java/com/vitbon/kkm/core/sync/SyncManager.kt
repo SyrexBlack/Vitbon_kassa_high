@@ -3,6 +3,7 @@ package com.vitbon.kkm.core.sync
 import com.vitbon.kkm.data.local.dao.CheckDao
 import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.dao.ProductDao
+import com.vitbon.kkm.data.local.entity.AuditLogEntry
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.*
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,7 @@ class SyncManager @Inject constructor(
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao,
     private val productDao: ProductDao,
+    private val auditBufferRepository: LocalAuditBufferRepository,
     private val syncPrefs: SyncPrefs
 ) {
     /** Наблюдение за количеством несинхронизированных чеков */
@@ -121,6 +123,43 @@ class SyncManager @Inject constructor(
         } catch (e: Exception) {
             ProductSyncResult(0, 0)
         }
+    }
+
+    suspend fun syncAuditLogs(): SyncResult {
+        val pending = auditBufferRepository.pending(AUDIT_BATCH_LIMIT)
+        if (pending.isEmpty()) return SyncResult(0, 0)
+
+        return try {
+            val response = api.syncAudit(
+                AuditSyncRequestDto(
+                    events = pending.map { it.toAuditSyncEntryDto() }
+                )
+            )
+            if (response.isSuccessful) {
+                val body = response.body() ?: return SyncResult(0, pending.size)
+                val failedIds = body.failed.map { it.id }.toSet()
+                val acknowledgedIds = pending.map { it.id }.filterNot { it in failedIds }
+                auditBufferRepository.acknowledge(acknowledgedIds)
+                SyncResult(acknowledgedIds.size, failedIds.size)
+            } else {
+                SyncResult(0, pending.size)
+            }
+        } catch (e: Exception) {
+            SyncResult(0, pending.size)
+        }
+    }
+
+    private fun AuditLogEntry.toAuditSyncEntryDto(): AuditSyncEntryDto = AuditSyncEntryDto(
+        id = id,
+        cashierId = cashierId,
+        deviceId = deviceId,
+        action = action,
+        details = details,
+        timestamp = timestamp
+    )
+
+    private companion object {
+        const val AUDIT_BATCH_LIMIT = 100
     }
 }
 

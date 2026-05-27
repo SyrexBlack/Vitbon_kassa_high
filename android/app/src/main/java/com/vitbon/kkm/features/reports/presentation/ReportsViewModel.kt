@@ -15,7 +15,8 @@ import javax.inject.Inject
 data class ReportsState(
     val period: String = "shift",
     val report: SalesReport? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -32,11 +33,15 @@ class ReportsViewModel @Inject constructor(private val useCase: ReportsUseCase) 
 
     private fun load() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, error = null) }
             val period = _state.value.period
             val (from, to) = getPeriodRange(period)
-            val report = useCase.getSalesReport(period, from, to)
-            _state.update { it.copy(report = report, isLoading = false) }
+            try {
+                val report = useCase.getSalesReport(period, from, to)
+                _state.update { it.copy(report = report, isLoading = false, error = null) }
+            } catch (error: ReportLoadException) {
+                _state.update { it.copy(report = null, isLoading = false, error = error.message) }
+            }
         }
     }
 

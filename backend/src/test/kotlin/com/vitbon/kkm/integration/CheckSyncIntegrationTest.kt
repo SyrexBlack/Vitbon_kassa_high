@@ -2,9 +2,17 @@ package com.vitbon.kkm.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitbon.kkm.api.dto.*
+import com.vitbon.kkm.domain.persistence.AuthSessionRepository
+import com.vitbon.kkm.domain.persistence.CashierEntity
+import com.vitbon.kkm.domain.persistence.CashierRepository
+import com.vitbon.kkm.domain.persistence.CheckRepository
+import com.vitbon.kkm.domain.persistence.ShiftEntity
+import com.vitbon.kkm.domain.persistence.ShiftRepository
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
@@ -12,29 +20,74 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import org.springframework.web.context.WebApplicationContext
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.util.UUID
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class CheckSyncIntegrationTest {
 
     @Autowired
-    lateinit var context: WebApplicationContext
+    lateinit var mockMvc: MockMvc
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
 
+    @Autowired
+    lateinit var authSessionRepository: AuthSessionRepository
+
+    @Autowired
+    lateinit var cashierRepository: CashierRepository
+
+    @Autowired
+    lateinit var shiftRepository: ShiftRepository
+
+    @Autowired
+    lateinit var checkRepository: CheckRepository
+
+    @BeforeEach
+    fun setUpFixture() {
+        authSessionRepository.deleteAll()
+        checkRepository.deleteAll()
+        shiftRepository.deleteAll()
+        cashierRepository.deleteAll()
+
+        cashierRepository.save(
+            CashierEntity(
+                id = UUID.fromString(CASHIER_ID),
+                name = "Демо Кассир",
+                pinHash = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+                role = "CASHIER",
+                createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+            )
+        )
+
+        shiftRepository.save(
+            ShiftEntity(
+                id = UUID.fromString(SHIFT_ID),
+                cashierId = UUID.fromString(CASHIER_ID),
+                deviceId = DEVICE_ID,
+                openedAt = System.currentTimeMillis().toOffsetDateTime(),
+                closedAt = null,
+                totalCash = 0L,
+                totalCard = 0L
+            )
+        )
+    }
+
     @Test
     fun `POST checks-sync — accepts valid check and returns processed count`() {
-        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val token = loginAndGetToken()
 
         val request = CheckSyncRequestDto(listOf(
             CheckDto(
                 id = "test-uuid-1",
                 localUuid = "local-uuid-1",
-                shiftId = null,
-                cashierId = null,
-                deviceId = "TEST-DEVICE",
+                shiftId = SHIFT_ID,
+                cashierId = CASHIER_ID,
+                deviceId = DEVICE_ID,
                 type = "SALE",
                 fiscalSign = null,
                 ffdVersion = "1.05",
@@ -62,6 +115,8 @@ class CheckSyncIntegrationTest {
 
         mockMvc.perform(
             post("/api/v1/checks/sync")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         )
@@ -73,7 +128,7 @@ class CheckSyncIntegrationTest {
 
     @Test
     fun `POST checks creates single check and GET checks by id returns it`() {
-        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val token = loginAndGetToken()
         val now = System.currentTimeMillis()
         val checkId = "33333333-3333-3333-3333-333333333333"
         val itemId = "44444444-4444-4444-4444-444444444444"
@@ -81,9 +136,9 @@ class CheckSyncIntegrationTest {
         val check = CheckDto(
             id = checkId,
             localUuid = "single-local-1",
-            shiftId = "shift-single-1",
-            cashierId = null,
-            deviceId = "TEST-DEVICE",
+            shiftId = SHIFT_ID,
+            cashierId = CASHIER_ID,
+            deviceId = DEVICE_ID,
             type = "SALE",
             fiscalSign = null,
             ffdVersion = "1.05",
@@ -110,13 +165,19 @@ class CheckSyncIntegrationTest {
 
         mockMvc.perform(
             post("/api/v1/checks")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(check))
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(checkId))
 
-        mockMvc.perform(get("/api/v1/checks/$checkId"))
+        mockMvc.perform(
+            get("/api/v1/checks/$checkId")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(checkId))
             .andExpect(jsonPath("$.items[0].id").value(itemId))
@@ -124,15 +185,19 @@ class CheckSyncIntegrationTest {
 
     @Test
     fun `GET checks by id returns 404 for unknown id`() {
-        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val token = loginAndGetToken()
 
-        mockMvc.perform(get("/api/v1/checks/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+        mockMvc.perform(
+            get("/api/v1/checks/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
+        )
             .andExpect(status().isNotFound)
     }
 
     @Test
     fun `GET checks returns persisted checks after sync`() {
-        val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+        val token = loginAndGetToken()
         val now = System.currentTimeMillis()
         val checkId = "11111111-1111-1111-1111-111111111111"
         val itemId = "22222222-2222-2222-2222-222222222222"
@@ -141,9 +206,9 @@ class CheckSyncIntegrationTest {
             CheckDto(
                 id = checkId,
                 localUuid = "persist-local-1",
-                shiftId = "shift-persist-1",
-                cashierId = null,
-                deviceId = "TEST-DEVICE",
+                shiftId = SHIFT_ID,
+                cashierId = CASHIER_ID,
+                deviceId = DEVICE_ID,
                 type = "SALE",
                 fiscalSign = null,
                 ffdVersion = "1.05",
@@ -171,6 +236,8 @@ class CheckSyncIntegrationTest {
 
         mockMvc.perform(
             post("/api/v1/checks/sync")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
         )
@@ -178,7 +245,9 @@ class CheckSyncIntegrationTest {
 
         mockMvc.perform(
             get("/api/v1/checks")
-                .param("shiftId", "shift-persist-1")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", DEVICE_ID)
+                .param("shiftId", SHIFT_ID)
                 .param("since", (now - 1).toString())
         )
             .andExpect(status().isOk)
@@ -202,5 +271,27 @@ class CheckSyncIntegrationTest {
         val response = CheckSyncResponseDto(processed = 5, failed = emptyList())
         assertEquals(5, response.processed)
         assertTrue(response.failed.isEmpty())
+    }
+
+    private fun loginAndGetToken(): String {
+        val loginBody = LoginRequestDto(pin = "1234", deviceId = DEVICE_ID)
+        val loginResponse = mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginBody))
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        return objectMapper.readTree(loginResponse.response.contentAsString)
+            .get("token")
+            .asText()
+    }
+
+    private fun Long.toOffsetDateTime() = OffsetDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneOffset.UTC)
+
+    private companion object {
+        const val CASHIER_ID = "11111111-1111-1111-1111-111111111111"
+        const val SHIFT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        const val DEVICE_ID = "TEST-DEVICE"
     }
 }

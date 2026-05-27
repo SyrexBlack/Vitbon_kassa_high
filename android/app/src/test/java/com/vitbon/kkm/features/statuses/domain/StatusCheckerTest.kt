@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import com.vitbon.kkm.core.features.FeatureFlag
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.core.sync.SyncManager
 import com.vitbon.kkm.data.remote.api.VitbonApi
@@ -77,6 +78,45 @@ class StatusCheckerTest {
         assertEquals(ServiceStatus.ERROR, status.cloudServer)
         assertEquals(3, status.ofd.pendingChecks)
         assertEquals(false, status.ofd.connected)
+        coVerify(exactly = 0) { api.getStatuses() }
+    }
+
+    @Test
+    fun `check maps unlicensed status to expired and ignores zero remote sync timestamp`() = runBlocking {
+        mockOnlineStatus(isOnline = true)
+        every { syncManager.observePendingCount() } returns flowOf(0)
+        every { licenseChecker.status } returns licenseStatusFlow
+        every { featureManager.isEnabledSync(any()) } returns false
+        coEvery { api.getStatuses() } returns Response.success(
+            StatusResponseDto(
+                ofdQueueLength = 0,
+                lastSyncTimestamp = 0L,
+                cloudServerOk = true,
+                licenseStatus = "UNLICENSED"
+            )
+        )
+
+        checker.check()
+
+        val status = checker.status.value
+        assertEquals(null, status.cloudLastSyncMs)
+        assertEquals(LicenseStatus.EXPIRED, status.license)
+        coVerify(exactly = 1) { api.getStatuses() }
+    }
+
+    @Test
+    fun `check marks enabled optional modules unavailable when device is offline`() = runBlocking {
+        mockOnlineStatus(isOnline = false)
+        every { syncManager.observePendingCount() } returns flowOf(1)
+        every { licenseChecker.status } returns licenseStatusFlow
+        every { featureManager.isEnabledSync(FeatureFlag.EGAAIS_ENABLED) } returns true
+        every { featureManager.isEnabledSync(FeatureFlag.CHASEZNAK_ENABLED) } returns true
+
+        checker.check()
+
+        val status = checker.status.value
+        assertEquals(ModuleStatus.UNAVAILABLE, status.egaisModule)
+        assertEquals(ModuleStatus.UNAVAILABLE, status.chaseznakModule)
         coVerify(exactly = 0) { api.getStatuses() }
     }
 

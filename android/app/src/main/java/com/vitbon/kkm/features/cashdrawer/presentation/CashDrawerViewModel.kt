@@ -42,7 +42,17 @@ class CashDrawerViewModel @Inject constructor(
             val emergencyActive = authUseCase.isEmergencySessionActive()
             val isCashIn = _state.value.type == "in"
             val allowed = if (isCashIn) useCase.canCashIn(role) else useCase.canCashOut(role)
-            if (emergencyActive || !allowed) {
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied(if (isCashIn) "CASH_IN" else "CASH_OUT")
+                _state.update {
+                    it.copy(
+                        isSubmitting = false,
+                        error = RolePolicy.ACCESS_DENIED_MESSAGE
+                    )
+                }
+                return@launch
+            }
+            if (!allowed) {
                 _state.update {
                     it.copy(
                         isSubmitting = false,

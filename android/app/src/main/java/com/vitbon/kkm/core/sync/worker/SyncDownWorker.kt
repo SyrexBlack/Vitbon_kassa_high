@@ -26,7 +26,7 @@ class SyncDownWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "sync_down"
-        const val INTERVAL_MINUTES = 1L
+        const val INTERVAL_MINUTES = 15L
 
         fun schedulePeriodic(context: Context) {
             val constraints = Constraints.Builder()

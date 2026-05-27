@@ -143,6 +143,9 @@ class ReturnViewModel @Inject constructor(
             _state.update { it.copy(isProcessing = true, error = null) }
             val role = authUseCase.getCurrentCashierRole()
             val emergencyActive = authUseCase.isEmergencySessionActive()
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied("RETURN")
+            }
 
             val check = _state.value.originalCheck
             if (check == null) {

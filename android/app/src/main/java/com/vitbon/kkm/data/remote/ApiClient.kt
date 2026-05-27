@@ -7,9 +7,19 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
+
+    internal fun createRetrofit(baseUrl: String, client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
 
     internal fun buildAuthorizationHeader(tokenStore: AuthTokenStore): String? {
         val token = tokenStore.read()
@@ -20,10 +30,19 @@ object ApiClient {
         return rawDeviceId?.trim()?.takeIf { it.isNotBlank() }
     }
 
-    fun create(tokenStore: AuthTokenStore, deviceIdProvider: () -> String?): VitbonApi {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+    internal fun createLoggingInterceptor(): HttpLoggingInterceptor {
+        return HttpLoggingInterceptor().apply {
+            redactHeader("Authorization")
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
+    }
+
+    fun create(tokenStore: AuthTokenStore, deviceIdProvider: () -> String?): VitbonApi {
+        val logging = createLoggingInterceptor()
 
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -42,11 +61,10 @@ object ApiClient {
             }
             .build()
 
-        return Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        return createRetrofit(
+            baseUrl = BuildConfig.API_BASE_URL,
+            client = client
+        )
             .create(VitbonApi::class.java)
     }
 }

@@ -36,12 +36,14 @@
 
 ### ЕГАИС
 1. Настройки → Модули → ЕГАИС
+2. Убедитесь, что backend включает модуль через server-side feature flag и настроен `EGAIS_INCOMING_URL` / `EGAIS_TARA_URL`
 2. Введите адрес УТМ: `http://localhost:8080`
 3. Загрузите RSA-сертификат
 4. Активировать
 
 ### Честный ЗНАК
 1. Настройки → Модули → Маркировка
+2. Убедитесь, что backend включает модуль через server-side feature flag и настроены `CHASEZNAK_VALIDATE_URL`, `CHASEZNAK_SELL_URL`, `CHASEZNAK_VERIFY_AGE_URL`
 2. Подключите ЛМ ЧЗ (локальный модуль)
 3. Активировать
 

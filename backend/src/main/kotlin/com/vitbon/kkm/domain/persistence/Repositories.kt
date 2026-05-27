@@ -5,12 +5,20 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 interface CheckRepository : JpaRepository<CheckEntity, UUID> {
+    fun findByLocalUuid(localUuid: String): CheckEntity?
     fun findByShiftId(shiftId: UUID): List<CheckEntity>
+    fun findAllByCashierIdAndDeviceId(cashierId: UUID, deviceId: String): List<CheckEntity>
     fun findByCreatedAtGreaterThanEqual(since: OffsetDateTime): List<CheckEntity>
     fun findByShiftIdAndCreatedAtGreaterThanEqual(shiftId: UUID, since: OffsetDateTime): List<CheckEntity>
 }
 
 interface DocumentRepository : JpaRepository<DocumentEntity, UUID> {
+    fun findAllByCashierIdAndDeviceId(cashierId: UUID, deviceId: String): List<DocumentEntity>
+    fun findByCashierIdAndDeviceIdAndTimestampGreaterThanEqual(
+        cashierId: UUID,
+        deviceId: String,
+        since: OffsetDateTime
+    ): List<DocumentEntity>
     fun findByTimestampGreaterThanEqual(since: OffsetDateTime): List<DocumentEntity>
 }
 

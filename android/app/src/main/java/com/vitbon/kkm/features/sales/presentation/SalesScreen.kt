@@ -19,9 +19,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.features.FeatureFlag
 import com.vitbon.kkm.features.sales.domain.CartItem
 import com.vitbon.kkm.features.sales.domain.SaleResult
+import com.vitbon.kkm.features.statuses.domain.StatusOperation
+import com.vitbon.kkm.features.statuses.domain.StatusOperationPolicy
+import com.vitbon.kkm.features.statuses.domain.SystemStatus
 import com.vitbon.kkm.features.statuses.presentation.StatusBar
 import com.vitbon.kkm.features.statuses.presentation.StatusViewModel
 import kotlinx.coroutines.launch
@@ -85,6 +89,16 @@ fun SalesScreen(
     }
 
     val coroutineScope = rememberCoroutineScope()
+    val egaisActionMessage = remember(status) {
+        resolveOptionalModuleActionMessage(status, StatusOperation.EGAIS)
+    }
+    val chaseznakActionMessage = remember(status) {
+        resolveOptionalModuleActionMessage(status, StatusOperation.CHASEZNAK)
+    }
+    val saleStatusWarning = remember(status) {
+        resolveStatusWarningMessage(status)
+    }
+    var lastStatusWarning by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(Unit) {
         val listener = createBackendWarningPreferenceListener(prefs) { warning ->
@@ -102,6 +116,21 @@ fun SalesScreen(
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose {
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    LaunchedEffect(saleStatusWarning) {
+        val warning = saleStatusWarning
+        if (warning == null) {
+            lastStatusWarning = null
+            return@LaunchedEffect
+        }
+        if (warning != lastStatusWarning) {
+            lastStatusWarning = warning
+            snackbarHostState.showSnackbar(
+                message = warning,
+                withDismissAction = true
+            )
         }
     }
 
@@ -138,7 +167,19 @@ fun SalesScreen(
                 ) {
                     if (shouldShowEgaisAction(enabledFeatures)) {
                         OutlinedButton(
-                            onClick = onOpenEgais,
+                            onClick = {
+                                val blockReason = egaisActionMessage
+                                if (blockReason == null) {
+                                    onOpenEgais()
+                                } else {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = blockReason,
+                                            withDismissAction = true
+                                        )
+                                    }
+                                }
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("ЕГАИС")
@@ -146,7 +187,19 @@ fun SalesScreen(
                     }
                     if (shouldShowChaseznakAction(enabledFeatures)) {
                         OutlinedButton(
-                            onClick = onOpenChaseznak,
+                            onClick = {
+                                val blockReason = chaseznakActionMessage
+                                if (blockReason == null) {
+                                    onOpenChaseznak()
+                                } else {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = blockReason,
+                                            withDismissAction = true
+                                        )
+                                    }
+                                }
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Честный ЗНАК")
@@ -156,21 +209,35 @@ fun SalesScreen(
             }
 
             // Поиск / сканер
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = { viewModel.search(it) },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Штрихкод или поиск...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { /* сканер */ }) {
-                        Icon(Icons.Default.QrCodeScanner, "Сканер")
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = { viewModel.search(it) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Штрихкод или поиск...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { /* сканер */ }) {
+                            Icon(Icons.Default.QrCodeScanner, "Сканер")
+                        }
+                    },
+                    singleLine = true
+                )
+                if (BuildConfig.DEBUG) {
+                    FilledTonalButton(
+                        onClick = { viewModel.addTestProduct() },
+                        modifier = Modifier.height(56.dp)
+                    ) {
+                        Text("+Товар")
                     }
-                },
-                singleLine = true
-            )
+                }
+            }
 
             // Результат сканирования
             if (state.scanError != null) {
@@ -362,6 +429,22 @@ fun shouldShowEgaisAction(enabledFeatures: Set<FeatureFlag>): Boolean {
 
 fun shouldShowChaseznakAction(enabledFeatures: Set<FeatureFlag>): Boolean {
     return FeatureFlag.CHASEZNAK_ENABLED in enabledFeatures
+}
+
+fun resolveOptionalModuleActionMessage(
+    status: SystemStatus,
+    operation: StatusOperation
+): String? {
+    val decision = StatusOperationPolicy.evaluate(status, operation)
+    return if (decision.allowed) {
+        null
+    } else {
+        decision.reason
+    }
+}
+
+fun resolveStatusWarningMessage(status: SystemStatus): String? {
+    return StatusOperationPolicy.evaluate(status, StatusOperation.SALE).warning
 }
 
 @Composable

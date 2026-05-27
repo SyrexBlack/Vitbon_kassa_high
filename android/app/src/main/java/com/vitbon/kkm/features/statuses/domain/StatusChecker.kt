@@ -54,23 +54,23 @@ class StatusChecker @Inject constructor(
             connected = internet == ConnectionStatus.AVAILABLE && remoteBody != null
         )
 
-        val egaisModule = if (featureManager.isEnabledSync(FeatureFlag.EGAAIS_ENABLED)) {
-            ModuleStatus.ACTIVE
-        } else {
-            ModuleStatus.INACTIVE
-        }
+        val egaisModule = resolveModuleStatus(
+            isEnabled = featureManager.isEnabledSync(FeatureFlag.EGAAIS_ENABLED),
+            internet = internet,
+            cloudServer = cloudServer
+        )
 
-        val chaseznakModule = if (featureManager.isEnabledSync(FeatureFlag.CHASEZNAK_ENABLED)) {
-            ModuleStatus.ACTIVE
-        } else {
-            ModuleStatus.INACTIVE
-        }
+        val chaseznakModule = resolveModuleStatus(
+            isEnabled = featureManager.isEnabledSync(FeatureFlag.CHASEZNAK_ENABLED),
+            internet = internet,
+            cloudServer = cloudServer
+        )
 
         _status.update {
             it.copy(
                 internet = internet,
                 cloudServer = cloudServer,
-                cloudLastSyncMs = remoteBody?.lastSyncTimestamp,
+                cloudLastSyncMs = remoteBody?.lastSyncTimestamp?.takeIf { timestamp -> timestamp > 0L },
                 ofd = ofdStatus,
                 chaseznakModule = chaseznakModule,
                 egaisModule = egaisModule,
@@ -83,8 +83,21 @@ class StatusChecker @Inject constructor(
         return when (remoteStatus?.uppercase()) {
             "ACTIVE" -> LicenseStatus.ACTIVE
             "GRACE_PERIOD" -> LicenseStatus.GRACE_PERIOD
+            "UNLICENSED" -> LicenseStatus.EXPIRED
             "EXPIRED" -> LicenseStatus.EXPIRED
             else -> mapDomainLicense(licenseChecker.status.value)
+        }
+    }
+
+    private fun resolveModuleStatus(
+        isEnabled: Boolean,
+        internet: ConnectionStatus,
+        cloudServer: ServiceStatus
+    ): ModuleStatus {
+        return when {
+            !isEnabled -> ModuleStatus.INACTIVE
+            internet != ConnectionStatus.AVAILABLE || cloudServer != ServiceStatus.OK -> ModuleStatus.UNAVAILABLE
+            else -> ModuleStatus.ACTIVE
         }
     }
 

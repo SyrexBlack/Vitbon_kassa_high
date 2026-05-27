@@ -36,7 +36,12 @@ class SyncService @Inject constructor(
      */
     suspend fun syncNow(): SyncResult {
         val manager = syncManager
-        return manager.syncChecks()
+        val checks = manager.syncChecks()
+        val audit = manager.syncAuditLogs()
+        return SyncResult(
+            synced = checks.synced + audit.synced,
+            failed = checks.failed + audit.failed
+        )
     }
 
     /**

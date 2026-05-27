@@ -19,6 +19,7 @@ private const val TAG = "LicenseChecker"
 private const val GRACE_PERIOD_DAYS = 7L
 private const val DAY_MS = 24 * 60 * 60 * 1000L
 private const val CHECK_INTERVAL_MS = DAY_MS  // 24 hours
+private const val LICENSE_VERIFICATION_FAILED_REASON = "Не удалось подтвердить статус лицензии. Подключите сеть или обратитесь в поддержку."
 
 @Singleton
 class LicenseChecker @Inject constructor(
@@ -75,10 +76,23 @@ class LicenseChecker @Inject constructor(
                     "GRACE_PERIOD" -> {
                         handleGracePeriod(now, body.graceUntil)
                     }
+                    "UNLICENSED" -> {
+                        securePrefs.edit()
+                            .putLong(PrefsMigration.KEY_LAST_CHECK, now)
+                            .putString(PrefsMigration.KEY_LICENSE_STATUS, "UNLICENSED")
+                            .remove(PrefsMigration.KEY_GRACE_UNTIL)
+                            .apply()
+                        _status.value = LicenseStatus.Expired
+                        _blockingState.value = AppBlockingState.Blocked("Устройство не лицензировано. Обратитесь в поддержку.")
+                        Log.w(TAG, "License: UNLICENSED, blocked")
+                        LicenseStatus.Expired
+                    }
                     else -> {
-                        // При ошибке сервера — считать активным (не блокировать)
+                        // Неизвестный ответ сервера не должен silently разблокировать кассу.
                         Log.w(TAG, "Unknown license status: ${body.status}")
-                        LicenseStatus.Active
+                        _status.value = LicenseStatus.Error("Неизвестный статус лицензии: ${body.status}")
+                        _blockingState.value = AppBlockingState.Blocked(LICENSE_VERIFICATION_FAILED_REASON)
+                        _status.value
                     }
                 }
             } else {
@@ -139,24 +153,33 @@ class LicenseChecker @Inject constructor(
 
     private fun checkGraceExpired(): LicenseStatus {
         val graceUntil = securePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L)
+        val lastKnownStatus = securePrefs.getString(PrefsMigration.KEY_LICENSE_STATUS, null)
         val now = System.currentTimeMillis()
         val daysLeft = calculateDaysLeft(graceUntil, now)
 
-        return if (graceUntil == 0L) {
-            // Никогда не проверяли — запустить grace period
-            val newGrace = now + GRACE_PERIOD_DAYS * DAY_MS
-            securePrefs.edit().putLong(PrefsMigration.KEY_GRACE_UNTIL, newGrace).apply()
-            _status.value = LicenseStatus.GracePeriod(7)
-            _blockingState.value = AppBlockingState.Unblocked
-            LicenseStatus.GracePeriod(7)
-        } else if (daysLeft > 0) {
+        return if (graceUntil > 0L && daysLeft > 0) {
             _status.value = LicenseStatus.GracePeriod(daysLeft)
             _blockingState.value = AppBlockingState.Unblocked
             LicenseStatus.GracePeriod(daysLeft)
-        } else {
+        } else if (graceUntil > 0L) {
             _status.value = LicenseStatus.Expired
             _blockingState.value = AppBlockingState.Blocked("Лицензия просрочена. Обратитесь в поддержку.")
             LicenseStatus.Expired
+        } else if (lastKnownStatus == "ACTIVE") {
+            val newGrace = now + GRACE_PERIOD_DAYS * DAY_MS
+            val graceDays = calculateDaysLeft(newGrace, now)
+            securePrefs.edit()
+                .putLong(PrefsMigration.KEY_LAST_CHECK, now)
+                .putLong(PrefsMigration.KEY_GRACE_UNTIL, newGrace)
+                .putString(PrefsMigration.KEY_LICENSE_STATUS, "GRACE_PERIOD")
+                .apply()
+            _status.value = LicenseStatus.GracePeriod(graceDays)
+            _blockingState.value = AppBlockingState.Unblocked
+            LicenseStatus.GracePeriod(graceDays)
+        } else {
+            _status.value = LicenseStatus.Error(LICENSE_VERIFICATION_FAILED_REASON)
+            _blockingState.value = AppBlockingState.Blocked(LICENSE_VERIFICATION_FAILED_REASON)
+            _status.value
         }
     }
 

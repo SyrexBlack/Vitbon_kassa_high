@@ -16,8 +16,10 @@ class SyncUpWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val result = syncManager.syncChecks()
-        return if (result.failed == 0) {
+        val checkResult = syncManager.syncChecks()
+        val auditResult = syncManager.syncAuditLogs()
+        val totalFailed = checkResult.failed + auditResult.failed
+        return if (totalFailed == 0) {
             Result.success()
         } else if (runAttemptCount < MAX_RETRIES) {
             Result.retry()

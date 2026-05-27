@@ -119,6 +119,18 @@ class SessionAuthFilter(
             reason = null
         )
 
-        chain.doFilter(request, response)
+        SecurityContextHolder.set(
+            AuthPrincipal(
+                cashierId = session.cashierId,
+                role = role,
+                deviceId = session.deviceId,
+                sessionId = session.id
+            )
+        )
+        try {
+            chain.doFilter(request, response)
+        } finally {
+            SecurityContextHolder.clear()
+        }
     }
 }

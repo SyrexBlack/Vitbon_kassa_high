@@ -28,7 +28,10 @@ class ChaseznakViewModel @Inject constructor(
 
     fun onScan(code: String) {
         _state.update { it.copy(scanInput = code, isValidating = true) }
-        if (code.length < 20) return
+        if (code.length < 20) {
+            _state.update { it.copy(isValidating = false) }
+            return
+        }
 
         viewModelScope.launch {
             val validation = repository.validateCode(code)
@@ -40,7 +43,8 @@ class ChaseznakViewModel @Inject constructor(
                         status = validation.status,
                         productName = validation.productName
                     ),
-                    scanInput = ""
+                    scanInput = "",
+                    error = validation.message
                 )
             }
         }
@@ -52,10 +56,21 @@ class ChaseznakViewModel @Inject constructor(
 
     fun sellAll(onComplete: () -> Unit) {
         viewModelScope.launch {
-            _state.update { it.copy(isSelling = true) }
+            _state.update { it.copy(isSelling = true, error = null) }
             val okItems = _state.value.items.filter { it.status == ChaseznakStatus.OK }
             for (item in okItems) {
-                repository.sell(item.code, "LOCAL-${System.currentTimeMillis()}")
+                when (val result = repository.sell(item.code, "LOCAL-${System.currentTimeMillis()}")) {
+                    is ChaseznakResult.Success -> Unit
+                    is ChaseznakResult.Error -> {
+                        _state.update {
+                            it.copy(
+                                isSelling = false,
+                                error = result.message
+                            )
+                        }
+                        return@launch
+                    }
+                }
             }
             _state.update { ChaseznakState() }
             onComplete()

@@ -4,6 +4,7 @@ import com.vitbon.kkm.api.dto.MovementReportDto
 import com.vitbon.kkm.api.dto.SalesReportDto
 import com.vitbon.kkm.domain.service.CheckService
 import com.vitbon.kkm.domain.service.DocumentService
+import com.vitbon.kkm.domain.service.security.SecurityContextHolder
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -21,7 +22,14 @@ class ReportsController(
         @RequestParam(required = false) shiftId: String?,
         @RequestParam(required = false) since: Long?
     ): SalesReportDto {
-        val checks = checkService.findChecks(shiftId = shiftId, date = null, since = since)
+        val principal = SecurityContextHolder.requirePrincipal()
+        val checks = checkService.findChecks(
+            shiftId = shiftId,
+            date = null,
+            since = since,
+            cashierId = principal.cashierId.toString(),
+            deviceId = principal.deviceId
+        )
         return checkService.buildSalesReport(checks, period)
     }
 
@@ -39,8 +47,19 @@ class ReportsController(
         @RequestParam period: String,
         @RequestParam(required = false) since: Long?
     ): MovementReportDto {
-        val checks = checkService.findChecks(shiftId = null, date = null, since = since)
-        val documents = documentService.findDocuments(since = since)
-        return checkService.buildMovementReport(checks = checks, documents = documents, period = period)
+        val principal = SecurityContextHolder.requirePrincipal()
+        val checks = checkService.findChecks(
+            shiftId = null,
+            date = null,
+            since = null,
+            cashierId = principal.cashierId.toString(),
+            deviceId = principal.deviceId
+        )
+        val documents = documentService.findDocuments(
+            since = null,
+            cashierId = principal.cashierId.toString(),
+            deviceId = principal.deviceId
+        )
+        return checkService.buildMovementReport(checks = checks, documents = documents, period = period, since = since)
     }
 }

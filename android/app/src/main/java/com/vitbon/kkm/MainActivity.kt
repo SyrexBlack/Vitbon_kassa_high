@@ -59,9 +59,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LaunchedEffect(blockingState) {
-                        if (blockingState !is AppBlockingState.Blocked) {
-                            blockedDestination = null
-                        }
+                        // Graceful handling of any blocking state
                     }
 
                     when (blockingState) {

@@ -19,24 +19,31 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val ROOT_CHECK_PENDING_REASON = "Проверка безопасности устройства выполняется. Дождитесь завершения."
+
 @Singleton
 class RootRiskGuard @Inject constructor(
     private val context: Context,
     private val detector: RootDetector,
     private val plainPrefs: SharedPreferences,
     @SecurePrefs private val securePrefs: SharedPreferences,
+    private val debugBypass: Boolean = false,
     private val asyncCheckEnabled: Boolean = true
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val _blockingState = MutableStateFlow<AppBlockingState>(AppBlockingState.Unblocked)
+    private val _blockingState = MutableStateFlow<AppBlockingState>(
+        if (debugBypass) AppBlockingState.Unblocked else AppBlockingState.Blocked(ROOT_CHECK_PENDING_REASON)
+    )
     val blockingState: StateFlow<AppBlockingState> = _blockingState.asStateFlow()
 
     init {
-        PrefsMigration.migrateRootRiskData(securePrefs, plainPrefs)
-        loadCachedState()
-        if (asyncCheckEnabled) {
-            triggerAsyncCheck()
+        if (!debugBypass) {
+            PrefsMigration.migrateRootRiskData(securePrefs, plainPrefs)
+            loadCachedState()
+            if (asyncCheckEnabled) {
+                triggerAsyncCheck()
+            }
         }
     }
 
@@ -44,7 +51,7 @@ class RootRiskGuard @Inject constructor(
         val cachedResult = securePrefs.getString(PrefsMigration.KEY_ROOT_CACHED_RESULT, null)
         if (cachedResult != null) {
             val checkResult = when (cachedResult) {
-                "CLEAN" -> RootCheckResult.Clean
+                "CLEAN" -> null
                 "DETECTED" -> {
                     RootCheckResult.Detected(
                         listOf(

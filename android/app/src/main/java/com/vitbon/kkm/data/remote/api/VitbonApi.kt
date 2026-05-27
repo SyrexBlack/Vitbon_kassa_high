@@ -13,6 +13,9 @@ interface VitbonApi {
     @POST("api/v1/auth/logout")
     suspend fun logout(): Response<Unit>
 
+    @POST("api/v1/audit/sync")
+    suspend fun syncAudit(@Body req: AuditSyncRequestDto): Response<AuditSyncResponseDto>
+
     // Checks
     @POST("api/v1/checks/sync")
     suspend fun syncChecks(@Body req: CheckSyncRequestDto): Response<CheckSyncResponseDto>
@@ -74,6 +77,9 @@ interface VitbonApi {
     suspend fun checkLicense(@Body req: LicenseCheckRequestDto): Response<LicenseCheckResponseDto>
 
     // ЕГАИС (optional)
+    @GET("api/v1/egais/status")
+    suspend fun getEgaisStatus(): Response<EgaisStatusDto>
+
     @POST("api/v1/egais/incoming")
     suspend fun egaisIncoming(@Body payload: String): Response<String>
 
@@ -81,6 +87,9 @@ interface VitbonApi {
     suspend fun egaisTara(@Body payload: String): Response<String>
 
     // Честный ЗНАК (optional)
+    @POST("api/v1/chaseznak/validate")
+    suspend fun chaseznakValidate(@Body payload: String): Response<ChaseznakValidationDto>
+
     @POST("api/v1/chaseznak/sell")
     suspend fun chaseznakSell(@Body payload: String): Response<String>
 

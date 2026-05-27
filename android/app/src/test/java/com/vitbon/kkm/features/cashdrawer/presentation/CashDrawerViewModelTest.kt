@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -31,6 +32,7 @@ class CashDrawerViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { authUseCase.isEmergencySessionActive() } returns false
+        every { authUseCase.auditEmergencyOperationDenied(any()) } returns Unit
     }
 
     @After
@@ -90,6 +92,7 @@ class CashDrawerViewModelTest {
         val state = vm.state.value
         assertFalse(state.isSubmitting)
         assertEquals("Операция запрещена для текущей роли", state.error)
+        verify(exactly = 1) { authUseCase.auditEmergencyOperationDenied("CASH_IN") }
         coVerify(exactly = 0) { useCase.cashIn(any(), any()) }
         coVerify(exactly = 0) { useCase.cashOut(any(), any()) }
     }

@@ -89,7 +89,7 @@ class SecurityRouteGuardIntegrationTest {
     }
 
     @Test
-    fun `statuses endpoint returns 200 when demo cashier role is elevated to admin`() {
+    fun `statuses endpoint returns 200 when admin is authorized`() {
         val token = loginAndGetToken(deviceId = "DEVICE-RBAC-ELEVATION")
         upsertDemoCashierRole("ADMIN")
 
@@ -98,6 +98,46 @@ class SecurityRouteGuardIntegrationTest {
                 .header("Authorization", "Bearer $token")
                 .header("X-Device-Id", "DEVICE-RBAC-ELEVATION")
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `egais endpoint returns 503 when route is authorized but integration is not configured`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-EGAIS-1")
+        upsertDemoCashierRole("SENIOR_CASHIER")
+
+        mockMvc.perform(
+            post("/api/v1/egais/incoming")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", "DEVICE-EGAIS-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+        ).andExpect(status().isServiceUnavailable)
+    }
+
+    @Test
+    fun `chaseznak endpoint returns 503 when route is authorized but integration is not configured`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-CHZ-1")
+
+        mockMvc.perform(
+            post("/api/v1/chaseznak/verify-age")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", "DEVICE-CHZ-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+        ).andExpect(status().isServiceUnavailable)
+    }
+
+    @Test
+    fun `chaseznak validate endpoint returns 503 when route is authorized but integration is not configured`() {
+        val token = loginAndGetToken(deviceId = "DEVICE-CHZ-VALIDATE-1")
+
+        mockMvc.perform(
+            post("/api/v1/chaseznak/validate")
+                .header("Authorization", "Bearer $token")
+                .header("X-Device-Id", "DEVICE-CHZ-VALIDATE-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+        ).andExpect(status().isServiceUnavailable)
     }
 
     @Test

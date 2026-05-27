@@ -2,9 +2,9 @@
 
 **Branch:** `feat/phase-b-security-auth-rbac-audit-pr`
 **Commits:** `e60005c`, `2282a31`
-**Schema migrations required:** `V5__add_auth_sessions_and_audit.sql`, `V6__widen_cashier_pin_hash.sql`
+**Schema migrations required:** `V5__add_auth_sessions_and_audit.sql`, `V6__widen_cashier_pin_hash.sql`, `V7__add_document_ownership.sql`
 
-> **Prerequisite:** Run Flyway migrations **before** deploying the new JAR. `V6__widen_cashier_pin_hash` must apply before PBKDF2 login rotation activates.
+> **Prerequisite:** Run Flyway migrations **before** deploying the new JAR. `V6__widen_cashier_pin_hash` must apply before PBKDF2 login rotation activates, and `V7__add_document_ownership` must apply before movement/document reports are considered tenant-isolated.
 
 ---
 
@@ -12,14 +12,16 @@
 
 ### Pre-deployment
 
+- [ ] Run local automated gate: `powershell -ExecutionPolicy Bypass -File .\verify-phase-b.ps1`
 - [ ] Run full backend test suite; confirm:
   - `SecurityRouteGuardIntegrationTest` — 8/8 passed
   - `AuthIntegrationTest` — 9/9 passed
+  - `DocumentsIntegrationTest` / `ReportsIntegrationTest` / `FlywayMigrationTest` — passed
 - [ ] Run Flyway migrate:
   ```bash
   flyway -locations=filesystem:src/main/resources/db/migration migrate
   ```
-  Confirm `V5` and `V6` apply cleanly; record final schema checksum.
+  Confirm `V5`, `V6`, and `V7` apply cleanly; record final schema checksum.
 - [ ] **Rollback schema note:** If rolling back the JAR, `ALTER COLUMN pin_hash TYPE VARCHAR(64)` is safe **only if no PBKDF2 hashes exist in production** (data truncation risk). Use DB backup before altering.
 
 ### Post-deployment smoke — single cashier
@@ -27,13 +29,17 @@
 - [ ] `POST /api/v1/auth/login { "pin": "...", "deviceId": "device-A" }` → HTTP 200, body contains `token`, `cashier`, `features`, `expiresAt`; token TTL = 8 hours
 - [ ] Replay same token with `X-Device-Id: device-B` → HTTP 401, `{"reason":"DEVICE_MISMATCH"}`
 - [ ] CASHIER role token → `GET /api/v1/statuses` → HTTP 403
-- [ ] ADMIN role token → `GET /api/v1/statuses` → HTTP 200
+- [ ] ADMIN role token → `GET /api/v1/statuses` → HTTP 200 with device-scoped telemetry payload
 - [ ] `POST /api/v1/auth/logout` with valid token → HTTP 200; token no longer usable
+- [ ] `POST /api/v1/checks/sync` replay with same `localUuid` from same cashier/device → HTTP 200, no duplicate row created
+- [ ] Movement report for cashier/device A does not include documents or checks created by cashier/device B
 
 ### Post-deployment smoke — audit
 
 - [ ] After each authorized request, query `audit_events` table:
   - `security.route_access` rows have non-null `actor_id`, `device_id`, `session_id`
+- [ ] `POST /api/v1/audit/sync` with buffered `auth.emergency.*` events from the device → HTTP 200; rows appear in `audit_events` with `target=emergency_mode`, parsed `result/reason`, and `session_id IS NULL`
+- [ ] While emergency ADMIN mode is active, attempt blocked sale/return/shift/cash-drawer operations; `audit_events` receives `action=auth.emergency.operation_denied` with `reason` matching the blocked operation code
 - [ ] After each denial, query `audit_events`:
   - Missing bearer → `security.auth_deny`, `reason=MISSING_BEARER`
   - Device mismatch → `security.auth_deny`, `reason=DEVICE_MISMATCH`
@@ -64,6 +70,7 @@
 - [ ] Install APK; login as cashier; capture bearer token
 - [ ] Install same APK version on second API 23 device; attempt request with token from device 1 → HTTP 401 `DEVICE_MISMATCH`
 - [ ] Confirm `X-Device-Id` header present and non-null in OkHttp request logs for all authenticated endpoints
+- [ ] Confirm Android app uses the same persisted secure `deviceId` for login, shifts, sales, and license check paths
 - [ ] Logout; confirm token cleared from `AuthTokenStore` (SharedPreferences); subsequent requests carry no `Authorization` header
 
 ### Physical POS — API 23 device — rate limit UX
@@ -79,6 +86,19 @@
 - [ ] Confirm server-side `audit_events` row: `action=fiscal.sale`, `session_id` set, no adapter stub in call chain
 - [ ] Confirm receipt data (INN, FN serial, document number) present in response and stored in local DB
 
+> Tip: before starting physical smoke on MSPOS-K or Neva, run `powershell -ExecutionPolicy Bypass -File .\verify-phase-b.ps1 -RequireHardware` to confirm automated gates are green and `adb` sees the device.
+
+### External integrations gate
+
+- [ ] Run live contour runner and archive the generated report: `powershell -ExecutionPolicy Bypass -File .\verify-live-integrations.ps1 -BackendBaseUrl https://<backend-host>/ -AdminPin 9999 -ChaseznakCode "<test-datamatrix>" -AgeQrData "<test-age-qr>" -EgaisIncomingPayloadPath .\payloads\egais-incoming.xml -EgaisTaraPayloadPath .\payloads\egais-tara.xml -EnableMutatingRoutes`
+- [ ] Confirm `.tmp_live_integrations_evidence.md` contains `PASS` for login, feature flags, `/api/v1/statuses`, `/api/v1/egais/status`, `/api/v1/chaseznak/validate`, `/api/v1/chaseznak/verify-age`; mutating routes may stay `PENDING` only until approved test payloads are provided
+- [ ] `GET /api/v1/statuses` returns real telemetry payload: `ofdQueueLength`, `lastSyncTimestamp`, `cloudServerOk`, `licenseStatus`
+- [ ] `GET /api/v1/egais/status` returns `{"available":true}` before running manual ЕГАИС smoke
+- [ ] With optional `ЕГАИС` / `Честный ЗНАК` features enabled and degraded status (`internet=LOST` or `cloudServer=ERROR`), core sale flow remains available with warning, while opening the affected module is denied with explicit UX message
+- [ ] `POST /api/v1/auth/login` returns feature flags matching server config for `ЕГАИС`, `Честный ЗНАК`, acquiring, and SBP
+- [ ] `POST /api/v1/egais/*` returns real integration result instead of HTTP 501
+- [ ] `POST /api/v1/chaseznak/validate`, `/sell`, `/verify-age` return real integration result instead of HTTP 501
+
 ### Rollback gate (Android)
 
 - [ ] Redeploy previous APK; confirm app still reads and uses old-format tokens from SharedPreferences (backward compat of token storage preserved)
@@ -92,5 +112,6 @@
 | `401 DEVICE_MISMATCH` on legitimate device | Check `X-Device-Id` header — ensure app sends non-null/non-blank value |
 | `429 TOO_MANY_REQUESTS` for valid cashier | Check `audit_events` for `reason=RATE_LIMITED`; device should unlock after session-duration TTL |
 | PBKDF2 login fails for cashier with legacy hash | Verify `V6__widen_cashier_pin_hash` migration applied; hash may be corrupt or empty |
+| Documents from one касса appear in another movement report | Verify `V7__add_document_ownership` applied and backend build includes document ownership filtering |
 | Concurrent re-login creates 2 active sessions | Minor race; resolved on next sequential login — acceptable for Phase B |
 | `security.route_access` events missing `actor_id` | Session was created but cashier record may have been deleted after session start |

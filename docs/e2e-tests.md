@@ -79,6 +79,8 @@
 
 **Требования:** test-УТМ запущен, тестовый RSA-сертификат загружен
 
+> Автоматически подтверждён только proxy contract: backend больше не должен возвращать HTTP 501 и обязан проксировать ответ живой интеграции. Полевая приёмка остаётся release-blocker до подключения реального ЕГАИС-контура.
+
 **Шаги:**
 1. Активировать модуль ЕГАИС
 2. Перейти в раздел «ЕГАИС → Приёмка»
@@ -94,6 +96,8 @@
 ### 6. Честный ЗНАК: продажа маркированного (test ЛМ ЧЗ)
 
 **Требования:** test ЛМ ЧЗ запущен
+
+> Автоматически подтверждён только proxy/validation contract: backend больше не должен возвращать HTTP 501, а scan validation/disposal flow должен ходить через backend integration endpoint. Полевая приёмка остаётся release-blocker до подключения реального ЧЗ-контура.
 
 **Шаги:**
 1. Активировать модуль «Честный ЗНАК»
@@ -116,7 +120,87 @@
 - [ ] ЕГАИС: накладные загружаются и подтверждаются
 - [ ] ЧЗ: выбытие работает (test ЛМ)
 - [ ] Лицензия: блокировка при просрочке
+- [ ] Лицензия: неизвестное/нелицензированное устройство блокируется, а не считается активным
 - [ ] Grace period: 7 дней при отсутствии сети
+
+---
+
+## Автоматическая верификация (2026-05-22)
+
+### Unified local gate
+
+Команда:
+`powershell -ExecutionPolicy Bypass -File .\verify-phase-b.ps1`
+
+Поведение:
+- запускает backend test suite с `JAVA_HOME=C:\Program Files\Java\jdk-17`
+- запускает Android `:app:testDebugUnitTest :app:assembleDebug`
+- по умолчанию запускает Android `:app:assembleRelease`
+- проверяет `adb.exe devices -l` и отдельно помечает hardware smoke как `PASS` или `PENDING`
+
+Строгий режим для полевого smoke:
+`powershell -ExecutionPolicy Bypass -File .\verify-phase-b.ps1 -RequireHardware`
+
+Ожидаемый результат на машине без подключённой кассы:
+- automated gates: `PASS`
+- hardware smoke precheck: `PENDING`
+
+Фактический snapshot (2026-05-22, current workspace):
+- `verify-phase-b.ps1` → backend tests `PASS`
+- `verify-phase-b.ps1` → Android `:app:testDebugUnitTest :app:assembleDebug` `PASS`
+- `verify-phase-b.ps1` → Android `:app:assembleRelease` `PASS`
+- `verify-phase-b.ps1` → `adb.exe devices -l` returns no devices, so hardware smoke precheck = `PENDING`
+
+### Backend
+
+Команда:
+`backend\gradlew.bat test --no-daemon --console=plain`
+
+Результат: `BUILD SUCCESSFUL`
+
+Подтверждено автоматически:
+- object-level binding для shifts/checks/reports/documents к session principal
+- idempotent replay для `checks/sync` по `localUuid`
+- per-item failure handling в `checks/sync`
+- `UNLICENSED` для неизвестного устройства на backend
+- `V7__add_document_ownership.sql` smoke-tested через `FlywayMigrationTest`
+
+### Android
+
+Команды:
+`android\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain`
+
+`android\gradlew.bat :app:assembleRelease --no-daemon --console=plain`
+
+Результат: `BUILD SUCCESSFUL`
+
+Подтверждено автоматически:
+- debug и release сборки проходят
+- Android клиент блокирует `UNLICENSED` вместо silent `ACTIVE`
+- sales/shift paths используют сохранённый secure `deviceId`
+- periodic sync worker переведён на 15 минут
+- destructive Room fallback удалён при текущей schema version 1
+- единый local runner `verify-phase-b.ps1` собирает backend/Android gates и сразу показывает, остался ли только hardware blocker
+- backend proxy routes `/api/v1/egais/incoming`, `/api/v1/egais/tara`, `/api/v1/chaseznak/validate`, `/api/v1/chaseznak/sell`, `/api/v1/chaseznak/verify-age` больше не зафиксированы на HTTP `501`
+- Android `ChaseznakRepository.validateCode()` использует backend `validate` flow вместо постоянного локального `ERROR`
+
+### Live contour evidence runner
+
+Для ЕГАИС/ЧЗ в live-контуре теперь есть отдельный runner:
+
+`powershell -ExecutionPolicy Bypass -File .\verify-live-integrations.ps1 -BackendBaseUrl https://<backend-host>/ -AdminPin 9999 -ChaseznakCode "<test-datamatrix>" -AgeQrData "<test-age-qr>" -EgaisIncomingPayloadPath .\payloads\egais-incoming.xml -EgaisTaraPayloadPath .\payloads\egais-tara.xml -EnableMutatingRoutes`
+
+Что делает:
+- логинится под ADMIN и проверяет, что optional feature flags реально включены
+- снимает evidence по `/api/v1/statuses` и `/api/v1/egais/status`
+- прогоняет non-mutating ЧЗ probes: `/api/v1/chaseznak/validate` и `/api/v1/chaseznak/verify-age`
+- по явному флагу `-EnableMutatingRoutes` дополнительно прогоняет `POST /api/v1/egais/incoming`, `/api/v1/egais/tara`, `/api/v1/chaseznak/sell`
+- пишет markdown-отчёт в `.tmp_live_integrations_evidence.md`
+
+Правила использования:
+- без `-EnableMutatingRoutes` destructive routes не трогаются и остаются `PENDING`
+- для полного release-evidence нужно передать согласованные contour payload’ы/test-коды
+- если в summary есть `FAIL`, contour gate не пройден; если есть только `PENDING`, evidence неполный и blocker остаётся внешним
 
 ---
 

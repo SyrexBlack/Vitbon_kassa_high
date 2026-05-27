@@ -1,5 +1,6 @@
 package com.vitbon.kkm.features.bootstrap.domain
 
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.fiscal.model.VatRate
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.local.dao.ProductDao
@@ -14,14 +15,18 @@ class SeedDataUseCase @Inject constructor(
     private val cashierDao: CashierDao,
     private val productDao: ProductDao
 ) {
-    suspend fun seedIfNeeded() {
+    suspend fun seedIfNeeded(enableDemoData: Boolean = BuildConfig.DEBUG) {
+        if (!enableDemoData) {
+            return
+        }
+
         if (cashierDao.count() == 0) {
             val now = System.currentTimeMillis()
             cashierDao.insert(
                 LocalCashier(
                     id = "cashier-demo-1",
                     name = "Демо Кассир",
-                    pinHash = sha256("1111"),
+                    pinHash = sha256("111111"),
                     role = "CASHIER",
                     createdAt = now
                 )

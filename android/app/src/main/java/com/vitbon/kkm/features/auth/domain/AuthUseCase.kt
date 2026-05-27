@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
 import com.vitbon.kkm.core.sync.SyncPrefs
+import com.vitbon.kkm.core.sync.SyncUpScheduler
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
@@ -25,7 +26,8 @@ class AuthUseCase @Inject constructor(
     private val featureManager: FeatureManager,
     private val tokenStore: AuthTokenStore,
     private val emergencyAdminSessionManager: EmergencyAdminSessionManager,
-    private val localAuditBufferRepository: LocalAuditBufferRepository
+    private val localAuditBufferRepository: LocalAuditBufferRepository,
+    private val syncUpScheduler: SyncUpScheduler
 ) {
     suspend fun authenticate(pin: String): AuthResult {
         if (pin.length < 4 || pin.length > 6) {
@@ -146,6 +148,11 @@ class AuthUseCase @Inject constructor(
         }
         return active
     }
+
+    fun auditEmergencyOperationDenied(operation: String) {
+        enqueueAudit("auth.emergency.operation_denied", "DENY:$operation")
+    }
+
     fun getCurrentCashierRole(): CashierRole? {
         val role = prefs.getString("current_cashier_role", null) ?: return null
         return CashierRole.entries.find { it.name == role }
@@ -174,5 +181,6 @@ class AuthUseCase @Inject constructor(
                 details = details
             )
         }
+        syncUpScheduler.enqueueIfConnected()
     }
 }

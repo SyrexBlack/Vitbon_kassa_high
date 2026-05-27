@@ -5,9 +5,9 @@ spring:
   application:
     name: vitbon-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/vitbon}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:postgres}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -19,5 +19,21 @@ spring:
 
 logging:
   level:
-    com.vitbon: DEBUG
+    com.vitbon: INFO
     org.springframework: INFO
+
+integrations:
+  request-timeout-seconds: ${INTEGRATIONS_REQUEST_TIMEOUT_SECONDS:10}
+  egais:
+    incoming-url: ${EGAIS_INCOMING_URL:}
+    tara-url: ${EGAIS_TARA_URL:}
+  chaseznak:
+    sell-url: ${CHASEZNAK_SELL_URL:}
+    validate-url: ${CHASEZNAK_VALIDATE_URL:}
+    verify-age-url: ${CHASEZNAK_VERIFY_AGE_URL:}
+
+features:
+  egais-enabled: ${EGAIS_ENABLED:false}
+  chaseznak-enabled: ${CHASEZNAK_ENABLED:false}
+  acquiring-enabled: ${ACQUIRING_ENABLED:true}
+  sbp-enabled: ${SBP_ENABLED:true}

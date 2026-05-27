@@ -7,6 +7,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitbon.kkm.features.statuses.domain.ConnectionStatus
+import com.vitbon.kkm.features.statuses.domain.LicenseStatus
+import com.vitbon.kkm.features.statuses.domain.ModuleStatus
+import com.vitbon.kkm.features.statuses.domain.OfdStatus
+import com.vitbon.kkm.features.statuses.domain.ServiceStatus
+import com.vitbon.kkm.features.statuses.domain.StatusOperation
+import com.vitbon.kkm.features.statuses.domain.StatusOperationPolicy
+import com.vitbon.kkm.features.statuses.domain.SystemStatus
 import com.vitbon.kkm.ui.navigation.NavRoutes
 
 @Composable
@@ -76,6 +84,28 @@ fun LicenseBlockedScreen(
 }
 
 fun isRouteAllowedWhenBlocked(route: String): Boolean {
-    val baseRoute = route.substringBefore("/")
-    return baseRoute == NavRoutes.REPORTS || baseRoute == NavRoutes.STATUSES
+    val operation = when (route.substringBefore("/")) {
+        NavRoutes.SALES.substringBefore("/") -> StatusOperation.SALE
+        NavRoutes.RETURN -> StatusOperation.RETURN
+        NavRoutes.SHIFT -> StatusOperation.SHIFT
+        NavRoutes.CASH_DRAWER -> StatusOperation.CASH_DRAWER
+        NavRoutes.CORRECTION -> StatusOperation.CORRECTION
+        NavRoutes.REPORTS -> StatusOperation.REPORTS
+        NavRoutes.STATUSES -> StatusOperation.STATUSES
+        NavRoutes.EGAIS -> StatusOperation.EGAIS
+        NavRoutes.CHASEZNAK -> StatusOperation.CHASEZNAK
+        else -> return false
+    }
+
+    return StatusOperationPolicy.evaluate(blockedModeStatus, operation).allowed
 }
+
+private val blockedModeStatus = SystemStatus(
+    internet = ConnectionStatus.UNKNOWN,
+    cloudServer = ServiceStatus.UNKNOWN,
+    cloudLastSyncMs = null,
+    ofd = OfdStatus(pendingChecks = 0, connected = true),
+    chaseznakModule = ModuleStatus.INACTIVE,
+    egaisModule = ModuleStatus.INACTIVE,
+    license = LicenseStatus.EXPIRED
+)

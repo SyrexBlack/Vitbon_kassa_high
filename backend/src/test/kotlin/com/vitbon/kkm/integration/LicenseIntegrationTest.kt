@@ -54,7 +54,7 @@ class LicenseIntegrationTest {
     }
 
     @Test
-    fun `license check returns ACTIVE by default when no device row exists`() {
+    fun `license check returns UNLICENSED when no device row exists`() {
         val mockMvc: MockMvc = MockMvcBuilders.webAppContextSetup(context).build()
         val deviceId = "DEVICE-NO-ROW"
 
@@ -66,7 +66,7 @@ class LicenseIntegrationTest {
                 .content(objectMapper.writeValueAsString(LicenseCheckRequestDto(deviceId)))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.status").value("UNLICENSED"))
             .andExpect(jsonPath("$.expiryDate").doesNotExist())
             .andExpect(jsonPath("$.graceUntil").doesNotExist())
     }

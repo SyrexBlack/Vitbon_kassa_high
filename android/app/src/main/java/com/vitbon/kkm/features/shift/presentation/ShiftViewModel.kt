@@ -2,6 +2,7 @@ package com.vitbon.kkm.features.shift.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.auth.domain.RolePolicy
 import com.vitbon.kkm.features.shift.domain.*
@@ -23,7 +24,8 @@ data class ShiftState(
 @HiltViewModel
 class ShiftViewModel @Inject constructor(
     private val useCase: ShiftUseCase,
-    private val authUseCase: AuthUseCase
+    private val authUseCase: AuthUseCase,
+    private val syncPrefs: SyncPrefs
 ) : ViewModel() {
     private val _state = MutableStateFlow(ShiftState())
     val state: StateFlow<ShiftState> = _state.asStateFlow()
@@ -41,12 +43,17 @@ class ShiftViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             val role = authUseCase.getCurrentCashierRole()
             val emergencyActive = authUseCase.isEmergencySessionActive()
-            if (emergencyActive || !useCase.canOpenShift(role)) {
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied("SHIFT_OPEN")
+                _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
+            if (!useCase.canOpenShift(role)) {
                 _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
                 return@launch
             }
             val result = useCase.openShift(
-                deviceId = android.os.Build.MODEL,
+                deviceId = syncPrefs.deviceId ?: "unknown-device",
                 cashierId = authUseCase.getCurrentCashierId() ?: "unknown"
             )
             when (result) {
@@ -61,7 +68,12 @@ class ShiftViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             val role = authUseCase.getCurrentCashierRole()
             val emergencyActive = authUseCase.isEmergencySessionActive()
-            if (emergencyActive || !useCase.canCloseShift(role)) {
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied("SHIFT_CLOSE")
+                _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
+            if (!useCase.canCloseShift(role)) {
                 _state.update { it.copy(isLoading = false, error = RolePolicy.ACCESS_DENIED_MESSAGE) }
                 return@launch
             }
@@ -98,7 +110,12 @@ class ShiftViewModel @Inject constructor(
         viewModelScope.launch {
             val role = authUseCase.getCurrentCashierRole()
             val emergencyActive = authUseCase.isEmergencySessionActive()
-            if (emergencyActive || !useCase.canPrintXReport(role)) {
+            if (emergencyActive) {
+                authUseCase.auditEmergencyOperationDenied("SHIFT_X_REPORT")
+                _state.update { it.copy(error = RolePolicy.ACCESS_DENIED_MESSAGE) }
+                return@launch
+            }
+            if (!useCase.canPrintXReport(role)) {
                 _state.update { it.copy(error = RolePolicy.ACCESS_DENIED_MESSAGE) }
                 return@launch
             }

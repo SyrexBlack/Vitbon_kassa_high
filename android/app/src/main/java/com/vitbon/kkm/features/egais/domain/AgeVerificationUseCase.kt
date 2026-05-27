@@ -1,6 +1,7 @@
 package com.vitbon.kkm.features.egais.domain
 
 import android.util.Log
+import com.google.gson.Gson
 import com.vitbon.kkm.core.fiscal.model.AgeVerificationResult
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import javax.inject.Inject
@@ -12,6 +13,8 @@ private const val TAG = "AgeVerification"
 class AgeVerificationUseCase @Inject constructor(
     private val api: VitbonApi
 ) {
+    private val gson = Gson()
+
     /**
      * Проверить возраст через API Цифрового ID Max.
      * QR-код содержит URL или данные с паспорта покупателя.
@@ -24,7 +27,8 @@ class AgeVerificationUseCase @Inject constructor(
      */
     suspend fun verify(qrPayload: String): AgeVerificationResult {
         return try {
-            val response = api.verifyAge(qrPayload)
+            val requestPayload = gson.toJson(mapOf("qrData" to qrPayload))
+            val response = api.verifyAge(requestPayload)
             if (response.isSuccessful) {
                 val body = response.body() ?: ""
                 // Parse JSON: { "verified": true/false, "verificationId": "..." }

@@ -12,6 +12,18 @@ data class LoginResponseDto(
     val expiresAt: Long
 )
 
+data class AuditSyncRequestDto(val events: List<AuditSyncEntryDto>)
+data class AuditSyncEntryDto(
+    val id: String,
+    val cashierId: String?,
+    val deviceId: String?,
+    val action: String,
+    val details: String?,
+    val timestamp: Long
+)
+data class AuditSyncResponseDto(val processed: Int, val failed: List<FailedAuditSyncDto>)
+data class FailedAuditSyncDto(val id: String, val error: String)
+
 data class LoginFeaturesDto(
     val egaisEnabled: Boolean = false,
     val chaseznakEnabled: Boolean = false,
@@ -79,6 +91,7 @@ data class DocumentItemDto(val productId: String?, val barcode: String?, val nam
 data class LicenseCheckRequestDto(val deviceId: String)
 data class LicenseCheckResponseDto(val status: String, val expiryDate: Long?, val graceUntil: Long?)
 data class StatusResponseDto(val ofdQueueLength: Int, val lastSyncTimestamp: Long, val cloudServerOk: Boolean, val licenseStatus: String)
+data class EgaisStatusDto(val available: Boolean)
 
 data class ProductSalesDto(
     val name: String,

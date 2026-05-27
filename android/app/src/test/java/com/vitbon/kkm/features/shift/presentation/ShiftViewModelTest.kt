@@ -1,5 +1,7 @@
 package com.vitbon.kkm.features.shift.presentation
 
+
+import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.auth.domain.CashierRole
 import com.vitbon.kkm.features.shift.domain.ShiftResult
@@ -9,6 +11,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,11 +32,14 @@ class ShiftViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val shiftUseCase = mockk<ShiftUseCase>()
     private val authUseCase = mockk<AuthUseCase>()
+    private val syncPrefs = mockk<SyncPrefs>()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { authUseCase.isEmergencySessionActive() } returns false
+        every { authUseCase.auditEmergencyOperationDenied(any()) } returns Unit
+        every { syncPrefs.deviceId } returns "secure-device-1"
     }
 
     @After
@@ -48,7 +54,7 @@ class ShiftViewModelTest {
         coEvery { shiftUseCase.findOpenShiftId() } returns "shift-open-1"
         coEvery { shiftUseCase.closeShift("shift-open-1") } returns ShiftResult.Success("shift-open-1")
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.closeShift()
         advanceUntilIdle()
@@ -68,7 +74,7 @@ class ShiftViewModelTest {
         every { shiftUseCase.canCloseShift(CashierRole.SENIOR_CASHIER) } returns true
         coEvery { shiftUseCase.findOpenShiftId() } returns null
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.closeShift()
         advanceUntilIdle()
@@ -92,7 +98,7 @@ class ShiftViewModelTest {
             message = "fiscal busy"
         )
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.checkStatus()
         advanceUntilIdle()
@@ -114,7 +120,7 @@ class ShiftViewModelTest {
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         every { shiftUseCase.canOpenShift(CashierRole.CASHIER) } returns false
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.openShift()
         advanceUntilIdle()
@@ -130,7 +136,7 @@ class ShiftViewModelTest {
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
         every { shiftUseCase.canPrintXReport(CashierRole.CASHIER) } returns false
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.printXReport()
         advanceUntilIdle()
@@ -145,7 +151,7 @@ class ShiftViewModelTest {
         every { authUseCase.getCurrentCashierRole() } returns CashierRole.ADMIN
         every { authUseCase.isEmergencySessionActive() } returns true
 
-        val vm = ShiftViewModel(shiftUseCase, authUseCase)
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
 
         vm.openShift()
         advanceUntilIdle()
@@ -153,6 +159,28 @@ class ShiftViewModelTest {
         val state = vm.state.value
         assertFalse(state.isLoading)
         assertEquals("Операция запрещена для текущей роли", state.error)
+        verify(exactly = 1) { authUseCase.auditEmergencyOperationDenied("SHIFT_OPEN") }
         coVerify(exactly = 0) { shiftUseCase.openShift(any(), any()) }
+    }
+
+    @Test
+    fun `openShift uses secure sync device id`() = runTest {
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.SENIOR_CASHIER
+        every { authUseCase.getCurrentCashierId() } returns "cashier-1"
+        every { shiftUseCase.canOpenShift(CashierRole.SENIOR_CASHIER) } returns true
+        coEvery {
+            shiftUseCase.openShift("secure-device-1", "cashier-1")
+        } returns ShiftResult.Success("shift-open-1")
+
+        val vm = ShiftViewModel(shiftUseCase, authUseCase, syncPrefs)
+
+        vm.openShift()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertFalse(state.isLoading)
+        assertTrue(state.opened)
+        assertEquals(ShiftStatus.OPEN, state.shiftStatus)
+        coVerify(exactly = 1) { shiftUseCase.openShift("secure-device-1", "cashier-1") }
     }
 }

@@ -8,6 +8,7 @@ import android.net.NetworkCapabilities
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
 import com.vitbon.kkm.core.sync.SyncPrefs
+import com.vitbon.kkm.core.sync.SyncUpScheduler
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.testutil.InMemorySharedPreferences
 import com.vitbon.kkm.data.local.entity.LocalCashier
@@ -43,6 +44,7 @@ class AuthUseCaseTest {
     private val tokenStore = mockk<AuthTokenStore>(relaxed = true)
     private val emergencyAdminSessionManager = mockk<EmergencyAdminSessionManager>(relaxed = true)
     private val localAuditBufferRepository = mockk<LocalAuditBufferRepository>(relaxed = true)
+    private val syncUpScheduler = mockk<SyncUpScheduler>(relaxed = true)
 
     private val useCase = AuthUseCase(
         cashierDao,
@@ -53,7 +55,8 @@ class AuthUseCaseTest {
         featureManager,
         tokenStore,
         emergencyAdminSessionManager,
-        localAuditBufferRepository
+        localAuditBufferRepository,
+        syncUpScheduler
     )
 
     @Test
@@ -195,6 +198,25 @@ class AuthUseCaseTest {
         assertNull(prefs.getString("current_cashier_id", null))
         assertNull(prefs.getString("current_cashier_name", null))
         assertNull(prefs.getString("current_cashier_role", null))
+    }
+
+    @Test
+    fun `auditEmergencyOperationDenied enqueues transport audit and triggers sync`() = runBlocking {
+        prefs.edit().putString("current_cashier_id", "admin-1").apply()
+        securePrefs.edit().putString("device_id", "DEVICE-1").apply()
+
+        useCase.auditEmergencyOperationDenied("SALE")
+
+        coVerify(exactly = 1) {
+            localAuditBufferRepository.enqueue(
+                cashierId = "admin-1",
+                deviceId = "DEVICE-1",
+                action = "auth.emergency.operation_denied",
+                details = "DENY:SALE",
+                timestamp = any()
+            )
+        }
+        verify(exactly = 1) { syncUpScheduler.enqueueIfConnected() }
     }
 
     private fun mockOnlineStatus(isOnline: Boolean) {

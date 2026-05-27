@@ -23,7 +23,7 @@ class SeedDataUseCaseTest {
         coEvery { cashierDao.count() } returns 0
         coEvery { productDao.count() } returns 0
 
-        useCase.seedIfNeeded()
+        useCase.seedIfNeeded(enableDemoData = true)
 
         coVerify(exactly = 1) { cashierDao.insert(withArg { cashier ->
             assertEquals("cashier-demo-1", cashier.id)
@@ -53,8 +53,18 @@ class SeedDataUseCaseTest {
         coEvery { cashierDao.count() } returns 1
         coEvery { productDao.count() } returns 10
 
-        useCase.seedIfNeeded()
+        useCase.seedIfNeeded(enableDemoData = true)
 
+        coVerify(exactly = 0) { cashierDao.insert(any()) }
+        coVerify(exactly = 0) { productDao.insert(any()) }
+    }
+
+    @Test
+    fun `seedIfNeeded skips demo data when disabled`() = runBlocking {
+        useCase.seedIfNeeded(enableDemoData = false)
+
+        coVerify(exactly = 0) { cashierDao.count() }
+        coVerify(exactly = 0) { productDao.count() }
         coVerify(exactly = 0) { cashierDao.insert(any()) }
         coVerify(exactly = 0) { productDao.insert(any()) }
     }

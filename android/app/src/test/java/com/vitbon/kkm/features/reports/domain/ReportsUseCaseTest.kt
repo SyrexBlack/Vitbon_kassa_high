@@ -17,6 +17,8 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import retrofit2.Response
 import java.io.IOException
@@ -64,7 +66,7 @@ class ReportsUseCaseTest {
     }
 
     @Test
-    fun `getSalesReport falls back to local range when backend responds non-success`() = runBlocking {
+    fun `getSalesReport fails closed when backend responds non-success`() = runBlocking {
         val fromTs = 1_000L
         val toTs = 9_999L
         coEvery { shiftDao.findOpenShift() } returns null
@@ -72,73 +74,36 @@ class ReportsUseCaseTest {
             500,
             "server error".toResponseBody("text/plain".toMediaType())
         )
-        coEvery { checkDao.findByDateRange(fromTs, toTs) } returns fallbackChecks()
-        coEvery { checkItemDao.findByCheckId("sale-cash") } returns listOf(
-            checkItem(id = "item-1", checkId = "sale-cash", name = "Вода", quantity = 2.0, total = 2_000L),
-            checkItem(id = "item-2", checkId = "sale-cash", name = "Вода", quantity = 1.0, total = 1_000L)
-        )
-        coEvery { checkItemDao.findByCheckId("sale-card") } returns listOf(
-            checkItem(id = "item-3", checkId = "sale-card", name = "Сок", quantity = 1.0, total = 2_000L)
-        )
-        coEvery { checkItemDao.findByCheckId("sale-sbp") } returns listOf(
-            checkItem(id = "item-4", checkId = "sale-sbp", name = "Сок", quantity = 2.0, total = 2_000L),
-            checkItem(id = "item-5", checkId = "sale-sbp", name = "Лимонад", quantity = 1.0, total = 1_000L)
-        )
-        coEvery { checkItemDao.findByCheckId("return-card") } returns emptyList()
-
-        val report = useCase.getSalesReport("day", fromTs, toTs)
+        try {
+            useCase.getSalesReport("day", fromTs, toTs)
+            fail("Expected getSalesReport to fail closed")
+        } catch (error: ReportLoadException) {
+            assertTrue(error.message!!.contains("не удалось загрузить", ignoreCase = true))
+        }
 
         coVerify(exactly = 0) { shiftDao.findOpenShift() }
         coVerify(exactly = 1) { api.getSalesReport("day", null, fromTs) }
-        coVerify(exactly = 1) { checkDao.findByDateRange(fromTs, toTs) }
-        coVerify(exactly = 1) { checkItemDao.findByCheckId("sale-cash") }
-        coVerify(exactly = 1) { checkItemDao.findByCheckId("sale-card") }
-        coVerify(exactly = 1) { checkItemDao.findByCheckId("sale-sbp") }
-        assertEquals(6_000L, report.totalSales)
-        assertEquals(500L, report.totalReturns)
-        assertEquals(1_000L, report.cashTotal)
-        assertEquals(2_000L, report.cardTotal)
-        assertEquals(3_000L, report.sbpTotal)
-        assertEquals(3, report.checkCount)
-        assertEquals(1, report.returnCount)
-        assertEquals(2_000L, report.averageCheck)
-        assertEquals(3, report.topProducts.size)
-        assertEquals("Сок", report.topProducts[0].name)
-        assertEquals(3.0, report.topProducts[0].quantity, 0.0001)
-        assertEquals(4_000L, report.topProducts[0].total)
-        assertEquals("Вода", report.topProducts[1].name)
-        assertEquals(3.0, report.topProducts[1].quantity, 0.0001)
-        assertEquals(3_000L, report.topProducts[1].total)
-        assertEquals("Лимонад", report.topProducts[2].name)
-        assertEquals(1.0, report.topProducts[2].quantity, 0.0001)
-        assertEquals(1_000L, report.topProducts[2].total)
-        assertEquals(ReportDataSource.LOCAL, report.source)
+        coVerify(exactly = 0) { checkDao.findByDateRange(fromTs, toTs) }
+        coVerify(exactly = 0) { checkItemDao.findByCheckId(any()) }
     }
 
     @Test
-    fun `getSalesReport falls back to local range when backend request throws`() = runBlocking {
+    fun `getSalesReport fails closed when backend request throws`() = runBlocking {
         val fromTs = 1_000L
         val toTs = 9_999L
         coEvery { shiftDao.findOpenShift() } returns null
         coEvery { api.getSalesReport("day", null, fromTs) } throws IOException("timeout")
-        coEvery { checkDao.findByDateRange(fromTs, toTs) } returns fallbackChecks()
-        coEvery { checkItemDao.findByCheckId(any()) } returns emptyList()
-
-        val report = useCase.getSalesReport("day", fromTs, toTs)
+        try {
+            useCase.getSalesReport("day", fromTs, toTs)
+            fail("Expected getSalesReport to fail closed")
+        } catch (error: ReportLoadException) {
+            assertTrue(error.message!!.contains("не удалось загрузить", ignoreCase = true))
+        }
 
         coVerify(exactly = 0) { shiftDao.findOpenShift() }
         coVerify(exactly = 1) { api.getSalesReport("day", null, fromTs) }
-        coVerify(exactly = 1) { checkDao.findByDateRange(fromTs, toTs) }
-        assertEquals(6_000L, report.totalSales)
-        assertEquals(500L, report.totalReturns)
-        assertEquals(1_000L, report.cashTotal)
-        assertEquals(2_000L, report.cardTotal)
-        assertEquals(3_000L, report.sbpTotal)
-        assertEquals(3, report.checkCount)
-        assertEquals(1, report.returnCount)
-        assertEquals(2_000L, report.averageCheck)
-        assertEquals(0, report.topProducts.size)
-        assertEquals(ReportDataSource.LOCAL, report.source)
+        coVerify(exactly = 0) { checkDao.findByDateRange(any(), any()) }
+        coVerify(exactly = 0) { checkItemDao.findByCheckId(any()) }
     }
 
     @Test
@@ -208,6 +173,21 @@ class ReportsUseCaseTest {
         assertEquals(10.0, report.items[0].income, 0.0001)
         assertEquals(3.0, report.items[0].sales, 0.0001)
         assertEquals(8.0, report.items[0].balance, 0.0001)
+    }
+
+    @Test
+    fun `getMovementReport fails closed when backend request throws`() = runBlocking {
+        val since = 1_000L
+        coEvery { api.getMovementReport("day", since) } throws IOException("timeout")
+
+        try {
+            useCase.getMovementReport("day", since)
+            fail("Expected getMovementReport to fail closed")
+        } catch (error: ReportLoadException) {
+            assertTrue(error.message!!.contains("не удалось загрузить", ignoreCase = true))
+        }
+
+        coVerify(exactly = 1) { api.getMovementReport("day", since) }
     }
 
     private fun fallbackChecks(): List<LocalCheck> = listOf(
