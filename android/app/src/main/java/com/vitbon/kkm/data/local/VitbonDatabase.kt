@@ -16,7 +16,8 @@ import com.vitbon.kkm.data.local.dao.*
         AuditLogEntry::class,
         LocalMarkingDisposal::class,
         LocalInventoryDocument::class,
-        LocalInventoryDocumentItem::class
+        LocalInventoryDocumentItem::class,
+        StockMovement::class
     ],
     version = 1,
     exportSchema = false
@@ -31,4 +32,5 @@ abstract class VitbonDatabase : RoomDatabase() {
     abstract fun markingDisposalDao(): MarkingDisposalDao
     abstract fun inventoryDocumentDao(): InventoryDocumentDao
     abstract fun inventoryDocumentItemDao(): InventoryDocumentItemDao
+    abstract fun stockMovementDao(): StockMovementDao
 }

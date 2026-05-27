@@ -62,6 +62,8 @@ object AppModule {
     fun provideInventoryDocumentDao(db: VitbonDatabase): InventoryDocumentDao = db.inventoryDocumentDao()
     @Provides
     fun provideInventoryDocumentItemDao(db: VitbonDatabase): InventoryDocumentItemDao = db.inventoryDocumentItemDao()
+    @Provides
+    fun provideStockMovementDao(db: VitbonDatabase): StockMovementDao = db.stockMovementDao()
 
     @Provides
     @Singleton
