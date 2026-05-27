@@ -115,6 +115,7 @@ class CheckService(
         val totalReturns = returns.sumOf { it.total }
         val cashRevenue = sales.filter { it.paymentType.equals("cash", ignoreCase = true) }.sumOf { it.total }
         val cardRevenue = sales.filter { it.paymentType.equals("card", ignoreCase = true) }.sumOf { it.total }
+        val sbpRevenue = sales.filter { it.paymentType.equals("sbp", ignoreCase = true) }.sumOf { it.total }
         val averageCheck = if (totalChecks == 0) 0L else totalRevenue / totalChecks
         val topProducts = sales
             .flatMap { it.items }
@@ -135,6 +136,7 @@ class CheckService(
             totalReturns = totalReturns,
             cashRevenue = cashRevenue,
             cardRevenue = cardRevenue,
+            sbpRevenue = sbpRevenue,
             averageCheck = averageCheck,
             topProducts = topProducts
         )

@@ -66,6 +66,33 @@ class ReportsUseCaseTest {
     }
 
     @Test
+    fun `getSalesReport maps sbpRevenue correctly`() = runBlocking {
+        val fromTs = 1_000L
+        val toTs = 9_999L
+        coEvery { shiftDao.findOpenShift() } returns null
+        coEvery { api.getSalesReport("day", null, fromTs) } returns Response.success(
+            SalesReportDto(
+                totalChecks = 3,
+                returnChecks = 0,
+                totalRevenue = 60_000L,
+                totalReturns = 0L,
+                cashRevenue = 20_000L,
+                cardRevenue = 30_000L,
+                sbpRevenue = 10_000L,
+                averageCheck = 20_000L
+            )
+        )
+
+        val report = useCase.getSalesReport("day", fromTs, toTs)
+
+        assertEquals(20_000L, report.cashTotal)
+        assertEquals(30_000L, report.cardTotal)
+        assertEquals(10_000L, report.sbpTotal)
+        assertEquals(60_000L, report.totalSales)
+        assertEquals(20_000L, report.averageCheck)
+    }
+
+    @Test
     fun `getSalesReport fails closed when backend responds non-success`() = runBlocking {
         val fromTs = 1_000L
         val toTs = 9_999L

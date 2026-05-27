@@ -64,7 +64,7 @@ class ReportsUseCase @Inject constructor(
                     totalReturns = body.totalReturns,
                     cashTotal = body.cashRevenue,
                     cardTotal = body.cardRevenue,
-                    sbpTotal = 0L,
+                    sbpTotal = body.sbpRevenue,
                     checkCount = body.totalChecks,
                     returnCount = body.returnChecks,
                     averageCheck = body.averageCheck,

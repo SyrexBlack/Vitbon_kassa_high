@@ -184,6 +184,7 @@ data class SalesReportDto(
     val totalReturns: Long,
     val cashRevenue: Long,
     val cardRevenue: Long,
+    val sbpRevenue: Long = 0L,
     val averageCheck: Long,
     val topProducts: List<ProductSalesDto>? = null
 )
