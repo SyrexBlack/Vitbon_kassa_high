@@ -46,4 +46,7 @@ interface CheckDao {
 
     @Query("UPDATE checks SET status = 'SYNCED', syncedAt = :syncedAt WHERE id = :id")
     suspend fun markSynced(id: String, syncedAt: Long)
+
+    @Query("UPDATE checks SET ofdResponse = :evidenceJson WHERE id = :id")
+    suspend fun updateOfdEvidence(id: String, evidenceJson: String)
 }

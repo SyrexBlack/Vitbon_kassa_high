@@ -95,4 +95,12 @@ interface VitbonApi {
 
     @POST("api/v1/chaseznak/verify-age")
     suspend fun verifyAge(@Body payload: String): Response<String>
+
+    // OFD evidence
+    @GET("api/v1/ofd/receipt")
+    suspend fun getOfdReceiptStatus(
+        @Query("fnNumber") fnNumber: String,
+        @Query("fdNumber") fdNumber: String,
+        @Query("fiscalSign") fiscalSign: String
+    ): Response<OfdReceiptStatusResponse>
 }

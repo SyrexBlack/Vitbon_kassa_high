@@ -205,3 +205,9 @@ data class MovementReportDto(
     val closingStock: Double,
     val items: List<MovementReportItemDto>
 )
+
+data class OfdReceiptStatusResponse(
+    val registrationTime: Long,
+    val checkUrl: String?,
+    val operatorId: String?
+)
