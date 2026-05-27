@@ -25,5 +25,6 @@ data class LocalCheckItem(
     val price: Long,
     val discount: Long,
     val vatRate: String,
-    val total: Long
+    val total: Long,
+    val markedProductCode: String? = null
 )

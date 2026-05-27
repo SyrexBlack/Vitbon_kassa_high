@@ -50,7 +50,6 @@ class ProcessSaleUseCase @Inject constructor(
         if (emergencySessionActive || !RolePolicy.canPerform(cashierRole, RoleOperation.SALE)) {
             return SaleResult.FiscalError(-1, RolePolicy.ACCESS_DENIED_MESSAGE)
         }
-        // 1. Построить FiscalCheck
         val additionalInfo = buildAdditionalInfo()
         val fiscalCheck = FiscalCheck(
             id = UUID.randomUUID().toString(),
@@ -65,7 +64,8 @@ class ProcessSaleUseCase @Inject constructor(
                     price = item.price,
                     discount = item.discount,
                     vatRate = item.vatRate,
-                    total = item.total
+                    total = item.total,
+                    markedProductCode = item.markedProductCode
                 )
             },
             payments = listOf(
@@ -78,7 +78,6 @@ class ProcessSaleUseCase @Inject constructor(
             additionalInfo = additionalInfo
         )
 
-        // 2. Сохранить в Room (черновик — PENDING_SYNC)
         val localCheck = LocalCheck(
             id = fiscalCheck.id,
             localUuid = fiscalCheck.id,
@@ -111,12 +110,12 @@ class ProcessSaleUseCase @Inject constructor(
                 price = item.price.kopecks,
                 discount = item.discount.kopecks,
                 vatRate = item.vatRate.name,
-                total = item.total.kopecks
+                total = item.total.kopecks,
+                markedProductCode = item.markedProductCode
             )
         }
         checkItemDao.insertAll(localItems)
 
-        // 3. Отправить в FiscalRuntime
         val fiscalResult = fiscalOrchestrator.executeSale(fiscalCheck)
 
         return when (fiscalResult) {

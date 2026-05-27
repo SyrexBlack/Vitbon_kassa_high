@@ -9,9 +9,11 @@ data class CartItem(
     val quantity: Double,
     val price: Money,
     val discount: Money = Money.ZERO,
-    val vatRate: VatRate
+    val vatRate: VatRate,
+    val markedProductCode: String? = null
 ) {
     val total: Money get() = Money((price.kopecks * quantity).toLong()) - discount
+    val isMarked: Boolean get() = markedProductCode != null
 }
 
 data class Cart(
