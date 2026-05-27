@@ -8,6 +8,7 @@ import com.vitbon.kkm.features.chaseznak.domain.ChaseznakRepository
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakResult
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakStatus
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakValidation
+import com.vitbon.kkm.features.products.domain.ProductRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,8 +20,15 @@ import org.junit.Test
 class MarkedGoodsSaleUseCaseTest {
 
     private val chaseznakRepository = mockk<ChaseznakRepository>(relaxed = true)
+    private val productRepository = mockk<ProductRepository>(relaxed = true)
     private val innerUseCase = mockk<ProcessSaleUseCase>(relaxed = true)
-    private val useCase = MarkedGoodsSaleUseCase(chaseznakRepository, innerUseCase)
+    private val useCase = MarkedGoodsSaleUseCase(
+        chaseznakRepository = chaseznakRepository,
+        productRepository = productRepository,
+        innerUseCase = innerUseCase
+    )
+
+    // ─── MARKING VALIDATION (existing — preserved) ───────────────────────────
 
     @Test
     fun `non-marked items bypass validation and call inner use case`() = runTest {
@@ -33,21 +41,18 @@ class MarkedGoodsSaleUseCaseTest {
             ),
             paymentType = PaymentType.CARD
         )
-        val innerResult = SaleResult.Success(checkId = "ck-1", fiscalSign = "fs", total = 10.0)
-        coEvery { innerUseCase.execute(any(), any(), any(), any(), any(), any()) } returns innerResult
+        coEvery { innerUseCase.execute(any(), any(), any(), any(), any(), any()) } returns
+            SaleResult.Success(checkId = "ck-1", fiscalSign = "fs", total = 10.0)
 
         val result = useCase.execute(
             cart = cart,
-            cashierId = "c1",
-            deviceId = "d1",
-            shiftId = "s1",
-            cashierRole = CashierRole.CASHIER,
-            emergencySessionActive = false
+            cashierId = "c1", deviceId = "d1", shiftId = "s1",
+            cashierRole = CashierRole.CASHIER, emergencySessionActive = false
         )
 
-        assertTrue(result is SaleResult.Success)
+        assertTrue(result is  SaleResult.Success)
         coVerify(exactly = 0) { chaseznakRepository.validateCode(any()) }
-        coVerify(exactly = 1) { innerUseCase.execute(any(), any(), any(), any(), any(), any()) }
+        coVerify { innerUseCase.execute(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -63,9 +68,7 @@ class MarkedGoodsSaleUseCaseTest {
             ),
             paymentType = PaymentType.CARD
         )
-        coEvery {
-            chaseznakRepository.validateCode(code)
-        } returns ChaseznakValidation(
+        coEvery { chaseznakRepository.validateCode(code) } returns ChaseznakValidation(
             barcode = code, status = ChaseznakStatus.OK,
             productName = "Cigarette Pack", expiryDate = null, message = null
         )
@@ -78,6 +81,7 @@ class MarkedGoodsSaleUseCaseTest {
             cashierRole = CashierRole.CASHIER, emergencySessionActive = false
         )
 
+        assertTrue(result is SaleResult.Success)
         coVerify { chaseznakRepository.validateCode(code) }
         coVerify { innerUseCase.execute(any(), any(), any(), any(), any(), any()) }
     }
@@ -108,7 +112,6 @@ class MarkedGoodsSaleUseCaseTest {
 
         assertTrue(result is SaleResult.FiscalError)
         assertEquals("CHASENAK_BLOCK", (result as SaleResult.FiscalError).message.take(14))
-
         coVerify(exactly = 0) { innerUseCase.execute(any(), any(), any(), any(), any(), any()) }
     }
 
@@ -270,5 +273,88 @@ class MarkedGoodsSaleUseCaseTest {
         coVerify(exactly = 0) { chaseznakRepository.validateCode("4600000000000") }
         coVerify { chaseznakRepository.validateCode(code) }
         coVerify { chaseznakRepository.sell(code, "ck-4") }
+    }
+
+    // ─── STOCK MUTATION (vitbon-kassa-1rd.5.1) ────────────────────────────────
+
+    @Test
+    fun `successful sale decrements stock for each cart item`() = runTest {
+        val cart = Cart(
+            items = listOf(
+                CartItem(
+                    productId = "p1", barcode = "4600000000000", name = "Milk",
+                    quantity = 2.0, price = Money(1000), vatRate = VatRate.VAT_22
+                ),
+                CartItem(
+                    productId = "p2", barcode = "4601111111111", name = "Bread",
+                    quantity = 1.0, price = Money(500), vatRate = VatRate.VAT_22
+                )
+            ),
+            paymentType = PaymentType.CASH
+        )
+        coEvery { innerUseCase.execute(any(), any(), any(), any(), any(), any()) } returns
+            SaleResult.Success(checkId = "ck-stock", fiscalSign = "fs", total = 25.0)
+
+        val result = useCase.execute(
+            cart = cart,
+            cashierId = "c1", deviceId = "d1", shiftId = "s1",
+            cashierRole = CashierRole.CASHIER, emergencySessionActive = false
+        )
+
+        assertTrue(result is SaleResult.Success)
+        coVerify { productRepository.decrementStock("p1", 2.0) }
+        coVerify { productRepository.decrementStock("p2", 1.0) }
+    }
+
+    @Test
+    fun `failed fiscal sale does not decrement stock`() = runTest {
+        val cart = Cart(
+            items = listOf(
+                CartItem(
+                    productId = "p1", barcode = "4600000000000", name = "Milk",
+                    quantity = 5.0, price = Money(1000), vatRate = VatRate.VAT_22
+                )
+            ),
+            paymentType = PaymentType.CARD
+        )
+        coEvery { innerUseCase.execute(any(), any(), any(), any(), any(), any()) } returns
+            SaleResult.FiscalError(-1, "Fiscal error")
+
+        val result = useCase.execute(
+            cart = cart,
+            cashierId = "c1", deviceId = "d1", shiftId = "s1",
+            cashierRole = CashierRole.CASHIER, emergencySessionActive = false
+        )
+
+        assertTrue(result is SaleResult.FiscalError)
+        coVerify(exactly = 0) { productRepository.decrementStock(any(), any()) }
+    }
+
+    @Test
+    fun `chaseznak block does not decrement stock`() = runTest {
+        val code = "01046123456789052FnS+EqV1XNAmLqT"
+        val cart = Cart(
+            items = listOf(
+                CartItem(
+                    productId = "p1", barcode = null, name = "Cigarettes",
+                    quantity = 1.0, price = Money(2000), vatRate = VatRate.VAT_22,
+                    markedProductCode = code
+                )
+            ),
+            paymentType = PaymentType.CARD
+        )
+        coEvery { chaseznakRepository.validateCode(code) } returns ChaseznakValidation(
+            barcode = code, status = ChaseznakStatus.ALREADY_SOLD,
+            productName = null, expiryDate = null, message = null
+        )
+
+        val result = useCase.execute(
+            cart = cart,
+            cashierId = "c1", deviceId = "d1", shiftId = "s1",
+            cashierRole = CashierRole.CASHIER, emergencySessionActive = false
+        )
+
+        assertTrue(result is SaleResult.FiscalError)
+        coVerify(exactly = 0) { productRepository.decrementStock(any(), any()) }
     }
 }

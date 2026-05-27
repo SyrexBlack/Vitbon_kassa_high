@@ -2,21 +2,24 @@ package com.vitbon.kkm.features.sales.domain
 
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakRepository
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakStatus
+import com.vitbon.kkm.features.products.domain.ProductRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Обёртка над ProcessSaleUseCase: валидирует и выбывает маркированные товары
- * до и после фискализации.
+ * до и после фискализации, обновляет остатки после успешной продажи.
  *
  * Поток:
  * 1. unmarked items → сразу в innerUseCase
  * 2. marked items → validateCode → innerUseCase → sell (по checkId)
  * 3. Блокировка: OK — продажа, всё остальное — SaleResult.FiscalError
+ * 4. После успеха: decrementStock для каждой позиции
  */
 @Singleton
 class MarkedGoodsSaleUseCase @Inject constructor(
     private val chaseznakRepository: ChaseznakRepository,
+    private val productRepository: ProductRepository,
     private val innerUseCase: ProcessSaleUseCase
 ) {
     suspend fun execute(
@@ -40,6 +43,9 @@ class MarkedGoodsSaleUseCase @Inject constructor(
 
         val result = innerUseCase.execute(cart, cashierId, deviceId, shiftId, cashierRole, emergencySessionActive)
         if (result is SaleResult.Success) {
+            for (item in cart.items) {
+                productRepository.decrementStock(item.productId, item.quantity)
+            }
             for (item in cart.items) {
                 val code = item.markedProductCode ?: continue
                 try {

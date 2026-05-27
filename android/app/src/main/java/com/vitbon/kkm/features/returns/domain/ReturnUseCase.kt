@@ -12,6 +12,7 @@ import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import com.vitbon.kkm.features.auth.domain.CashierRole
 import com.vitbon.kkm.features.auth.domain.RoleOperation
 import com.vitbon.kkm.features.auth.domain.RolePolicy
+import com.vitbon.kkm.features.products.domain.ProductRepository
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +23,8 @@ class ReturnUseCase @Inject constructor(
     private val checkDao: CheckDao,
     private val checkItemDao: CheckItemDao,
     private val shiftDao: ShiftDao,
-    private val fiscalConfig: FiscalConfig
+    private val fiscalConfig: FiscalConfig,
+    private val productRepository: ProductRepository
 ) {
     private suspend fun buildAdditionalInfo(): Map<String, String> {
         val shift = shiftDao.findOpenShift() ?: return emptyMap()
@@ -167,6 +169,11 @@ class ReturnUseCase @Inject constructor(
                     ofdResponse = null,
                     syncedAt = null
                 )
+                for (item in items) {
+                    item.productId?.let { productId ->
+                        productRepository.incrementStock(productId, item.quantity)
+                    }
+                }
                 ReturnResult.Success(returnCheck.id, fiscalResult.fiscalSign)
             }
             is FiscalRuntimeResult.Error -> {

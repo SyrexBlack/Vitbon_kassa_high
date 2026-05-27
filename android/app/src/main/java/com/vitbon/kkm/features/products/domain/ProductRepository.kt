@@ -53,6 +53,12 @@ class ProductRepository @Inject constructor(
         val newStock = (product.stock - quantity).coerceAtLeast(0.0)
         productDao.insert(product.copy(stock = newStock))
     }
+
+    /** Восстановить остаток после возврата */
+    suspend fun incrementStock(productId: String, quantity: Double) {
+        val product = productDao.findById(productId) ?: return
+        productDao.insert(product.copy(stock = product.stock + quantity))
+    }
 }
 
 /** Маппинг LocalProduct → доменная модель */

@@ -13,6 +13,7 @@ import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalCheck
 import com.vitbon.kkm.data.local.entity.LocalCheckItem
 import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.products.domain.ProductRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -29,8 +30,9 @@ class ReturnUseCaseTest {
     private val checkItemDao = mockk<CheckItemDao>(relaxed = true)
     private val shiftDao = mockk<ShiftDao>(relaxed = true)
     private val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
+    private val productRepository = mockk<ProductRepository>(relaxed = true)
 
-    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
+    private val useCase = ReturnUseCase(fiscalOrchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig, productRepository)
 
     @Test
     fun `findCheckByNumber trims identifier and delegates deterministic lookup`() = runBlocking {
@@ -228,6 +230,7 @@ class ReturnUseCaseTest {
                 syncedAt = null
             )
         }
+        coVerify { productRepository.incrementStock("prod-1", 2.0) }
     }
 
     @Test
