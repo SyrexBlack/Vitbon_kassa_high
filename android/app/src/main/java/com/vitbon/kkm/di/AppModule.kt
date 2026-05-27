@@ -56,6 +56,8 @@ object AppModule {
     fun provideProductDao(db: VitbonDatabase): ProductDao = db.productDao()
     @Provides
     fun provideAuditLogDao(db: VitbonDatabase): AuditLogDao = db.auditLogDao()
+    @Provides
+    fun provideMarkingDisposalDao(db: VitbonDatabase): MarkingDisposalDao = db.markingDisposalDao()
 
     @Provides
     @Singleton
