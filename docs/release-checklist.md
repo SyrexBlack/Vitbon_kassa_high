@@ -57,6 +57,14 @@
 
 - [ ] 10 concurrent `POST /api/v1/auth/login` for the same cashier from same device; after all complete, query `auth_sessions` — only 1 row with `status=ACTIVE`; all others have `status=REVOKED, revoke_reason=REPLACED_BY_NEW_LOGIN`
 
+### Health and monitoring
+
+- [ ] `GET /api/v1/health` → HTTP 200, `{"status":"UP","service":"vitbon-backend",...}`
+- [ ] `GET /api/v1/health/live` → HTTP 200, `{"status":"ALIVE",...}`
+- [ ] `GET /api/v1/health/ready` → HTTP 200, `{"status":"READY",...}`
+- [ ] Rollback procedure documented in `backend/docs/monitoring.md` — verify Flyway migration version table is readable
+- [ ] Confirm `GET /api/v1/license/check?deviceId=` returns ok or 403 (no 500)
+
 ---
 
 ## Android POS App
@@ -98,6 +106,16 @@
 - [ ] `POST /api/v1/auth/login` returns feature flags matching server config for `ЕГАИС`, `Честный ЗНАК`, acquiring, and SBP
 - [ ] `POST /api/v1/egais/*` returns real integration result instead of HTTP 501
 - [ ] `POST /api/v1/chaseznak/validate`, `/sell`, `/verify-age` return real integration result instead of HTTP 501
+
+### Inventory and stock accounting (vitbon-kassa-1rd.5.2, 1rd.5.3)
+
+- [ ] `POST /api/v1/documents/sync` (inventory) → HTTP 200, saved locally with `PENDING_SYNC`, sent to API; if offline, saved with `PENDING_SYNC` for later retry
+- [ ] `GET /api/v1/products` → returns product list with `stock` field
+- [ ] Sale/receipt flow: `product.stock` decremented only after successful fiscal receipt (rollback on failure)
+- [ ] Return flow: `product.stock` incremented on successful fiscal return
+- [ ] Stock conflict detection: sale with insufficient stock → conflict surfaced to operator; product not found → conflict surfaced
+- [ ] Ledger reconciliation: `StockMovement` records reflect all SALE/RETURN/INCOME/WRITEOFF operations; mismatches between product stock and ledger balance are flagged
+- [ ] Inventory document retry: offline-created documents are re-submitted automatically via retry mechanism
 
 ### Rollback gate (Android)
 
