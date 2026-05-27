@@ -150,4 +150,5 @@ class ProcessSaleUseCase @Inject constructor(
 sealed class SaleResult {
     data class Success(val checkId: String, val fiscalSign: String, val total: Double) : SaleResult()
     data class FiscalError(val code: Int, val message: String) : SaleResult()
+    data class TerminalError(val reason: String, val message: String) : SaleResult()
 }
