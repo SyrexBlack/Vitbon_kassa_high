@@ -10,8 +10,14 @@ class RouteAccessPolicy {
         if (normalized == "/api/v1/auth/login") return emptySet()
         if (normalized == "/api/v1/auth/logout") return setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
 
+        // Health probes: public for k8s/lb orchestrators
+        if (normalized == "/api/v1/health" ||
+            normalized == "/api/v1/health/live" ||
+            normalized == "/api/v1/health/ready") return emptySet()
+
         return when {
             normalized == "/api/v1/license/check" -> emptySet()
+            normalized.startsWith("/api/v1/audit") -> setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
             normalized.startsWith("/api/v1/statuses") -> setOf("ADMIN", "SENIOR_CASHIER")
             normalized.startsWith("/api/v1/checks") -> setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
             normalized.startsWith("/api/v1/shifts") -> setOf("CASHIER", "SENIOR_CASHIER", "ADMIN")
