@@ -136,9 +136,12 @@ interface Neva01FProtocol {
     suspend fun getFFDVersion(): FFDVersion
 }
 
-class RealNeva01FProtocol(private val context: Context) : Neva01FProtocol {
-    // До поставки отдельного Neva SDK-контракта используем runtime binder bridge фискального сервиса.
-    private val fallbackBridge by lazy { RealMSPOSKProtocol(context) }
+open class RealNeva01FProtocol(private val context: Context) : Neva01FProtocol {
+    // MSPOS-K binder service is the vendor's current runtime for the Neva 01Ф device.
+    // Rationale: see docs/superpowers/specs/2026-05-27-neva01f-sdk-justification-design.md
+    // Migration: replace createBridge() with a real Neva SDK adapter when vendor contract fulfilled.
+    protected open fun createBridge(): RealMSPOSKProtocol = RealMSPOSKProtocol(context)
+    private val fallbackBridge by lazy { createBridge() }
 
     override suspend fun openShift(): FiscalResult = fallbackBridge.openShift()
 
