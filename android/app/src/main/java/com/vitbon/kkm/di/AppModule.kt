@@ -19,6 +19,7 @@ import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.features.auth.domain.AuthTokenStore
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
 import com.vitbon.kkm.features.rootdetection.RootRiskGuard
+import com.vitbon.kkm.di.createFiscalCore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -147,18 +148,5 @@ object AppModule {
         rootRiskGuard: RootRiskGuard,
         cashierNameProvider: CashierNameProvider
     ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard, cashierNameProvider)
-}
-
-internal fun createFiscalCore(
-    isDebug: Boolean,
-    context: Context,
-    realCoreProvider: () -> FiscalCore
-): FiscalCore {
-    if (isDebug) {
-        return runBlocking {
-            FakeFiscalCore(context).also { it.initialize() }
-        }
-    }
-    return realCoreProvider()
 }
 

@@ -17,7 +17,7 @@ import javax.inject.Singleton
  * SDK предоставляется компанией-производителем.
  */
 @Singleton
-class Neva01FFiscalCore @Inject constructor(
+open class Neva01FFiscalCore @Inject constructor(
     private val context: Context
 ) : FiscalCore {
 
@@ -30,7 +30,14 @@ class Neva01FFiscalCore @Inject constructor(
     private var cachedStatus: FiscalStatus? = null
 
     private val sdk: Neva01FProtocol by lazy {
-        RealNeva01FProtocol(context)
+        createProtocol()
+    }
+
+    /**
+     * Override in tests to inject a mock/spy protocol.
+     */
+    protected open fun createProtocol(): Neva01FProtocol {
+        return RealNeva01FProtocol(context)
     }
 
     override suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
@@ -107,6 +114,8 @@ class Neva01FFiscalCore @Inject constructor(
             withContext(Dispatchers.IO) { block() }
         } catch (e: FiscalException) {
             throw e
+        } catch (e: java.util.concurrent.TimeoutException) {
+            throw FiscalException(-1, e.message ?: "Timeout", recoverable = true)
         } catch (e: Exception) {
             Log.e(TAG, "Fiscal op failed", e)
             throw FiscalException(-1, e.message ?: "Unknown", recoverable = false)
