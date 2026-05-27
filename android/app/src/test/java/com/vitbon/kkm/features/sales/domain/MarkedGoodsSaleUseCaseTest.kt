@@ -11,10 +11,16 @@ import com.vitbon.kkm.features.chaseznak.domain.ChaseznakValidation
 import com.vitbon.kkm.features.products.domain.ProductRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Before
+import org.junit.After
 import org.junit.Test
 
 class MarkedGoodsSaleUseCaseTest {
@@ -27,6 +33,18 @@ class MarkedGoodsSaleUseCaseTest {
         productRepository = productRepository,
         innerUseCase = innerUseCase
     )
+
+    @Before
+    fun mockLog() {
+        mockkStatic(android.util.Log::class)
+        every { android.util.Log.e(any(), any<String>()) } returns 0
+        every { android.util.Log.e(any(), any<String>(), any<Throwable>()) } returns 0
+    }
+
+    @After
+    fun unmockLog() {
+        unmockkStatic(android.util.Log::class)
+    }
 
     // ─── MARKING VALIDATION (existing — preserved) ───────────────────────────
 
