@@ -1,0 +1,9 @@
+# Keystore and signing
+keystore.properties
+*.jks
+*.keystore
+
+# Build outputs
+/build/
+app/build/
+app/release/

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -8,6 +10,20 @@ plugins {
 android {
     namespace = "com.vitbon.kkm"
     compileSdk = 34
+
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("keystore.properties")
+            if (keystoreFile.exists()) {
+                val props = Properties()
+                keystoreFile.inputStream().use { stream -> props.load(stream) }
+                storeFile = file(props.getProperty("storeFile")!!)
+                storePassword = props.getProperty("storePassword")!!
+                keyAlias = props.getProperty("keyAlias")!!
+                keyPassword = props.getProperty("keyPassword")!!
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.vitbon.kkm"
@@ -32,6 +48,11 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String", "API_BASE_URL", "\"https://api.vitbon.ru/\"")
+            // signingConfig is set conditionally — no auto-signing without keystore
+            val releaseSign = signingConfigs.findByName("release")
+            if (releaseSign?.storeFile?.canRead() == true) {
+                signingConfig = releaseSign
+            }
         }
         debug {
             isMinifyEnabled = false
@@ -115,6 +136,7 @@ dependencies {
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
@@ -128,6 +150,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.9")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
