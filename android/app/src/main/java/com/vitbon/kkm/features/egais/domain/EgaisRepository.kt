@@ -13,18 +13,41 @@ class EgaisRepository @Inject constructor(
     private val api: VitbonApi
 ) {
     /**
-     * Проверить доступность УТМ.
+     * Проверить доступность УТМ и вернуть развёрнутый статус.
      * УТМ запущен локально (на сервере бэкенда или на кассе).
+     *
+     * Статус отражает причину недоступности, чтобы UI мог показать
+     * конкретное сообщение вместо generic "УТМ недоступен".
      */
-    suspend fun checkUtmAvailable(): Boolean {
+    suspend fun getUtmStatus(): UtmStatus {
         return try {
             val response = api.getEgaisStatus()
-            response.isSuccessful && response.body()?.available == true
+            if (response.isSuccessful && response.body()?.available == true) {
+                UtmStatus.Ready
+            } else {
+                val body = response.body()
+                when {
+                    body == null -> UtmStatus.UnknownError("Пустой ответ УТМ")
+                    !body.available -> UtmStatus.Unreachable("УТМ сообщил: недоступен")
+                    else -> UtmStatus.UnknownError("Статус УТМ: unknown")
+                }
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "УТМ недоступен: ${e.message}")
-            false
+            when {
+                e.message?.contains("401", ignoreCase = true) == true ||
+                e.message?.contains("auth", ignoreCase = true) == true ->
+                    UtmStatus.AuthError("Ошибка авторизации УТМ: ${e.message}")
+                e.message?.contains("connect", ignoreCase = true) == true ||
+                e.message?.contains("refused", ignoreCase = true) == true ||
+                e.message?.contains("timeout", ignoreCase = true) == true ->
+                    UtmStatus.Unreachable(e.message ?: "Сеть недоступна")
+                else -> UtmStatus.UnknownError(e.message ?: "Неизвестная ошибка")
+            }
         }
     }
+
+    /** Обратная совместимость — булевый checkUtmAvailable(). */
+    suspend fun checkUtmAvailable(): Boolean = getUtmStatus() is UtmStatus.Ready
 
     /**
      * Принять накладную от ЕГАИС (прокси через бэкенд → УТМ).
