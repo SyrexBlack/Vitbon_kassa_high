@@ -40,6 +40,7 @@ class ReturnViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { authUseCase.isEmergencySessionActive() } returns false
+        every { authUseCase.auditEmergencyOperationDenied(any()) } returns Unit
     }
 
     @After
@@ -327,6 +328,7 @@ class ReturnViewModelTest {
         val st = vm.state.value
         assertFalse(st.isProcessing)
         assertEquals("-1: Операция запрещена для текущей роли", st.error)
+        verify(exactly = 1) { authUseCase.auditEmergencyOperationDenied("RETURN") }
         coVerify(exactly = 1) { returnUseCase.processReturn(any(), any(), "unknown", CashierRole.ADMIN, true) }
         verify(exactly = 0) { syncService.onCheckCreated() }
     }

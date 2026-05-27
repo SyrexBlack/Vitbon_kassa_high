@@ -14,10 +14,12 @@ import com.vitbon.kkm.data.local.dao.*
         LocalProduct::class,
         LocalCategory::class,
         AuditLogEntry::class,
-        LocalMarkingDisposal::class
+        LocalMarkingDisposal::class,
+        LocalInventoryDocument::class,
+        LocalInventoryDocumentItem::class
     ],
     version = 1,
-    exportSchema = true
+    exportSchema = false
 )
 abstract class VitbonDatabase : RoomDatabase() {
     abstract fun cashierDao(): CashierDao
@@ -27,4 +29,6 @@ abstract class VitbonDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun auditLogDao(): AuditLogDao
     abstract fun markingDisposalDao(): MarkingDisposalDao
+    abstract fun inventoryDocumentDao(): InventoryDocumentDao
+    abstract fun inventoryDocumentItemDao(): InventoryDocumentItemDao
 }
