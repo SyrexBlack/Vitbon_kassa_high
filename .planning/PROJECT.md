@@ -8,6 +8,21 @@
 
 **Текущий статус:** v1.0 MVP SHIPPED 2026-06-21
 
+## Current Milestone: v1.1 Production Readiness
+
+**Goal:** Закрыть deferred tech debt из v1.0 и подтвердить готовность к production через sandbox-интеграцию и нагрузочные тесты.
+
+**Target features:**
+- Sandbox integration (ОФД, Честный ЗНАК, УТМ, Цифровой ID Max)
+- 24-час offline stress test
+- Load test 200+ касс (Redis Streams)
+- SQLCipher key rotation test
+- ФН replacement flow (FnRegistration lifecycle)
+- Mutual TLS cert management
+- Token rotation/revocation
+
+**Текущий статус:** v1.0 MVP SHIPPED 2026-06-21
+
 ## Core Value
 
 Кассир может быстро и безопасно провести продажу/возврат товара с формированием фискального чека и синхронизацией данных — в любое время, в любое время, онлайн или офлайн.
@@ -156,4 +171,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 after v1.0 milestone completion*
+*Last updated: 2026-06-21 after v1.1 Production Readiness milestone kickoff*

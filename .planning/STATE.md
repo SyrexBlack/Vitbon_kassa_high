@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: Production Readiness
+status: planning
+last_updated: "2026-06-21T12:24:24.059Z"
+last_activity: 2026-06-21
+progress:
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+---
+
 # STATE: VITBON Kassovoye Prilozheniye
 
 **Version:** 1.0  
@@ -26,6 +41,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** FISC-01–08, KKT-01–06, SEC-02 (15 total)
 
 **Implementation status:**
+
 - ✓ `FiscalCore` interface with all 8 operations (openShift, printSale, printReturn, printCorrection, closeShift, printXReport, cashIn, cashOut)
 - ✓ `MSPOSKFiscalCore` adapter (MSPOS-K SDK)
 - ✓ `Neva01FFiscalCore` adapter (delegation via MSPOS-K service)
@@ -49,6 +65,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** AUTH-01–04, LIC-01–03, SEC-01, SEC-03–05 (12 total)
 
 **Implementation status:**
+
 - ✓ `AuthUseCase` — PIN/password authentication
 - ✓ `AuthTokenStore` — secure session storage
 - ✓ `AdminPinSetupScreen` — admin PIN setup
@@ -73,6 +90,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** GOOD-01–05, MON-01–06, UPDT-01 (12 total)
 
 **Implementation status:**
+
 - ✓ `SyncManager` — bidirectional sync orchestration
 - ✓ `SyncUpScheduler` — push checks to cloud
 - ✓ `SyncDownWorker` — pull products from cloud
@@ -96,6 +114,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** REPT-01–05 (5 total)
 
 **Implementation status:**
+
 - ✓ Reports module — sales, returns, fiscal reports
 - ✓ Inventory module — stock count vs expected
 - ✓ Writeoff module — goods writeoff documents
@@ -114,6 +133,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** SYNC-01, SYNC-02 (v2, batch sync + conflict resolution)
 
 **Implementation status:**
+
 - ✓ Backend Spring Boot 3.2.2 + Kotlin
 - ✓ REST API controllers: Checks, Products, Documents, Shifts, Reports, Status, License, Auth, Audit
 - ✓ Domain entities: Check, Document, Product, Shift, Security
@@ -135,6 +155,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** MARK-01–06, ALCO-01–05 (11 total)
 
 **Implementation status:**
+
 - ✓ Chaseznak module — DataMatrix, validation, write-off
 - ✓ Egais module — УТМ integration, alcohol sale fixation
 - ✓ Both compiled-in but runtime-gated via `FeatureManager`
@@ -167,6 +188,7 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 **Requirements:** GAP-01 to GAP-05
 
 **Implementation status:**
+
 - ✓ Created 4 backend services: LicenseService, EgaisService, ChaseznakService, StatusService
 - ✓ Created `di/FiscalCoreFactory.kt` with `createFiscalCore()` function + private `FakeFiscalCore` for debug
 - ✓ Wired `AlcoholSalePolicyUseCase` into `ProcessSaleUseCase` as pre-fiscal check
@@ -198,3 +220,10 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 
 
 *State file: updated on roadmap creation and phase transitions*
 *Last updated: 2026-06-20*
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-21 — Milestone v1.1 started
