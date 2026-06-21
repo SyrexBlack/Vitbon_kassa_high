@@ -1,0 +1,296 @@
+--------- beginning of main
+06-06 18:59:19.521   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.522   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.522   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.522   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.523   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.523   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.523   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.524   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.525   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.525   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:19.525   705   732 W IPCThreadState: Sending oneway calls to frozen process.
+--------- beginning of system
+06-06 18:59:19.526   705  2264 D CoreBackPreview: Window{490fd78 u0 Splash Screen com.vitbon.kkm}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@f437db7, mPriority=0, mIsAnimationCallback=false, mOverrideBehavior=0}
+06-06 18:59:19.526   705   739 I ActivityManager: Start proc 4832:com.vitbon.kkm/u0a236 for next-top-activity {com.vitbon.kkm/com.vitbon.kkm.MainActivity}
+06-06 18:59:19.527   705   739 I ActivityManager: ProcessObserver broadcast disabled
+06-06 18:59:19.530  4832  4832 I com.vitbon.kkm: Late-enabling -Xcheck:jni
+06-06 18:59:19.540   479   541 I netd    : tetherGetStats() -> {[]} <0.57ms>
+06-06 18:59:19.549  4832  4832 I com.vitbon.kkm: Using CollectorTypeCMC GC.
+06-06 18:59:19.549  4832  4832 W com.vitbon.kkm: Unexpected CPU variant for x86: x86_64.
+06-06 18:59:19.549  4832  4832 W com.vitbon.kkm: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+06-06 18:59:19.554   565   579 I adbd    : jdwp connection from 4832
+06-06 18:59:19.559  4832  4832 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-06 18:59:19.568   705   907 D BackgroundInstallControlService: Package event received: 0
+06-06 18:59:19.571   705   729 V WindowManager: Sent Transition (#15) createdAt=06-06 18:59:19.492 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=191 effectiveUid=10236 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=com.vitbon.kkm/.MainActivity } baseActivity=ComponentInfo{com.vitbon.kkm/com.vitbon.kkm.MainActivity} topActivity=ComponentInfo{com.vitbon.kkm/com.vitbon.kkm.MainActivity} origActivity=null realActivity=ComponentInfo{com.vitbon.kkm/com.vitbon.kkm.MainActivity} numActivities=1 lastActiveTime=1106899 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{8c19489 Task{6fe95bf #191 type=standard A=10236:com.vitbon.kkm}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 145 - 0, 0) topActivityInfo=ActivityInfo{a42c8e com.vitbon.kkm.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(362, 870 - 1079, 2310) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= true isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 145 - 1440, 3036) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive}} topActivityMainWindowFrame=null}, pipChange = null, remoteTransition = null, displayChange = null, flags = 0, debugId = 15 }
+06-06 18:59:19.571   705   729 V WindowManager:     startWCT=WindowContainerTransaction { changes= {} hops= [] errorCallbackToken=null taskFragmentOrganizer=null }
+06-06 18:59:19.571   705   729 V WindowManager:     info={id=15 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+06-06 18:59:19.571   705   729 V WindowManager:         {WCT{RemoteToken{8c19489 Task{6fe95bf #191 type=standard A=10236:com.vitbon.kkm}}} m=OPEN f=NONE leash=Surface(name=Task=191)/@0x9883e53 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},
+06-06 18:59:19.571   705   729 V WindowManager:         {WCT{RemoteToken{55ffeae Task{9fe928a #1 type=home}}} m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xe337129 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},
+06-06 18:59:19.571   705   729 V WindowManager:         {m=TO_BACK f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{a95ad75 showWhenLocked=false})/@0xacea444 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0}
+06-06 18:59:19.571   705   729 V WindowManager:     ]}
+06-06 18:59:19.575   949  1082 V WindowManagerShell: onTransitionReady(transaction=3027951944210)
+06-06 18:59:19.575   949   999 V WindowManagerShell: onTransitionReady (#15) android.os.BinderProxy@a6a7a44: {id=15 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+06-06 18:59:19.575   949   999 V WindowManagerShell:         {m=OPEN f=NONE leash=Surface(name=Task=191)/@0x4944b55 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},
+06-06 18:59:19.575   949   999 V WindowManagerShell:         {m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xad6296a sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},
+06-06 18:59:19.575   949   999 V WindowManagerShell:         {m=TO_BACK f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{a95ad75 showWhenLocked=false})/@0xfca1e5b sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0}
+06-06 18:59:19.575   949   999 V WindowManagerShell:     ]}
+06-06 18:59:19.575   949   999 V WindowManagerShell: Playing animation for (#15) android.os.BinderProxy@a6a7a44@0
+06-06 18:59:19.575   949   999 V ShellRecents: RecentsTransitionHandler.startAnimation: no controller found
+06-06 18:59:19.576   949   999 V WindowManagerShell: Transition doesn't have explicit remote, search filters for match for {id=15 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{m=OPEN f=NONE leash=Surface(name=Task=191)/@0x4944b55 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},{m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xad6296a sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},{m=TO_BACK f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{a95ad75 showWhenLocked=false})/@0xfca1e5b sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0}]}
+06-06 18:59:19.576   949   999 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x0 checks=[{atype=undefined independent=true modes=[CLOSE,TO_BACK] flags=IN_TASK_WITH_EMBEDDED_ACTIVITY mustBeTask=false order=ANY topActivity=null launchCookie=null taskFragmentToken=android.os.BinderProxy@6dc0cb6 windowingMode=undefined}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@2550db7, appThread = android.app.IApplicationThread$Stub$Proxy@aeec924, debugName = overlayBackTransition }}
+06-06 18:59:19.576   949   999 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x0 checks=[{atype=dream independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined},{atype=home independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@ecccc8d, appThread = android.app.IApplicationThread$Stub$Proxy@5943e42, debugName = LauncherToDream }}
+06-06 18:59:19.576   949   999 V WindowManagerShell:  Checking filter Pair{{types=[] flags=0x0] notFlags=0x100 checks=[{atype=home independent=true modes=[OPEN,TO_FRONT] flags=NONE mustBeTask=false order=TOP topActivity=ComponentInfo{com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity} launchCookie=null windowingMode=undefined},{atype=standard independent=true modes=[CLOSE,TO_BACK] flags=NONE mustBeTask=false order=ANY topActivity=null launchCookie=null windowingMode=undefined},{NOT atype=undefined independent=true modes=[] flags=NONE mustBeTask=true order=ANY topActivity=null launchCookie=null customAnim=true windowingMode=undefined}]} RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@422ce53, appThread = android.app.IApplicationThread$Stub$Proxy@4e15390, debugName = QuickstepLaunchHome }}
+06-06 18:59:19.576   949   999 V WindowManagerShell:  Delegate animation for (#15) to null
+06-06 18:59:19.576   949   999 V WindowManagerShell: start default transition animation, info = {id=15 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{m=OPEN f=NONE leash=Surface(name=Task=191)/@0x4944b55 sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},{m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0xad6296a sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0 taskParent=-1},{m=TO_BACK f=IS_WALLPAPER leash=Surface(name=WallpaperWindowToken{a95ad75 showWhenLocked=false})/@0xfca1e5b sb=Rect(0, 0 - 1440, 3120) eb=Rect(0, 0 - 1440, 3120) epz=Point(1440, 3120) d=0}]}
+06-06 18:59:19.576   949   999 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@f9b47d1 animAttr=0x13 type=OPEN isEntrance=false
+06-06 18:59:19.576   949   999 V WindowManagerShell: loadAnimation: anim=android.view.animation.AnimationSet@1a57236 animAttr=0x12 type=OPEN isEntrance=true
+06-06 18:59:19.577   949   999 V WindowManagerShell:  animated by com.android.wm.shell.transition.DefaultTransitionHandler@1817122
+06-06 18:59:19.579  4832  4832 D CompatChangeReporter: Compat change id reported: 242716250; UID 10236; state: ENABLED
+06-06 18:59:19.591   949   999 V WindowManagerShell: Transition animation finished (aborted=false), notifying core (#15) android.os.BinderProxy@a6a7a44@0
+06-06 18:59:19.598   705   729 V WindowManager: Finish Transition (#15): created at 06-06 18:59:19.492 collect-started=0.047ms request-sent=6.399ms started=8.354ms ready=77.456ms sent=78.573ms commit=17.54ms finished=106.353ms
+06-06 18:59:19.600  1101  1101 D VRI[NexusLauncherActivity]: visibilityChanged oldVisibility=true newVisibility=false
+06-06 18:59:19.600   949   999 V WindowManagerShell: Track 0 became idle
+06-06 18:59:19.600   949   999 V WindowManagerShell: All active transition animations finished
+06-06 18:59:19.622  1101  1101 D NexusLauncherModelDelegate: notifySmartspaceEvent: SmartspaceTargetEvent{mSmartspaceTarget=null, mSmartspaceActionId='null', mEventType=7}
+06-06 18:59:19.640   705  1990 W HWUI    : Image decoding logging dropped!
+06-06 18:59:19.653   705  4846 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+06-06 18:59:19.653   705  4846 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+06-06 18:59:19.701   705  1990 W HWUI    : Image decoding logging dropped!
+06-06 18:59:19.913  1095  1276 D SatelliteController: iisInCarrierRoamingNbIotNtn: satellite is disabled
+06-06 18:59:20.010  4832  4832 D nativeloader: Configuring clns-9 for other apk /data/app/~~i2W9Upm49_eKz93Zn-U7NQ==/com.vitbon.kkm-ydR6kWaWZVMtBLC-aeOqAw==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~i2W9Upm49_eKz93Zn-U7NQ==/com.vitbon.kkm-ydR6kWaWZVMtBLC-aeOqAw==/lib/x86_64:/data/app/~~i2W9Upm49_eKz93Zn-U7NQ==/com.vitbon.kkm-ydR6kWaWZVMtBLC-aeOqAw==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.vitbon.kkm
+06-06 18:59:20.019  4832  4832 I com.vitbon.kkm: AssetManager2(0x78f4eba69b98) locale list changing from [] to [en-US]
+06-06 18:59:20.025  4832  4832 V GraphicsEnvironment: Currently set values for:
+06-06 18:59:20.026  4832  4832 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+06-06 18:59:20.026  4832  4832 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+06-06 18:59:20.026  4832  4832 V GraphicsEnvironment: com.vitbon.kkm is not listed in per-application setting
+06-06 18:59:20.026  4832  4832 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+06-06 18:59:20.027  4832  4832 V GraphicsEnvironment: com.vitbon.kkm is not listed in ANGLE allowlist or settings, returning default
+06-06 18:59:20.027  4832  4832 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+06-06 18:59:20.489  4832  4832 I com.vitbon.kkm: hiddenapi: Accessing hidden method Ljava/lang/invoke/MethodHandles$Lookup;-><init>(Ljava/lang/Class;I)V (runtime_flags=0, domain=core-platform, api=unsupported) from Lretrofit2/Platform; (domain=app) using reflection: allowed
+06-06 18:59:20.568   705   855 D ConnectivityService: NetReassign [no changes] [c 0] [a 1] [i 1]
+06-06 18:59:20.584  4832  4855 E ashmem  : Pinning is deprecated since Android Q. Please use trim or other methods.
+06-06 18:59:20.637  4832  4832 D WM-PackageManagerHelper: Skipping component enablement for androidx.work.impl.background.systemjob.SystemJobService
+06-06 18:59:20.637  4832  4832 D WM-Schedulers: Created SystemJobScheduler and enabled SystemJobService
+06-06 18:59:20.659   705  1990 W OptProp : Cannot read opt property android.window.PROPERTY_COMPAT_ENABLE_FAKE_FOCUS
+06-06 18:59:20.661  4832  4832 I Choreographer: Skipped 31 frames!  The application may be doing too much work on its main thread.
+06-06 18:59:20.662   705   907 D BackgroundInstallControlService: Package event received: 0
+06-06 18:59:20.663   705   907 D BackgroundInstallControlService: Package event received: 0
+06-06 18:59:20.666  4832  4857 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+06-06 18:59:20.669  4832  4832 I com.vitbon.kkm: AssetManager2(0x78f4eba6ff98) locale list changing from [] to [en-US]
+06-06 18:59:20.710  4832  4860 W JobInfo : Requested important-while-foreground flag for job168 is ignored and takes no effect
+06-06 18:59:20.711  4832  4860 D CompatChangeReporter: Compat change id reported: 253665015; UID 10236; state: ENABLED
+06-06 18:59:20.725  4832  4857 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+06-06 18:59:20.727  4832  4857 I EGL_emulation: Opening libGLESv2_emulation.so
+06-06 18:59:20.734  4832  4856 W JobInfo : Requested important-while-foreground flag for job169 is ignored and takes no effect
+06-06 18:59:20.739  4832  4857 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+06-06 18:59:20.743  4832  4857 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+06-06 18:59:20.752  4832  4832 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+06-06 18:59:20.784   705  1990 D ConnectivityService: requestNetwork for uid/pid:10236/4832 activeRequest: null callbackRequest: 209 [NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+06-06 18:59:20.786   705   849 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]
+06-06 18:59:20.786   705   849 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]
+06-06 18:59:20.786   705   855 D ConnectivityService: NetReassign [210 : null → 100] [c 0] [a 1] [i 0]
+06-06 18:59:20.786   705   849 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]
+06-06 18:59:20.786   705   849 V WifiNetworkFactory: Accepted network request NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]
+06-06 18:59:20.786   705   849 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=210, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10236 RequestorUid: 10236 RequestorPkg: com.vitbon.kkm UnderlyingNetworks: Null] ]
+06-06 18:59:20.797  4832  4860 D CompatChangeReporter: Compat change id reported: 263076149; UID 10236; state: ENABLED
+06-06 18:59:20.812  4832  4832 W HWUI    : Unknown dataspace 0
+--------- beginning of kernel
+06-06 18:59:20.795     0     0 I servicemanager: Caller(pid=4832,uid=10236,sid=u:r:untrusted_app:s0:c236,c256,c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+06-06 18:59:20.798     0     0 I servicemanager: Caller(pid=4832,uid=10236,sid=u:r:untrusted_app:s0:c236,c256,c512,c768) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+06-06 18:59:20.800     0     0 I servicemanager: Caller(pid=4832,uid=10236,sid=u:r:untrusted_app:s0:c236,c256,c512,c768) Found mapper/ranchu in device VINTF manifest.
+06-06 18:59:21.113  4832  4851 E VitbonApp: Seed data failed
+06-06 18:59:21.113  4832  4851 E VitbonApp: java.lang.IllegalStateException: Room cannot verify the data integrity. Looks like you've changed schema but forgot to update the version number. You can simply fix this by increasing the version number. Expected identity hash: e0e650bba9f531770264cf96ef3a9f5e, found: 4f4b02d8c7be7f027cb692ba8c9d0595
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.RoomOpenHelper.checkIdentity(RoomOpenHelper.kt:146)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.RoomOpenHelper.onOpen(RoomOpenHelper.kt:127)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.onOpen(FrameworkSQLiteOpenHelper.kt:287)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java:448)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java:336)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getWritableOrReadableDatabase(FrameworkSQLiteOpenHelper.kt:232)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.innerGetDatabase(FrameworkSQLiteOpenHelper.kt:190)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getSupportDatabase(FrameworkSQLiteOpenHelper.kt:151)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper.getWritableDatabase(FrameworkSQLiteOpenHelper.kt:104)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.RoomDatabase.inTransaction(RoomDatabase.kt:632)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.RoomDatabase.assertNotSuspendingTransaction(RoomDatabase.kt:451)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.RoomDatabase.query(RoomDatabase.kt:480)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.util.DBUtil.query(DBUtil.kt:75)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at com.vitbon.kkm.data.local.dao.CashierDao_Impl$7.call(CashierDao_Impl.java:236)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at com.vitbon.kkm.data.local.dao.CashierDao_Impl$7.call(CashierDao_Impl.java:232)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at androidx.room.CoroutinesRoom$Companion$execute$4$job$1.invokeSuspend(CoroutinesRoom.kt:87)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:106)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+06-06 18:59:21.113  4832  4851 E VitbonApp: 	at java.lang.Thread.run(Thread.java:1119)
+06-06 18:59:21.230  4832  4837 I com.vitbon.kkm: Compiler allocated 5042KB to compile void android.view.ViewRootImpl.performTraversals()
+06-06 18:59:21.305  4832  4832 W com.vitbon.kkm: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+06-06 18:59:21.305  4832  4832 W com.vitbon.kkm: Common causes for lock verification issues are non-optimized dex code
+06-06 18:59:21.305  4832  4832 W com.vitbon.kkm: and incorrect proguard optimizations.
+06-06 18:59:21.305  4832  4832 W com.vitbon.kkm: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+06-06 18:59:21.306  4832  4832 W com.vitbon.kkm: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+06-06 18:59:21.306  4832  4832 W com.vitbon.kkm: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+06-06 18:59:21.306  4832  4832 W com.vitbon.kkm: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+06-06 18:59:21.474   705  2264 D CoreBackPreview: Window{bfd2087 u0 com.vitbon.kkm/com.vitbon.kkm.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@6ca4b52, mPriority=0, mIsAnimationCallback=false, mOverrideBehavior=0}
+06-06 18:59:21.649   705   729 I ActivityTaskManager: Displayed com.vitbon.kkm/.MainActivity for user 0: +2s158ms
+06-06 18:59:21.651   705   849 D WifiClientModeImpl[27568:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-06 18:59:21.652   705   849 D WifiDataStall: tx tput in kbps: 11000
+06-06 18:59:21.652   705   849 D WifiDataStall: rx tput in kbps: 11000
+06-06 18:59:21.652   705   849 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:21.653   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:21.654   705   849 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 220949904 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-06 18:59:21.654   705   849 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-06 18:59:21.655   705   849 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 747515790 RSSI -50 txSpeed -1
+06-06 18:59:21.655   705   849 D WifiClientModeImpl[27568:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.1 bcn=0 [on:0 tx:0 rx:0 period:3014] from screen [on:0 period:-1639066185] score=60
+06-06 18:59:21.673   605   605 W IPCThreadState: Sending oneway calls to frozen process.
+06-06 18:59:21.675   949  1033 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda13@15b6a12
+06-06 18:59:21.675   705  2264 D CoreBackPreview: Window{490fd78 u0 Splash Screen com.vitbon.kkm EXITING}: Setting back callback null
+06-06 18:59:21.677  1101  1101 D BaseDepthController: setSurface:
+06-06 18:59:21.677  1101  1101 D BaseDepthController: 	mWaitingOnSurfaceValidity: false
+06-06 18:59:21.677  1101  1101 D BaseDepthController: 	mBaseSurface: null
+06-06 18:59:21.678  1101  1101 D BaseDepthController: mSurface is null and mCurrentBlur is: 0
+06-06 18:59:21.678  1101  1101 D StateManager: goToState - fromState: Normal, toState: Normal, partial trace:
+06-06 18:59:21.678  1101  1101 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(go/retraceme 43e00d9cd0eb17b3d9dd30fc1741b1c71445c4c0f7c8c9b81300265c86c5b873:4)
+06-06 18:59:21.678  1101  1101 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(go/retraceme 43e00d9cd0eb17b3d9dd30fc1741b1c71445c4c0f7c8c9b81300265c86c5b873:1)
+06-06 18:59:21.678  1101  1101 D StateManager: 	at com.android.launcher3.statemanager.StatefulActivity.onStop(go/retraceme 43e00d9cd0eb17b3d9dd30fc1741b1c71445c4c0f7c8c9b81300265c86c5b873:34)
+06-06 18:59:21.679  1101  1101 D StatsLog: LAUNCHER_ONSTOP
+06-06 18:59:21.679   705  2267 I AppWidgetServiceImpl: setAppWidgetHidden() 0
+06-06 18:59:21.680  1101  1101 D StatsLog: LAUNCHER_GOOGLE_SEARCH_RESTORE_LIST_SIZE_AFTER_ACTIVITY_RESTART
+06-06 18:59:21.686  4832  4868 I okhttp.OkHttpClient: --> GET http://10.0.2.2:8080/api/v1/products?since=0
+06-06 18:59:21.707   705   907 D BackgroundInstallControlService: Package event received: 0
+06-06 18:59:21.717   479   541 I netd    : tetherGetStats() -> {[]} <0.54ms>
+06-06 18:59:21.721  4832  4832 I Choreographer: Skipped 50 frames!  The application may be doing too much work on its main thread.
+06-06 18:59:21.721  4832  4869 I okhttp.OkHttpClient: --> POST http://10.0.2.2:8080/api/v1/license/check (31-byte body)
+06-06 18:59:21.721  4832  4843 I HWUI    : Davey! duration=847ms; Flags=1, FrameTimelineVsyncId=9164, IntendedVsync=1108220688996, Vsync=1108220688996, InputEventId=0, HandleInputStart=1108231238100, AnimationStart=1108231274800, PerformTraversalsStart=1108231345500, DrawStart=1108988637600, FrameDeadline=1108237355662, FrameStartTime=1108231226900, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=1109006874600, SyncStart=1109007467000, IssueDrawCommandsStart=1109007592300, SwapBuffers=1109043820300, FrameCompleted=1109069152500, DequeueBufferDuration=20200, QueueBufferDuration=361800, GpuCompleted=1109069152500, SwapBuffersCompleted=1109046300800, DisplayPresentTime=0, CommandSubmissionCompleted=1109043820300, 
+06-06 18:59:21.746   705   819 I ImeTracker: com.vitbon.kkm:bfc01fae: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+06-06 18:59:21.750  4832  4832 D InsetsController: hide(ime(), fromIme=false)
+06-06 18:59:21.750  4832  4832 I ImeTracker: com.vitbon.kkm:bfc01fae: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+06-06 18:59:21.754  1375  1375 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2043 
+06-06 18:59:21.756  1375  1375 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 0, locked = false
+06-06 18:59:21.757   705  2264 I ImeTracker: system_server:73ec2584: onRequestHide at ORIGIN_SERVER reason IME_REQUESTED_CHANGED_LISTENER fromUser false
+06-06 18:59:21.758  1375  1375 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1293 onStartInput(EditorInfo{EditorInfo{packageName=com.vitbon.kkm, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+06-06 18:59:21.759  1307  2131 I FontLog : Received query Noto Color Emoji Compat, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: EmojiCompatManager.getEmojiCompatIfLoaded():343 EmojiCompat.init() was never called.
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: java.lang.IllegalStateException: EmojiCompat is not initialized. Please call EmojiCompat.init() first
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at asx.p(PG:6)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at axb.b(PG:13)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at jnr.b(PG:2)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at jnr.c(PG:4)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at jnr.f(PG:3)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at jnx.c(PG:3)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at kif.cz(PG:47)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at lhl.run(PG:1025)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at jaf.execute(PG:12)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at nco.v(PG:13)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at lhn.m(PG:96)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at lhn.k(PG:25)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at kgn.onStartInput(PG:250)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.inputmethodservice.InputMethodService.doStartInput(InputMethodService.java:3521)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.inputmethodservice.InputMethodService$InputMethodImpl.startInput(InputMethodService.java:879)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.inputmethodservice.InputMethodService$InputMethodImpl.dispatchStartInput(InputMethodService.java:908)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.inputmethodservice.IInputMethodWrapper.executeMessage(IInputMethodWrapper.java:201)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at com.android.internal.os.HandlerCaller$MyHandler.handleMessage(HandlerCaller.java:44)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.os.Handler.dispatchMessage(Handler.java:110)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.os.Looper.loopOnce(Looper.java:248)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.os.Looper.loop(Looper.java:338)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at android.app.ActivityThread.main(ActivityThread.java:9067)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at java.lang.reflect.Method.invoke(Native Method)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:593)
+06-06 18:59:21.759  1375  1375 I EmojiCompatManager: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:932)
+06-06 18:59:21.759  1307  2131 I FontLog : Query [emojicompat-emoji-font] resolved to {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-06 18:59:21.761   705   732 I ImeTracker: system_server:73ec2584: onCancelled at PHASE_SERVER_SHOULD_HIDE
+06-06 18:59:21.762  1375  1375 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():100 repeatCheckTimes = 1, locked = false
+06-06 18:59:21.763   705  2264 W PackageConfigPersister: App-specific configuration not found for packageName: com.vitbon.kkm and userId: 0
+06-06 18:59:21.766  1307  2131 I FontLog : Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-06 18:59:21.776  1307  1324 I FontLog : Pulling font file for id = 14, cache size = 8 [CONTEXT service_id=132 ]
+06-06 18:59:21.780  1307  1324 I FontLog : Pulling font file for id = 14, cache size = 8 [CONTEXT service_id=132 ]
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: Work [ id=500eb088-2480-4f53-a04d-7fe67faecdef, tags={ com.vitbon.kkm.core.sync.worker.SyncUpWorker } ] failed because it threw an exception/error
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: java.util.concurrent.ExecutionException: java.lang.IllegalStateException: Room cannot verify the data integrity. Looks like you've changed schema but forgot to update the version number. You can simply fix this by increasing the version number. Expected identity hash: e0e650bba9f531770264cf96ef3a9f5e, found: 4f4b02d8c7be7f027cb692ba8c9d0595
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.work.impl.utils.futures.AbstractFuture.getDoneValue(AbstractFuture.java:515)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.work.impl.utils.futures.AbstractFuture.get(AbstractFuture.java:474)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.work.impl.WorkerWrapper$2.run(WorkerWrapper.java:316)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.work.impl.utils.SerialExecutorImpl$Task.run(SerialExecutorImpl.java:96)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at java.lang.Thread.run(Thread.java:1119)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: Caused by: java.lang.IllegalStateException: Room cannot verify the data integrity. Looks like you've changed schema but forgot to update the version number. You can simply fix this by increasing the version number. Expected identity hash: e0e650bba9f531770264cf96ef3a9f5e, found: 4f4b02d8c7be7f027cb692ba8c9d0595
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.RoomOpenHelper.checkIdentity(RoomOpenHelper.kt:146)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.RoomOpenHelper.onOpen(RoomOpenHelper.kt:127)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.onOpen(FrameworkSQLiteOpenHelper.kt:287)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java:448)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java:336)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getWritableOrReadableDatabase(FrameworkSQLiteOpenHelper.kt:232)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.innerGetDatabase(FrameworkSQLiteOpenHelper.kt:190)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getSupportDatabase(FrameworkSQLiteOpenHelper.kt:151)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper.getWritableDatabase(FrameworkSQLiteOpenHelper.kt:104)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.RoomDatabase.inTransaction(RoomDatabase.kt:632)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.RoomDatabase.assertNotSuspendingTransaction(RoomDatabase.kt:451)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.RoomDatabase.query(RoomDatabase.kt:480)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.util.DBUtil.query(DBUtil.kt:75)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at com.vitbon.kkm.data.local.dao.CheckDao_Impl$9.call(CheckDao_Impl.java:260)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at com.vitbon.kkm.data.local.dao.CheckDao_Impl$9.call(CheckDao_Impl.java:256)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at androidx.room.CoroutinesRoom$Companion$execute$4$job$1.invokeSuspend(CoroutinesRoom.kt:87)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:106)
+06-06 18:59:22.231  4832  4856 E WM-WorkerWrapper: 	... 3 more
+06-06 18:59:22.232  4832  4856 I WM-WorkerWrapper: Worker result FAILURE for Work [ id=500eb088-2480-4f53-a04d-7fe67faecdef, tags={ com.vitbon.kkm.core.sync.worker.SyncUpWorker } ]
+06-06 18:59:22.238   705  1990 W JobScheduler: Job didn't exist in JobStore: ee22397 #u0a236/168 com.vitbon.kkm/androidx.work.impl.background.systemjob.SystemJobService
+06-06 18:59:23.023   705  1539 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+06-06 18:59:24.668   705   849 D WifiClientModeImpl[27568:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=11 freq=2447 RxLinkSpeed=2
+06-06 18:59:24.668   705   849 D WifiDataStall: tx tput in kbps: 11000
+06-06 18:59:24.668   705   849 D WifiDataStall: rx tput in kbps: 11000
+06-06 18:59:24.669   705   849 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:24.669   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:24.670   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:24.670   705   849 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 220949904 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 11Mbps, Tx Link speed: 11Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-06 18:59:24.670   705   849 D WifiScoreCard: txRate: 2 txSpeed: 11
+06-06 18:59:24.671   705   849 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 747515790 RSSI -50 txSpeed -1
+06-06 18:59:24.671   705   849 D WifiClientModeImpl[27568:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=11 tx=1.2, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3016] from screen [on:0 period:-1639063169] score=60
+06-06 18:59:25.932  4832  4872 D ProfileInstaller: Installing profile for com.vitbon.kkm
+06-06 18:59:27.685   705   849 D WifiClientModeImpl[27568:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=11 freq=2447 RxLinkSpeed=2
+06-06 18:59:27.686   705   849 D WifiDataStall: tx tput in kbps: 11000
+06-06 18:59:27.686   705   849 D WifiDataStall: rx tput in kbps: 11000
+06-06 18:59:27.686   705   849 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-06 18:59:27.686   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:27.686   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:27.686   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:27.686   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:27.687   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:27.687   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:27.687   705   849 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-06 18:59:27.687   705   849 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-06 18:59:27.687   705   849 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 220949904 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 11Mbps, Tx Link speed: 11Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-06 18:59:27.687   705   849 D WifiScoreCard: txRate: 2 txSpeed: 11
+06-06 18:59:27.688   705   849 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 747515790 RSSI -50 txSpeed -1
+06-06 18:59:27.688   705   849 D WifiClientModeImpl[27568:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=11 tx=1.7, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3017] from screen [on:0 period:-1639060152] score=60
+06-06 18:59:27.856   479   541 I netd    : tetherGetStats() -> {[]} <0.46ms>
+06-06 18:59:29.924  1095  1276 D SatelliteController: iisInCarrierRoamingNbIotNtn: satellite is disabled
+06-06 18:59:30.213  4873  4873 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+06-06 18:59:30.217  4873  4873 I AndroidRuntime: Using default boot image
+06-06 18:59:30.218  4873  4873 I AndroidRuntime: Leaving lock profiling enabled
+06-06 18:59:30.220  4873  4873 I app_process: Core platform API reporting enabled, enforcing=false
+06-06 18:59:30.221  4873  4873 I app_process: Using CollectorTypeCMC GC.
+06-06 18:59:30.298  4873  4873 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-06 18:59:30.308  4873  4873 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-06 18:59:30.308  4873  4873 D app_process: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+06-06 18:59:30.308  4873  4873 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+06-06 18:59:30.309  4873  4873 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-06 18:59:30.310  4873  4873 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-06 18:59:30.311  4873  4873 W app_process: Unexpected CPU variant for x86: x86_64.
+06-06 18:59:30.311  4873  4873 W app_process: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+06-06 18:59:30.313  4873  4873 W app_process: ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*2789897741]#PCL[/system/framework/android.test.mock.jar*3361312393]} | PCL[])
+06-06 18:59:30.313  4873  4873 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*895143020]#PCL[/system/framework/android.test.base.jar*2789897741]} | PCL[/system/framework/android.test.runner.jar*895143020])
+06-06 18:59:30.329  4873  4873 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-06 18:59:30.330  4873  4873 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher

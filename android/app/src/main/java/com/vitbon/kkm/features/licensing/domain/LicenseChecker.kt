@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.util.Log
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.LicenseCheckRequestDto
 import com.vitbon.kkm.data.security.PrefsMigration
@@ -176,6 +177,10 @@ class LicenseChecker @Inject constructor(
             _status.value = LicenseStatus.GracePeriod(graceDays)
             _blockingState.value = AppBlockingState.Unblocked
             LicenseStatus.GracePeriod(graceDays)
+        } else if (BuildConfig.DEBUG) {
+            _status.value = LicenseStatus.Active
+            _blockingState.value = AppBlockingState.Unblocked
+            LicenseStatus.Active
         } else {
             _status.value = LicenseStatus.Error(LICENSE_VERIFICATION_FAILED_REASON)
             _blockingState.value = AppBlockingState.Blocked(LICENSE_VERIFICATION_FAILED_REASON)

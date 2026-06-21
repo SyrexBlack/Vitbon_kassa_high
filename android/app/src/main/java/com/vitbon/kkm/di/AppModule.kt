@@ -18,6 +18,12 @@ import com.vitbon.kkm.data.remote.ApiClient
 import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.features.auth.domain.AuthTokenStore
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.payments.domain.BankTerminalService
+import com.vitbon.kkm.features.payments.domain.DefaultSalePaymentPipeline
+import com.vitbon.kkm.features.payments.domain.SalePaymentPipeline
+import com.vitbon.kkm.features.payments.domain.SandboxBankTerminalService
+import com.vitbon.kkm.features.payments.domain.SandboxSbpPaymentService
+import com.vitbon.kkm.features.payments.domain.SbpPaymentService
 import com.vitbon.kkm.features.rootdetection.RootRiskGuard
 import com.vitbon.kkm.di.createFiscalCore
 import dagger.Module
@@ -156,5 +162,17 @@ object AppModule {
         rootRiskGuard: RootRiskGuard,
         cashierNameProvider: CashierNameProvider
     ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard, cashierNameProvider)
+
+    @Provides
+    @Singleton
+    fun provideBankTerminalService(service: SandboxBankTerminalService): BankTerminalService = service
+
+    @Provides
+    @Singleton
+    fun provideSbpPaymentService(service: SandboxSbpPaymentService): SbpPaymentService = service
+
+    @Provides
+    @Singleton
+    fun provideSalePaymentPipeline(pipeline: DefaultSalePaymentPipeline): SalePaymentPipeline = pipeline
 }
 

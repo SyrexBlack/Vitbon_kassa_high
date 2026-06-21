@@ -1,0 +1,9 @@
+powershell.exe : Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of
+ version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were 
+released at different times.
+At D:\cursor\Vitbon_kassa_08.04.2026\tests\verify-phase-b-planonly.Tests.ps1:15 char:15
++ ...   $output = & powershell -NoProfile -ExecutionPolicy Bypass -File ".\ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Warning: SDK pr...ifferent times.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

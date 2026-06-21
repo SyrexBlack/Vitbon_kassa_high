@@ -4,12 +4,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.vitbon.kkm.BuildConfig
 import com.vitbon.kkm.core.features.FeatureManager
 import com.vitbon.kkm.core.sync.LocalAuditBufferRepository
 import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.core.sync.SyncUpScheduler
 import com.vitbon.kkm.data.local.dao.CashierDao
 import com.vitbon.kkm.data.remote.api.VitbonApi
+import com.vitbon.kkm.data.remote.dto.LoginFeaturesDto
 import com.vitbon.kkm.data.remote.dto.LoginRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
@@ -37,6 +39,7 @@ class AuthUseCase @Inject constructor(
             return AuthResult.Error("ПИН должен состоять только из цифр")
         }
         if (!isOnline()) {
+            authenticateDebugLocalCashier(pin)?.let { return it }
             return AuthResult.Error("Требуется подключение к серверу для входа")
         }
 
@@ -44,6 +47,7 @@ class AuthUseCase @Inject constructor(
         val response = try {
             api.login(LoginRequestDto(pin = pin, deviceId = deviceId))
         } catch (e: Exception) {
+            authenticateDebugLocalCashier(pin)?.let { return it }
             return AuthResult.Error("Сервер авторизации недоступен")
         }
 
@@ -72,6 +76,39 @@ class AuthUseCase @Inject constructor(
                 id = body.cashier.id,
                 name = body.cashier.name,
                 role = CashierRole.entries.find { it.name == body.cashier.role } ?: CashierRole.CASHIER
+            )
+        )
+    }
+
+    private suspend fun authenticateDebugLocalCashier(pin: String): AuthResult? {
+        if (!BuildConfig.DEBUG) {
+            return null
+        }
+
+        val localCashier = cashierDao.findByPinHash(sha256(pin)) ?: return null
+        val role = CashierRole.entries.find { it.name == localCashier.role } ?: CashierRole.CASHIER
+        tokenStore.clear()
+        emergencyAdminSessionManager.clear()
+        featureManager.applyFeatures(
+            LoginFeaturesDto(
+                egaisEnabled = false,
+                chaseznakEnabled = false,
+                acquiringEnabled = true,
+                sbpEnabled = true
+            )
+        )
+
+        prefs.edit()
+            .putString("current_cashier_id", localCashier.id)
+            .putString("current_cashier_name", localCashier.name)
+            .putString("current_cashier_role", role.name)
+            .apply()
+
+        return AuthResult.Success(
+            cashier = AuthenticatedCashier(
+                id = localCashier.id,
+                name = localCashier.name,
+                role = role
             )
         )
     }

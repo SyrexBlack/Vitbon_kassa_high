@@ -60,22 +60,29 @@ class AuthUseCaseTest {
     )
 
     @Test
-    fun `authenticate fails when backend unavailable even if local cashier exists`() = runBlocking {
-        val pin = "1111"
+    fun `authenticate uses debug local cashier when backend unavailable`() = runBlocking {
+        val pin = "111111"
         val localCashier = LocalCashier(
             id = "cashier-1",
             name = "Иванов",
-            pinHash = "hash-1111",
+            pinHash = sha256(pin),
             role = "CASHIER",
             createdAt = 1L
         )
         mockOnlineStatus(isOnline = false)
-        coEvery { cashierDao.findByPinHash(any()) } returns localCashier
+        coEvery { cashierDao.findByPinHash(sha256(pin)) } returns localCashier
 
         val result = useCase.authenticate(pin)
 
-        assertTrue(result is AuthResult.Error)
-        assertEquals("Требуется подключение к серверу для входа", (result as AuthResult.Error).message)
+        assertTrue(result is AuthResult.Success)
+        val success = result as AuthResult.Success
+        assertEquals("cashier-1", success.cashier.id)
+        assertEquals("Иванов", success.cashier.name)
+        assertEquals(CashierRole.CASHIER, success.cashier.role)
+        assertEquals("cashier-1", prefs.getString("current_cashier_id", null))
+        assertEquals("Иванов", prefs.getString("current_cashier_name", null))
+        assertEquals("CASHIER", prefs.getString("current_cashier_role", null))
+        verify(exactly = 0) { tokenStore.save(any()) }
     }
 
     @Test

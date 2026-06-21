@@ -1,0 +1,22 @@
+Manual Android QA on Pixel_6_Pro emulator, debug APK.
+
+Setup:
+- Installed android/app/build/outputs/apk/debug/app-debug.apk.
+- Cleared com.vitbon.kkm app data.
+- Launched com.vitbon.kkm/.MainActivity.
+- Entered demo PIN 111111.
+- Auth backend at 10.0.2.2:8080 was unavailable; debug local cashier fallback completed after request timeout.
+
+Evidence files:
+- G001-C001-login-2.xml: PIN screen before login.
+- G001-C001-workplace-after-auth-timeout.png/xml: sales workplace after debug login.
+- G001-C001-cart-product.png/xml: demo product "Вода 0.5л", total 129.0 RUB.
+- G001-C001-card-sale-after.png/xml: card sale completed, cart cleared, total 0.0 RUB.
+- G001-C001-sbp-sale-after.png/xml: QR/SBP sale completed, cart cleared, total 0.0 RUB.
+- G001-C001-cash-sale-after.png/xml: cash sale completed, cart cleared, total 0.0 RUB.
+
+Observed result:
+- Sales workplace shows "Демо Кассир | Смена 1".
+- Status bar shows "Лицензия: ACTIVE".
+- Payment buttons available: "Наличные", "Карта", "QR".
+- Card, QR/SBP, and cash sales each returned to an empty cart after pressing "ПРОДАТЬ".

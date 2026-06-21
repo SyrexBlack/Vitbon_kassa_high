@@ -13,8 +13,8 @@ import com.vitbon.kkm.features.auth.domain.CashierRole
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakResult
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakStatus
 import com.vitbon.kkm.features.chaseznak.domain.ChaseznakValidation
+import com.vitbon.kkm.features.payments.domain.SalePaymentPipeline
 import com.vitbon.kkm.features.sales.domain.CartItem
-import com.vitbon.kkm.features.sales.domain.MarkedGoodsSaleUseCase
 import com.vitbon.kkm.features.sales.domain.SaleResult
 import com.vitbon.kkm.features.sales.domain.ScanBarcodeUseCase
 import com.vitbon.kkm.features.sales.domain.ScanResult
@@ -40,7 +40,7 @@ class SalesViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val scanBarcode = mockk<ScanBarcodeUseCase>()
-    private val processSale = mockk<MarkedGoodsSaleUseCase>()
+    private val processSale = mockk<SalePaymentPipeline>()
     private val authUseCase = mockk<AuthUseCase>()
     private val syncService = mockk<SyncService>(relaxed = true)
     private val shiftDao = mockk<ShiftDao>()
@@ -238,5 +238,85 @@ class SalesViewModelTest {
         assertEquals(false, state.isProcessing)
         assertEquals(true, state.saleResult is SaleResult.FiscalError)
         assertEquals(true, (state.saleResult as SaleResult.FiscalError).message.startsWith("CHASENAK_BLOCK"))
+    }
+
+    @Test
+    fun `processSale keeps cart and skips sync when card payment is declined`() = runTest {
+        val item = CartItem(
+            productId = "p1",
+            barcode = "4607001234567",
+            name = "Вода",
+            quantity = 1.0,
+            price = Money(12_900L),
+            vatRate = VatRate.NO_VAT
+        )
+
+        coEvery { scanBarcode.execute("4607001234567") } returns ScanResult.Found(item)
+        every { authUseCase.getCurrentCashierId() } returns "cashier-1"
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
+        coEvery { shiftDao.findOpenShift() } returns null
+        coEvery {
+            processSale.execute(any(), any(), any(), any(), any(), any())
+        } returns SaleResult.TerminalError(
+            reason = "INSUFFICIENT_FUNDS",
+            message = "Terminal declined: INSUFFICIENT_FUNDS"
+        )
+
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
+
+        vm.search("4607001234567")
+        advanceUntilIdle()
+        vm.setPayment(PaymentType.CARD)
+        vm.processSale()
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertEquals(false, state.isProcessing)
+        assertEquals(1, state.cart.items.size)
+        assertEquals(true, state.saleResult is SaleResult.TerminalError)
+        assertEquals("INSUFFICIENT_FUNDS", (state.saleResult as SaleResult.TerminalError).reason)
+        coVerify(exactly = 1) {
+            processSale.execute(any(), "cashier-1", "secure-device-1", null, CashierRole.CASHIER, false)
+        }
+        verify(exactly = 0) { syncService.onCheckCreated() }
+    }
+
+    @Test
+    fun `processSale syncs check when cash payment succeeds through payment pipeline`() = runTest {
+        val item = CartItem(
+            productId = "p1",
+            barcode = "4607001234567",
+            name = "Вода",
+            quantity = 1.0,
+            price = Money(12_900L),
+            vatRate = VatRate.NO_VAT
+        )
+
+        coEvery { scanBarcode.execute("4607001234567") } returns ScanResult.Found(item)
+        every { authUseCase.getCurrentCashierId() } returns "cashier-1"
+        every { authUseCase.getCurrentCashierRole() } returns CashierRole.CASHIER
+        coEvery { shiftDao.findOpenShift() } returns null
+        coEvery {
+            processSale.execute(any(), any(), any(), any(), any(), any())
+        } returns SaleResult.Success(
+            checkId = "check-cash-1",
+            fiscalSign = "fs-cash-1",
+            total = 129.0
+        )
+
+        val vm = SalesViewModel(scanBarcode, processSale, authUseCase, syncService, shiftDao, syncPrefs)
+
+        vm.search("4607001234567")
+        advanceUntilIdle()
+        vm.setPayment(PaymentType.CASH)
+        vm.processSale()
+        advanceUntilIdle()
+
+        assertEquals(false, vm.state.value.isProcessing)
+        assertEquals(true, vm.state.value.saleResult is SaleResult.Success)
+        coVerify(exactly = 1) {
+            processSale.execute(any(), "cashier-1", "secure-device-1", null, CashierRole.CASHIER, false)
+        }
+        verify(exactly = 1) { syncService.onCheckCreated() }
     }
 }

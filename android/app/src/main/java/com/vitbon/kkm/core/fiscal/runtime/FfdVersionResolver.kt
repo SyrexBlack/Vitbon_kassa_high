@@ -26,6 +26,13 @@ class FfdVersionResolver @Inject constructor(
     }
 
     fun saveManual(version: String) {
+        val current = policyStore.read()
+        if (current.locked && current.version != version) {
+            throw IllegalStateException(
+                "FFD version уже зафиксирована (${current.version}); изменение на $version невозможно — " +
+                "ФН заблокирован на эту версию после первого fiscal-документа."
+            )
+        }
         policyStore.saveResolved(
             version = version,
             source = "manual",

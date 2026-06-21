@@ -1,0 +1,16 @@
+Payment failure regression evidence.
+
+Automated coverage:
+- android/app/src/test/java/com/vitbon/kkm/features/sales/presentation/SalesViewModelTest.kt
+- Test: processSale keeps cart and skips sync when card payment is declined.
+
+Evidence files:
+- G001-sales-viewmodel-red.txt: RED compile failure before SalePaymentPipeline existed.
+- G001-sales-viewmodel-green.txt: SalesViewModelTest passed after payment pipeline wiring.
+- G001-sales-viewmodel-green-2.txt: SalesViewModelTest passed after sequential KSP recovery.
+- G001-auth-sales-green-3.txt and G001-license-auth-sales-green-5.txt: SalesViewModelTest remained green after debug auth/license additions.
+
+Observed result from test:
+- Mocked SalePaymentPipeline returns SaleResult.TerminalError for a CARD cart.
+- ViewModel keeps cart items after the declined payment.
+- Sync repository is not called, so no successful sale/fiscal sync is emitted after the decline.

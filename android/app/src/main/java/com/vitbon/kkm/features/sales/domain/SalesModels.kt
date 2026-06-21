@@ -10,7 +10,17 @@ data class CartItem(
     val price: Money,
     val discount: Money = Money.ZERO,
     val vatRate: VatRate,
-    val markedProductCode: String? = null
+    val markedProductCode: String? = null,
+    /**
+     * true if the product is EGAIS-tracked alcohol. Defaults to false so existing
+     * callers (tests, manual carts) remain backward compatible — sales of unmarked
+     * products are never affected by the alcohol policy check.
+     */
+    val egaisFlag: Boolean = false,
+    /**
+     * true if the product is a marked good (Честный ЗНАК). Defaults to false.
+     */
+    val chaseznakFlag: Boolean = false
 ) {
     val total: Money get() = Money((price.kopecks * quantity).toLong()) - discount
     val isMarked: Boolean get() = markedProductCode != null

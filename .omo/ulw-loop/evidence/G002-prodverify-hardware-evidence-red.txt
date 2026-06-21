@@ -1,0 +1,1 @@
+Hardware evidence regression failed: adb online device detection can mark MSPOS-K smoke PASS without explicit evidence.

@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CheckDao {
-    @Query("SELECT * FROM checks WHERE status = 'PENDING_SYNC' ORDER BY createdAt ASC")
-    suspend fun findPendingSync(): List<LocalCheck>
+    @Query("SELECT * FROM checks WHERE status = 'PENDING_SYNC' ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun findPendingSync(limit: Int = 500): List<LocalCheck>
 
     @Query("SELECT * FROM checks WHERE id = :id")
     suspend fun findById(id: String): LocalCheck?

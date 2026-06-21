@@ -161,7 +161,7 @@ class LicenseCheckerTest {
     }
 
     @Test
-    fun `check blocks app on first failed verification without prior active license`() {
+    fun `check keeps debug build unblocked on first failed verification without prior active license`() {
         val offlineApi = mockk<VitbonApi>()
         val inMemoryPlainPrefs = InMemorySharedPreferences()
         val inMemorySecurePrefs = InMemorySharedPreferences()
@@ -170,8 +170,8 @@ class LicenseCheckerTest {
 
         val result = kotlinx.coroutines.runBlocking { localChecker.check() }
 
-        assertTrue(result is LicenseStatus.Error)
-        assertTrue(localChecker.blockingState.value is AppBlockingState.Blocked)
+        assertTrue(result is LicenseStatus.Active)
+        assertTrue(localChecker.blockingState.value is AppBlockingState.Unblocked)
         assertEquals(0L, inMemorySecurePrefs.getLong(PrefsMigration.KEY_GRACE_UNTIL, 0L))
     }
 

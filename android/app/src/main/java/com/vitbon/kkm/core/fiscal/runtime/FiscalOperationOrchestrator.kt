@@ -20,6 +20,7 @@ interface CashierNameProvider {
 class FiscalOperationOrchestrator @Inject constructor(
     private val fiscalCore: FiscalCore,
     private val ffdResolver: FfdVersionResolver,
+    private val ffdPolicyStore: FfdPolicyStore,
     private val rootRiskGuard: RootRiskGuard,
     private val cashierNameProvider: CashierNameProvider
 ) {
@@ -36,14 +37,35 @@ class FiscalOperationOrchestrator @Inject constructor(
         return null
     }
 
+    /**
+     * Фиксирует версию ФФД в policy store после первого успешного fiscal-документа.
+     * В дальнейшем версия ФФД неизменна — FFD lock.
+     */
+    private fun lockFfdIfFirstDocument() {
+        val state = ffdPolicyStore.read()
+        if (!state.locked) {
+            val currentVersion = ffdResolver.resolve(forceRefresh = true).version
+            ffdPolicyStore.saveResolved(
+                version = currentVersion,
+                source = "LOCKED_AFTER_FIRST_DOC",
+                locked = true,
+                timestampMs = System.currentTimeMillis()
+            )
+        }
+    }
+
     suspend fun executeSale(check: FiscalCheck): FiscalRuntimeResult {
         checkSecurity()?.let { return it }
         val warnings = buildShiftAgeWarnings()
         val (name, inn) = cashierNameProvider.getCashierNameAndInn()
-        return executeWithFormatRetry(
+        val result = executeWithFormatRetry(
             primary = { fiscalCore.printSale(check, name, inn) },
             warnings = warnings
         )
+        if (result is FiscalRuntimeResult.Success) {
+            lockFfdIfFirstDocument()
+        }
+        return result
     }
 
     suspend fun executeReturn(check: FiscalCheck): FiscalRuntimeResult {

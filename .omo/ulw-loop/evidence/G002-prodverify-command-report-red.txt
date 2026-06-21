@@ -1,0 +1,1 @@
+Report command interpolation regression failed: literal $command is written to the markdown report.

@@ -9,8 +9,8 @@
 ## Overall State
 
 ```
-Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F
-  ●         ●         ●         ●         ●         ●
+Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F ▸ Phase 7 (closure)
+  ●         ●         ●         ●         ●         ●              ●
 
 ○ Not started  ◐ In progress  ● Complete  ⊘ Cancelled
 ```
@@ -160,17 +160,39 @@ Phase A ▸ Phase B ▸ Phase C ▸ Phase D ▸ Phase E ▸ Phase F
 
 ---
 
+### Phase 7 — Audit Gap Closure
+
+**Status:** ● Complete ✓  
+**Dependencies:** Phase A-F (initial audit found 5 blockers)  
+**Requirements:** GAP-01 to GAP-05
+
+**Implementation status:**
+- ✓ Created 4 backend services: LicenseService, EgaisService, ChaseznakService, StatusService
+- ✓ Created `di/FiscalCoreFactory.kt` with `createFiscalCore()` function + private `FakeFiscalCore` for debug
+- ✓ Wired `AlcoholSalePolicyUseCase` into `ProcessSaleUseCase` as pre-fiscal check
+- ✓ Added `CHECK_BATCH_LIMIT = 500` in `SyncManager.syncChecks()` with `LIMIT :limit` SQL
+- ✓ Added FFD post-fiscal lock in `FiscalOperationOrchestrator` after `executeSale` success
+- ✓ Updated `FfdVersionResolver.saveManual()` to throw if version is locked
+- ✓ Tests: `ProcessSaleUseCaseAlcoholPolicyTest` (6 tests), `SyncManagerTest` (3 tests)
+
+**Blockers:** None  
+**Notes:** All audit gaps closed. Milestone ready for completion.
+
+---
+
 ## Validation Log
 
 | Date | Phase | What Changed | Validated By |
 |------|-------|-------------|--------------|
 | 2026-06-20 | — | Roadmap created, all 52 v1 requirements mapped | — |
-| 2026-06-20 | A | KKT + FFD Fiscal Core verified: FiscalCore interface, MSPOS-K adapter, Нева 01Ф delegation, FFD 1.05/1.2 builder, FfdVersionResolver, FiscalOperationOrchestrator, ShiftStateMachine, all unit tests | autonomous |
-| 2026-06-20 | B | Auth + Licensing + Security verified: AuthUseCase, AuthTokenStore, LicenseChecker (7-day grace), RootRiskGuard (≥2 indicators), audit log | autonomous |
-| 2026-06-20 | C | Core Sync + Status Monitoring verified: SyncManager, SyncUpWorker/DownWorker, SyncPrefs, products module, statuses module | autonomous |
-| 2026-06-20 | D | Reports verified: sales/returns/fiscal reports, inventory, writeoff, acceptance modules aggregating from Room | autonomous |
-| 2026-06-20 | E | Cloud Sync verified: Spring Boot 3.2.2 backend with all REST controllers, conflict resolution, security config | autonomous |
-| 2026-06-20 | F | Optional Modules verified: Chaseznak module, Egais module, runtime-gated, offline-blocked for marked goods, synchronous УТМ validation | autonomous |
+| 2026-06-20 | A | KKT + FFD Fiscal Core verified | autonomous |
+| 2026-06-20 | B | Auth + Licensing + Security verified | autonomous |
+| 2026-06-20 | C | Core Sync + Status Monitoring verified | autonomous |
+| 2026-06-20 | D | Reports verified | autonomous |
+| 2026-06-20 | E | Cloud Sync verified | autonomous |
+| 2026-06-20 | F | Optional Modules verified | autonomous |
+| 2026-06-20 | Audit | Initial audit found 5 critical blockers | gsd-integration-checker |
+| 2026-06-20 | 7 | All 5 blockers closed (backend services, DI, policy wiring, queue cap, FFD lock) | autonomous |
 
 ---
 

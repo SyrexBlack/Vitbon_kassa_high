@@ -1,10 +1,11 @@
 package com.vitbon.kkm.domain.service
 
 import com.vitbon.kkm.api.dto.CheckDto
+import com.vitbon.kkm.api.dto.CheckItemDto
 import com.vitbon.kkm.api.dto.ProductSalesDto
 import com.vitbon.kkm.api.dto.SalesReportDto
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 class CheckServiceSalesReportTest {
 
@@ -61,18 +62,18 @@ class CheckServiceSalesReportTest {
     fun `buildSalesReport topProducts sorted by total descending`() {
         val checks = listOf(
             makeSale(100_000L, "cash", items = listOf(
-                ProductSalesDto(name = "Вода", quantity = 1.0, total = 100_000L)
+                makeItem(name = "Вода", quantity = 1.0, total = 100_000L)
             )),
             makeSale(200_000L, "cash", items = listOf(
-                ProductSalesDto(name = "Вода", quantity = 2.0, total = 200_000L)
+                makeItem(name = "Вода", quantity = 2.0, total = 200_000L)
             )),
             makeSale(150_000L, "cash", items = listOf(
-                ProductSalesDto(name = "Хлеб", quantity = 1.0, total = 150_000L)
+                makeItem(name = "Хлеб", quantity = 1.0, total = 150_000L)
             ))
         )
         val result = service.buildSalesReport(checks, "day")
 
-        assertEquals(3, result.topProducts.size)
+        assertEquals(2, result.topProducts.size)
         assertEquals("Вода", result.topProducts[0].name)
         assertEquals(300_000L, result.topProducts[0].total)
         assertEquals("Хлеб", result.topProducts[1].name)
@@ -143,27 +144,54 @@ class CheckServiceSalesReportTest {
         }
     }
 
-    private fun makeSale(total: Long, paymentType: String, items: List<ProductSalesDto> = emptyList()) =
+    private fun makeSale(total: Long, paymentType: String, items: List<CheckItemDto> = emptyList()) =
         CheckDto(
             id = "id-${(Math.random() * 1000).toInt()}",
+            localUuid = "local-${(Math.random() * 1000).toInt()}",
+            shiftId = null,
             type = "SALE",
             cashierId = "c-1",
             deviceId = "d-1",
+            fiscalSign = null,
+            ffdVersion = "1.2",
+            subtotal = total,
+            discount = 0L,
             total = total,
+            taxAmount = 0L,
             items = items,
             paymentType = paymentType,
             createdAt = System.currentTimeMillis()
         )
 
-    private fun makeReturn(total: Long, paymentType: String, items: List<ProductSalesDto> = emptyList()) =
+    private fun makeReturn(total: Long, paymentType: String, items: List<CheckItemDto> = emptyList()) =
         CheckDto(
             id = "id-${(Math.random() * 1000).toInt()}",
+            localUuid = "local-${(Math.random() * 1000).toInt()}",
+            shiftId = null,
             type = "RETURN",
             cashierId = "c-1",
             deviceId = "d-1",
+            fiscalSign = null,
+            ffdVersion = "1.2",
+            subtotal = total,
+            discount = 0L,
             total = total,
+            taxAmount = 0L,
             items = items,
             paymentType = paymentType,
             createdAt = System.currentTimeMillis()
+        )
+
+    private fun makeItem(name: String, quantity: Double, total: Long): CheckItemDto =
+        CheckItemDto(
+            id = "item-${(Math.random() * 1000).toInt()}",
+            productId = null,
+            barcode = null,
+            name = name,
+            quantity = quantity,
+            price = total,
+            discount = 0L,
+            vatRate = "VAT_22",
+            total = total
         )
 }

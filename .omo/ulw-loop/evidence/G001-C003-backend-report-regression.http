@@ -1,0 +1,16 @@
+Backend sales report regression evidence.
+
+Automated coverage:
+- backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt
+
+Evidence files:
+- G001-backend-report-test-green.txt: initial green backend report run after fixture repair.
+- G001-backend-report-test-green-2.txt: current green backend report run using Java 17.
+
+Command:
+backend\gradlew.bat -p backend -Dorg.gradle.java.home=C:\Progra~1\Java\jdk-17 test --tests com.vitbon.kkm.domain.service.CheckServiceSalesReportTest
+
+Observed result:
+- Test passed.
+- Sales report fixture covers checks with CASH, CARD, and SBP payment types.
+- Report aggregation includes total cash, card, and SBP revenue buckets.

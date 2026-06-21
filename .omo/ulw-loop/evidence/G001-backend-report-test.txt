@@ -1,0 +1,67 @@
+> Task :checkKotlinGradlePluginConfigurationErrors
+> Task :processResources
+> Task :processTestResources UP-TO-DATE
+> Task :compileKotlin
+> Task :compileJava NO-SOURCE
+> Task :classes
+
+> Task :compileTestKotlin FAILED
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:7:15 Unresolved reference: test
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:25:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:26:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:27:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:28:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:29:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:30:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:31:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:32:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:38:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:39:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:40:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:41:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:42:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:43:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:55:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:56:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:57:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:75:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:76:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:77:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:78:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:79:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:88:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:89:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:90:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:104:9 Unresolved reference: assertEquals
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:153:21 Type mismatch: inferred type is List<ProductSalesDto> but List<CheckItemDto> was expected
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'localUuid'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'shiftId'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'fiscalSign'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'ffdVersion'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'subtotal'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'discount'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:155:13 No value passed for parameter 'taxAmount'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:165:21 Type mismatch: inferred type is List<ProductSalesDto> but List<CheckItemDto> was expected
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'localUuid'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'shiftId'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'fiscalSign'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'ffdVersion'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'subtotal'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'discount'
+e: file:///D:/cursor/Vitbon_kassa_08.04.2026/backend/src/test/kotlin/com/vitbon/kkm/domain/service/CheckServiceSalesReportTest.kt:167:13 No value passed for parameter 'taxAmount'
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileTestKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 14s
+5 actionable tasks: 4 executed, 1 up-to-date

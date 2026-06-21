@@ -8,6 +8,7 @@ import com.vitbon.kkm.data.remote.api.VitbonApi
 import com.vitbon.kkm.data.remote.dto.AuditSyncEntryDto
 import com.vitbon.kkm.data.remote.dto.AuditSyncRequestDto
 import com.vitbon.kkm.data.remote.dto.AuditSyncResponseDto
+import com.vitbon.kkm.data.remote.dto.CheckSyncResponseDto
 import com.vitbon.kkm.data.remote.dto.FailedAuditSyncDto
 import com.vitbon.kkm.data.remote.dto.ProductDto
 import com.vitbon.kkm.data.remote.dto.ProductSyncResponseDto
@@ -16,8 +17,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Response
 
@@ -238,5 +241,117 @@ class SyncManagerTest {
         assertEquals(1, result.synced)
         assertEquals(1, result.failed)
         coVerify { auditBufferRepository.acknowledge(listOf("11111111-1111-1111-1111-111111111111")) }
+    }
+
+    // ─── vitbon-kassa-1rd.6.1: 500-doc queue cap ────────────────────────────
+
+    @Test
+    fun `syncChecks caps fetched batch at CHECK_BATCH_LIMIT (500) to avoid OOM on long-offline devices`() = runTest {
+        val api = mockk<VitbonApi>()
+        val checkDao = mockk<CheckDao>(relaxed = true)
+        val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val productDao = mockk<ProductDao>(relaxed = true)
+        val auditBufferRepository = mockk<LocalAuditBufferRepository>(relaxed = true)
+        val prefs = InMemorySharedPreferences()
+
+        val limitSlot = slot<Int>()
+        coEvery { checkDao.findPendingSync(capture(limitSlot)) } returns emptyList()
+
+        val manager = SyncManager(
+            api,
+            checkDao,
+            checkItemDao,
+            productDao,
+            auditBufferRepository,
+            SyncPrefs(prefs, InMemorySharedPreferences())
+        )
+
+        manager.syncChecks()
+
+        assertEquals(500, limitSlot.captured)
+    }
+
+    @Test
+    fun `syncChecks passes only the capped batch to api_syncChecks (rest stays PENDING_SYNC for next cycle)`() = runTest {
+        val api = mockk<VitbonApi>()
+        val checkDao = mockk<CheckDao>(relaxed = true)
+        val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val productDao = mockk<ProductDao>(relaxed = true)
+        val auditBufferRepository = mockk<LocalAuditBufferRepository>(relaxed = true)
+        val prefs = InMemorySharedPreferences()
+
+        // Simulate 500 pending checks returned by the capped query
+        val capped = (0 until 500).map { i ->
+            com.vitbon.kkm.data.local.entity.LocalCheck(
+                id = "check-$i",
+                localUuid = "uuid-$i",
+                shiftId = "shift-1",
+                cashierId = "c1",
+                deviceId = "d1",
+                type = "SALE",
+                fiscalSign = "fs-$i",
+                ofdResponse = null,
+                ffdVersion = "1.2",
+                status = "PENDING_SYNC",
+                subtotal = 1000L,
+                discount = 0L,
+                total = 1000L,
+                taxAmount = 200L,
+                paymentType = "CASH",
+                createdAt = i.toLong(),
+                syncedAt = null
+            )
+        }
+        coEvery { checkDao.findPendingSync(500) } returns capped
+        coEvery { checkItemDao.findByCheckId(any()) } returns emptyList()
+        coEvery { api.syncChecks(any()) } returns Response.success(
+            CheckSyncResponseDto(
+                processed = 500,
+                failed = emptyList()
+            )
+        )
+
+        val manager = SyncManager(
+            api,
+            checkDao,
+            checkItemDao,
+            productDao,
+            auditBufferRepository,
+            SyncPrefs(prefs, InMemorySharedPreferences())
+        )
+
+        val result = manager.syncChecks()
+
+        assertEquals(500, result.synced)
+        assertEquals(0, result.failed)
+        // The cap is enforced at the SQL level: only one findPendingSync(500) call
+        coVerify(exactly = 1) { checkDao.findPendingSync(500) }
+    }
+
+    @Test
+    fun `syncChecks returns zero result when no pending checks exist (no api call)`() = runTest {
+        val api = mockk<VitbonApi>()
+        val checkDao = mockk<CheckDao>(relaxed = true)
+        val checkItemDao = mockk<CheckItemDao>(relaxed = true)
+        val productDao = mockk<ProductDao>(relaxed = true)
+        val auditBufferRepository = mockk<LocalAuditBufferRepository>(relaxed = true)
+        val prefs = InMemorySharedPreferences()
+
+        coEvery { checkDao.findPendingSync(500) } returns emptyList()
+
+        val manager = SyncManager(
+            api,
+            checkDao,
+            checkItemDao,
+            productDao,
+            auditBufferRepository,
+            SyncPrefs(prefs, InMemorySharedPreferences())
+        )
+
+        val result = manager.syncChecks()
+
+        assertEquals(0, result.synced)
+        assertEquals(0, result.failed)
+        coVerify(exactly = 0) { api.syncChecks(any()) }
     }
 }

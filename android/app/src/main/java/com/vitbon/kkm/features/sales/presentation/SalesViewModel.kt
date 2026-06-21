@@ -8,6 +8,7 @@ import com.vitbon.kkm.core.sync.SyncPrefs
 import com.vitbon.kkm.core.sync.SyncService
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.features.auth.domain.AuthUseCase
+import com.vitbon.kkm.features.payments.domain.SalePaymentPipeline
 import com.vitbon.kkm.features.sales.domain.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +29,7 @@ data class SalesState(
 @HiltViewModel
 class SalesViewModel @Inject constructor(
     private val scanBarcode: ScanBarcodeUseCase,
-    private val processSale: MarkedGoodsSaleUseCase,
+    private val processSale: SalePaymentPipeline,
     private val authUseCase: AuthUseCase,
     private val syncService: SyncService,
     private val shiftDao: ShiftDao,

@@ -23,9 +23,15 @@ class SyncManager @Inject constructor(
     /** Наблюдение за количеством несинхронизированных чеков */
     fun observePendingCount(): Flow<Int> = checkDao.observePendingCount()
 
-    /** Push: синхронизировать все чеки со статусом PENDING_SYNC */
+    /**
+     * Push: синхронизировать все чеки со статусом PENDING_SYNC.
+     *
+     * The fetch is capped at [CHECK_BATCH_LIMIT] per cycle to avoid OOM on devices
+     * that have been offline for a long time. Anything beyond the cap stays
+     * PENDING_SYNC and is picked up on the next sync tick.
+     */
     suspend fun syncChecks(): SyncResult {
-        val pending = checkDao.findPendingSync()
+        val pending = checkDao.findPendingSync(limit = CHECK_BATCH_LIMIT)
         if (pending.isEmpty()) return SyncResult(0, 0)
 
         val checkDtos = pending.map { check ->
@@ -160,6 +166,14 @@ class SyncManager @Inject constructor(
 
     private companion object {
         const val AUDIT_BATCH_LIMIT = 100
+
+        /**
+         * Maximum checks fetched per sync cycle. Sized so that a single batch
+         * comfortably fits in memory on a low-end device (each check payload
+         * ≈ 1 KB, items included). Anything beyond the cap is left PENDING_SYNC
+         * and drained on the next tick — the sync is idempotent and stable.
+         */
+        const val CHECK_BATCH_LIMIT = 500
     }
 }
 

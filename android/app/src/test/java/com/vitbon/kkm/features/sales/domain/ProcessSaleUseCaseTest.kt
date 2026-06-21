@@ -14,6 +14,7 @@ import com.vitbon.kkm.data.local.dao.CheckItemDao
 import com.vitbon.kkm.data.local.dao.ShiftDao
 import com.vitbon.kkm.data.local.entity.LocalShift
 import com.vitbon.kkm.features.auth.domain.CashierRole
+import com.vitbon.kkm.features.egais.domain.AlcoholSalePolicyUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -25,6 +26,8 @@ import org.junit.Test
 
 class ProcessSaleUseCaseTest {
 
+    private val alcoholSalePolicy = mockk<AlcoholSalePolicyUseCase>(relaxed = true)
+
     @Test
     fun `process sale returns access denied when role is missing`() = runTest {
         val orchestrator = mockk<FiscalOperationOrchestrator>()
@@ -33,7 +36,7 @@ class ProcessSaleUseCaseTest {
         val shiftDao = mockk<ShiftDao>(relaxed = true)
         coEvery { shiftDao.findOpenShift() } returns null
         val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig, alcoholSalePolicy)
 
         val cart = Cart(
             items = listOf(
@@ -77,7 +80,7 @@ class ProcessSaleUseCaseTest {
         val shiftDao = mockk<ShiftDao>(relaxed = true)
         coEvery { shiftDao.findOpenShift() } returns null
         val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig, alcoholSalePolicy)
 
         val cart = Cart(
             items = listOf(
@@ -129,7 +132,7 @@ class ProcessSaleUseCaseTest {
         )
 
         val fiscalConfig = mockk<FiscalConfig>(relaxed = true)
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig, alcoholSalePolicy)
         val cart = Cart(
             items = listOf(
                 CartItem(
@@ -193,7 +196,7 @@ class ProcessSaleUseCaseTest {
             taxSystem = TaxSystem.USN_INCOME,
             orgInn = "770123456789"
         )
-        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig)
+        val useCase = ProcessSaleUseCase(orchestrator, checkDao, checkItemDao, shiftDao, fiscalConfig, alcoholSalePolicy)
         val cart = Cart(
             items = listOf(
                 CartItem(

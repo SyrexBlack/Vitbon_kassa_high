@@ -20,7 +20,9 @@ class ScanBarcodeUseCase @Inject constructor(
                     name = product.name,
                     quantity = 1.0,
                     price = product.price,
-                    vatRate = product.vatRate
+                    vatRate = product.vatRate,
+                    egaisFlag = product.egaisFlag,
+                    chaseznakFlag = product.chaseznakFlag
                 )
             )
         } else {

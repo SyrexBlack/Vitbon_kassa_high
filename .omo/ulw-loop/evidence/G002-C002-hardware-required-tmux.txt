@@ -1,0 +1,15 @@
+Manual QA channel note:
+- Requested channel in notepad: tmux.
+- Host result: `where tmux` returned no tmux executable on Windows.
+- Because this criterion is CLI/data-shaped, evidence was captured via non-interactive CLI stdout and generated markdown report.
+
+Invocation:
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\verify-phase-b.ps1 -PlanOnly -SkipRelease -ReportPath .\.omo\ulw-loop\evidence\G002-C001-prodverify-report.md > .omo\ulw-loop\evidence\G002-C001-prodverify-cli-transcript.txt 2>&1`
+
+PASS observable:
+- `.omo/ulw-loop/evidence/G002-C001-prodverify-cli-transcript.txt` contains `MSPOS-K physical smoke       HARDWARE_REQUIRED`.
+- `.omo/ulw-loop/evidence/G002-C001-prodverify-report.md` contains `| MSPOS-K physical smoke | HARDWARE_REQUIRED | Physical MSPOS-K smoke remains pending: no connected physical devices |`.
+
+Cleanup:
+- No tmux session was created because tmux is unavailable.
+- No emulator/device process was started.
