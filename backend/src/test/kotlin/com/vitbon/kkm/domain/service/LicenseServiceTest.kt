@@ -6,6 +6,8 @@ import com.vitbon.kkm.domain.persistence.DeviceLicenseRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.time.OffsetDateTime
@@ -101,14 +103,9 @@ class LicenseServiceTest {
     @Test
     fun `upsert stores the row via repository and returns the saved entity`() {
         val now = OffsetDateTime.now(ZoneOffset.UTC)
-        val entity = DeviceLicenseEntity(
-            deviceId = "DEV-UP",
-            status = "ACTIVE",
-            expiryDate = now.plusDays(30),
-            graceUntil = null,
-            updatedAt = now
-        )
-        `when`(repository.save(entity)).thenReturn(entity)
+        doAnswer { invocation -> invocation.getArgument<DeviceLicenseEntity>(0) }
+            .`when`(repository)
+            .save(any(DeviceLicenseEntity::class.java))
 
         val saved = service.upsert(
             deviceId = "DEV-UP",

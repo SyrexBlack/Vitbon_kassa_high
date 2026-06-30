@@ -2,6 +2,7 @@ package com.vitbon.kkm.domain.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.server.ResponseStatusException
@@ -21,7 +22,7 @@ class ChaseznakServiceTest {
             service.validate("""{"code":"010460123456789021SERIAL"}""")
         }
         assertEquals(503, exception.statusCode.value())
-        assertEquals("Chestny ZNAK", exception.reason?.substringBefore(" "))
+        assertTrue(exception.reason?.startsWith("Chestny ZNAK") == true)
     }
 
     @Test

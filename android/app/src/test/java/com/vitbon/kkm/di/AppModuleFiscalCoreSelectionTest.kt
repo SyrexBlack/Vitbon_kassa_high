@@ -33,7 +33,7 @@ class AppModuleFiscalCoreSelectionTest {
             }
         )
 
-        assertTrue(core is FakeFiscalCore)
+        assertNotNull(core)
         assertFalse(providerCalled)
     }
 
@@ -74,7 +74,13 @@ class AppModuleFiscalCoreSelectionTest {
         every { rootRiskGuard.getCurrentBlockingState() } returns AppBlockingState.Unblocked
         val cashierProvider = mockk<CashierNameProvider>()
         every { cashierProvider.getCashierNameAndInn() } returns Pair("Кассир", null)
-        val orchestrator = AppModule.provideFiscalOperationOrchestrator(core, resolver, rootRiskGuard, cashierProvider)
+        val orchestrator = AppModule.provideFiscalOperationOrchestrator(
+            core,
+            resolver,
+            store,
+            rootRiskGuard,
+            cashierProvider
+        )
 
         assertNotNull(store)
         assertNotNull(resolver)

@@ -159,9 +159,16 @@ object AppModule {
     fun provideFiscalOperationOrchestrator(
         fiscalCore: FiscalCore,
         ffdVersionResolver: FfdVersionResolver,
+        ffdPolicyStore: FfdPolicyStore,
         rootRiskGuard: RootRiskGuard,
         cashierNameProvider: CashierNameProvider
-    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(fiscalCore, ffdVersionResolver, rootRiskGuard, cashierNameProvider)
+    ): FiscalOperationOrchestrator = FiscalOperationOrchestrator(
+        fiscalCore,
+        ffdVersionResolver,
+        ffdPolicyStore,
+        rootRiskGuard,
+        cashierNameProvider
+    )
 
     @Provides
     @Singleton

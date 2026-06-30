@@ -41,10 +41,10 @@ class FiscalOperationOrchestrator @Inject constructor(
      * Фиксирует версию ФФД в policy store после первого успешного fiscal-документа.
      * В дальнейшем версия ФФД неизменна — FFD lock.
      */
-    private fun lockFfdIfFirstDocument() {
+    private suspend fun lockFfdIfFirstDocument() {
         val state = ffdPolicyStore.read()
         if (!state.locked) {
-            val currentVersion = ffdResolver.resolve(forceRefresh = true).version
+            val currentVersion = ffdResolver.resolve(forceRefresh = true)
             ffdPolicyStore.saveResolved(
                 version = currentVersion,
                 source = "LOCKED_AFTER_FIRST_DOC",
